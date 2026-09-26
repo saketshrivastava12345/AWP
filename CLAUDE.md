@@ -376,6 +376,7 @@ The procedural car is architecturally right (named groups, real dimensions,
 explode, presets) but its _visual_ fidelity is the weakest part of the project —
 it reads as a stylised block model, not a sleek car. Two geometry passes
 improved it materially; a further pass on the body profile would help most.
+_(Addressed in Phase 10: the body is now a lofted parametric surface.)_
 
 **Phase 6 — search, filters, compare**
 
@@ -553,9 +554,80 @@ rejection instead of logging 478 phantom errors per build.
   Those are listed in `scripts/image-skip.txt` so a re-run cannot reinstall
   them, and need a photograph added by hand.
 
+**Phase 10 — a real-looking car, and a scroll tour of it**
+
+- **The car is a lofted surface, not boxes.** `car-styles.ts` holds a side-view
+  profile per body style (belt, roof, sill, nose/tail, overhangs) with no
+  three.js import, so the card silhouette (`cars/car-silhouette.ts`) draws from
+  the same profiles. `car-shape.ts` lofts it: monotone (Fritsch–Carlson)
+  curves in side view, a superellipse in plan view, Catmull-Rom cross-sections
+  per station, wheel arches cut by clamping samples to the arch circle.
+- **Everything inside is laid out from the variant's rows** (`car-layout.ts`,
+  `car-systems.ts`): cylinder count and bank layout from `engines`, engine
+  position from the new `car_models.engine_position`, driven axles from
+  `drive_type`, motor count and battery for EVs, seat count, and steering side
+  from the maker's home market. A 911 gets a flat-six behind the rear axle; a
+  Plaid gets three motors and a floor battery and no engine.
+- **Migration 0006** adds `engine_position` (front/mid/rear enum, NULL for
+  EVs). The seed backfills all 31 models with an engine, hybrids included;
+  the 15 electric-only models stay NULL. An engine whose position is not
+  recorded is **not drawn** rather than guessed, so an unmigrated database
+  shows combustion cars without engines.
+- **Lighting is built in the scene** (drei `Lightformer`s rendered once into
+  the environment map). The old `preset="studio"` fetched an HDR from a
+  third-party CDN at runtime; when that failed it took the whole car page down.
+- **The anatomy tour** (`lib/anatomy-tour.ts`, pure and unit-tested) turns a
+  variant's rows into stops — design, engine or motors, battery, drivetrain,
+  chassis, brakes, cabin, performance — each with only the figures that exist
+  and components chosen by the data (a turbocharger only for boosted engines).
+  `CarShowcase` is a CSS `sticky` stage beside normal-flow cards; scroll
+  position becomes a continuous `beat`. `StageDirector` (shared with the home
+  story) damps that beat and flies the camera between shots framed from the
+  car's own layout (`tour-cameras.ts`), ghosting the body and dimming other
+  systems when a stop looks inside. The road slides and the wheels turn with
+  the scroll, so the car reads as driving.
+- **The home story** now runs on the same Director and a generic coupé, and
+  its finale explodes the car into its subsystems.
+- **Missing photographs render a body-style silhouette** (`CarPhoto`), never a
+  broken-image icon. It is labelled as a placeholder, not a likeness.
+- Viewer panels list only the groups the car has (no battery on a petrol car),
+  and add the tour's general components after the variant's own, so a panel
+  is not empty just because nothing is catalogued against that exact variant.
+
+**Four bugs worth remembering**
+
+1. **`animation-fill-mode: both` broke every `position: fixed` child.** The
+   page-enter keyframe ends at `transform: none`, but interpolated against
+   `translateY()` it lands on an identity matrix — still a transform — which
+   makes the wrapper the containing block for fixed descendants. The home
+   story's ScrollTrigger pin was placed at the top of the page (a black
+   screen), and every `Sheet` opened on a scrolled page was misplaced. Fixed
+   with `backwards` fill. Rule: never leave a transform on a layout wrapper.
+2. **ScrollTrigger turns `pinSpacing` off when the pin's parent is flex**, and
+   the page wrapper is flex, so the next section scrolled straight over the
+   pinned story. Now explicit `pinSpacing: true`.
+3. **Read the last IntersectionObserver entry, not the first.** Creating the
+   pin re-parents the section, and the first callback arrived with a stale
+   zero-size entry ahead of the real one — the scene never mounted.
+4. **`emissiveIntensity` defaults to 1**, so a highlight that set the emissive
+   colour to gold rendered the part solid gold. Highlights blend the emissive
+   colour instead. Related: three's `computeVertexNormals` zig-zagged across
+   the lofted grid's thin, unevenly spaced quads and striped the reflections;
+   normals now come from central differences across the grid.
+
+Screenshots under SwiftShader need long settles: GSAP's lag smoothing advances
+tweens only 33 ms per slow frame, so an explode "takes" 30 s there.
+
 **Open items**
 
-- None blocking. The Supabase publishable key was initially rejected because
+- Apply migration 0006 to the hosted database: `npm run db:push`, then
+  `npm run db:seed` (idempotent). Until then combustion cars render without an
+  engine, and the tour's engine stop has no position line.
+- Cars without a verified photograph show the silhouette placeholder. Run
+  `node scripts/fetch-images.mjs --all --download` on a machine with internet
+  access, check every pick by eye, and commit the files in
+  `public/images/cars/`.
+- Otherwise none blocking. The Supabase publishable key was initially rejected because
   the paste had wrapped and lost its last four characters (`BUNI` arrived on a
   line of its own and looked like a stray token). The corrected key is in
   `.env.local` and is verified working: `/auth/v1/health` returns 200, anon
