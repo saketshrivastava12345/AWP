@@ -1,0 +1,59 @@
+{
+  "name": "aurix",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AURIX — Global Automotive Intelligence. A 3D automotive encyclopedia.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:types": "node scripts/gen-types.mjs",
+    "db:push": "node scripts/db-push.mjs",
+    "db:seed": "node scripts/run-sql.mjs supabase/seed.sql",
+    "db:verify": "node scripts/run-sql.mjs supabase/verify.sql",
+    "verify": "npm run lint && npm run build && npm run typecheck"
+  },
+  "dependencies": {
+    "@react-three/drei": "10.7.8",
+    "@react-three/fiber": "9.7.0",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.116.0",
+    "clsx": "^2.1.1",
+    "gsap": "3.15.0",
+    "lucide-react": "1.47.0",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.7.0",
+    "three": "0.186.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "24.10.1",
+    "@types/pg": "^8.16.0",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.4",
+    "@types/three": "0.186.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.5",
+    "eslint-config-prettier": "10.1.8",
+    "pg": "^8.17.0",
+    "prettier": "3.9.8",
+    "prettier-plugin-tailwindcss": "0.8.1",
+    "supabase": "2.117.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vitest": "5.0.1"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}
