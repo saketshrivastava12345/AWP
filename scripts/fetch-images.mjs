@@ -29,9 +29,10 @@
  * Nothing is written or uploaded without --download.
  *
  * Safe to re-run. A car whose photograph works is left alone. A car whose
- * `car_media` row points at a file under public/ that is not on disk (it was
- * never committed, say) has that broken row removed and a photograph fetched
- * again. Cars listed in scripts/image-skip.txt — automatic picks that were
+ * `car_media` row cannot be displayed — a file under public/ that is not on
+ * disk (it was never committed, say), or a Storage URL that is missing or that
+ * next.config.ts does not allow — has that broken row removed and a photograph
+ * fetched again. Cars listed in scripts/image-skip.txt — automatic picks that were
  * checked by eye and showed the wrong car — are never fetched; add those by
  * hand instead.
  *
@@ -175,16 +176,34 @@ const skipList = new Set(
     .filter(Boolean),
 );
 
+const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "");
+
 /**
- * True for a `car_media` URL that points into public/ but whose file is not on
- * disk. The card renders an <Image> for any row it finds, so a missing file is
- * a broken image — worse than having no row, which shows the placeholder.
- * Remote URLs (Supabase Storage) cannot be checked from here and are trusted.
+ * True when the card cannot display this `car_media` URL. The card renders an
+ * <Image> for any row it finds, so a row it cannot display is a broken image —
+ * worse than having no row, which shows the "No photograph" placeholder.
  */
-const isBrokenLocal = (url) =>
-  url.startsWith("/") &&
-  !url.startsWith("//") &&
-  !existsSync(path.join(ROOT, "public", ...url.split("/")));
+async function isBroken(url) {
+  if (url.startsWith("/") && !url.startsWith("//")) {
+    return !existsSync(path.join(ROOT, "public", ...url.split("/")));
+  }
+  // Without the project URL there is nothing to judge a remote URL against.
+  if (!SUPABASE_URL) return false;
+
+  // next.config.ts lets next/image load remote files from this project's public
+  // storage path only, and refuses anything else without fetching it.
+  if (!url.startsWith(`${SUPABASE_URL}/storage/v1/object/public/`)) return true;
+
+  try {
+    const res = await fetchRetry(url);
+    await res.body?.cancel();
+    // Storage answers 400 or 404 for a missing object, and 4xx for anything
+    // else next/image could not fetch either. A 5xx proves nothing.
+    return res.status >= 400 && res.status < 500;
+  } catch {
+    return false; // unreachable is not the same as missing
+  }
+}
 
 /**
  * Build the Commons search term.
@@ -480,7 +499,8 @@ let failed = 0;
 
 for (const car of cars) {
   const label = `${car.mf_name} ${car.model_name} ${car.variant_name}`;
-  const broken = car.images.filter((image) => isBrokenLocal(image.url));
+  const broken = [];
+  for (const image of car.images) if (await isBroken(image.url)) broken.push(image);
 
   if (broken.length > 0) {
     removed += broken.length;
@@ -488,9 +508,9 @@ for (const car of cars) {
       await db.query(`delete from car_media where id = any($1::uuid[])`, [
         broken.map((image) => image.id),
       ]);
-      console.log(`  − ${label}: removed image row whose file is missing`);
+      console.log(`  − ${label}: removed broken image ${broken[0].url}`);
     } else {
-      console.log(`  − ${label}: image file is missing (--download removes the row)`);
+      console.log(`  − ${label}: broken image ${broken[0].url} (--download removes it)`);
     }
   }
 
