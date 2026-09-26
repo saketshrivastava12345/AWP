@@ -541,6 +541,18 @@ rejection instead of logging 478 phantom errors per build.
   including car detail — confirmed by parsing the served HTML for chunk
   references. It is fetched only when a viewer scrolls into view.
 
+**Car photographs**
+
+- `scripts/fetch-images.mjs --all --download` fills `car_media` from Wikimedia
+  Commons into `public/images/cars/` and rewrites `public/images/CREDITS.md`.
+  It is safe to re-run: working photographs are left alone, and a row whose
+  local file is missing (never committed) is removed and fetched again, because
+  a dangling row renders a broken image rather than the placeholder.
+- **Every automatic pick must be checked by eye.** Of the first 18, 10 showed
+  the wrong car (a NASCAR Supra, a dashboard, a concept, older generations).
+  Those are listed in `scripts/image-skip.txt` so a re-run cannot reinstall
+  them, and need a photograph added by hand.
+
 **Open items**
 
 - None blocking. The Supabase publishable key was initially rejected because

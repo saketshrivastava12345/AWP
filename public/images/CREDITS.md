@@ -1,6 +1,6 @@
 # Photograph credits
 
-Car photographs are from [Wikimedia Commons](https://commons.wikimedia.org) under free licences. CC BY-SA requires attribution — these credits are also stored in `car_media.credit` and rendered in the interface.
+Car photographs are from [Wikimedia Commons](https://commons.wikimedia.org) under free licences. CC BY-SA requires attribution — these credits are also stored in `car_media.credit`.
 
 - **Audi RS 6 Avant RS 6 Avant** — Photo: Vauxford / Wikimedia Commons (CC BY-SA 4.0)
 - **Audi R8 V10 performance quattro** — Photo: Vauxford / Wikimedia Commons (CC BY-SA 4.0)
@@ -38,21 +38,11 @@ Car photographs are from [Wikimedia Commons](https://commons.wikimedia.org) unde
 - **Nissan GT-R Premium** — Photo: Elise240SX / Wikimedia Commons (CC BY-SA 4.0)
 - **Nissan Leaf e+** — Photo: Vauxford / Wikimedia Commons (CC BY-SA 4.0)
 - **Peugeot 208 e-208** — Photo: Harvey Bold / Wikimedia Commons (CC0)
-- **Peugeot 3008 PureTech 130** — Photo: Cutlass / Wikimedia Commons (CC0)
 - **Porsche 911 GT3** — Photo: MrWalkr / Wikimedia Commons (CC BY-SA 4.0)
 - **Porsche 911 Turbo S** — Photo: Alexander-93 / Wikimedia Commons (CC BY-SA 4.0)
-- **Porsche Taycan Turbo S** — Photo: Alexander Migl / Wikimedia Commons (CC BY-SA 4.0)
 - **Porsche 911 Carrera S** — Photo: MrWalkr / Wikimedia Commons (CC BY-SA 4.0)
-- **Renault Megane E-Tech Electric EV60 220hp** — Photo: Alexander Migl / Wikimedia Commons (CC BY-SA 4.0)
-- **Renault Clio TCe 90** — Photo: Vauxford / Wikimedia Commons (CC BY-SA 4.0)
-- **Tata Motors Nexon EV Long Range** — Photo: DriveSpark / Wikimedia Commons (CC BY 3.0)
 - **Tata Motors Altroz 1.2 Petrol** — Photo: Dairokkan9 / Wikimedia Commons (CC BY-SA 4.0)
-- **Tata Motors Harrier 2.0 Diesel** — Photo: Norbert Aepli, Switzerland (User:Noebu) / Wikimedia Commons (CC BY 4.0)
-- **Tesla Model 3 Performance** — Photo: Vauxford / Wikimedia Commons (CC BY-SA 4.0)
-- **Tesla Model 3 Long Range AWD** — Photo: Vauxford / Wikimedia Commons (CC BY-SA 4.0)
 - **Tesla Model S Plaid** — Photo: Alexander-93 / Wikimedia Commons (CC BY-SA 4.0)
-- **Toyota GR Supra 3.0 Manual** — Photo: Kevauto / Wikimedia Commons (CC BY-SA 4.0)
-- **Toyota GR Supra 3.0 Automatic** — Photo: Kevauto / Wikimedia Commons (CC BY-SA 4.0)
 - **Toyota Corolla 1.8 Hybrid** — Photo: Alexander-93 / Wikimedia Commons (CC BY-SA 4.0)
 - **Volvo Cars EX30 Twin Motor Performance** — Photo: Alexander-93 / Wikimedia Commons (CC BY-SA 4.0)
 - **Volvo Cars XC90 T8 Recharge** — Photo: © M 93 / Wikimedia Commons (CC BY-SA 3.0 de)

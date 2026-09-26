@@ -1,0 +1,19 @@
+# Cars scripts/fetch-images.mjs must never fetch a photograph for.
+#
+# Each automatic pick below was checked by eye and showed the wrong car. The
+# ranking is deterministic, so re-running would install the same photograph
+# again. Add a correct one by hand (README section 5), then leave the line here
+# or delete it — the script never replaces a car's working photograph either way.
+#
+# One car per line as manufacturer/model/variant. Text after # is ignored.
+
+peugeot/3008/puretech-130          # first-generation 3008, catalogue is P84
+porsche/taycan/turbo-s             # a Taycan Turbo GT, rear view
+renault/clio/tce-90                # Clio IV, catalogue is Clio V
+renault/megane-e-tech/ev60-220     # dashboard, not the car
+tata/harrier/2-0-diesel            # the 2018 H5X concept car
+tata/nexon-ev/long-range           # the 2020 design, catalogue variant is 2023
+tesla/model-3/long-range-awd       # pre-Highland design
+tesla/model-3/performance          # pre-Highland design
+toyota/gr-supra/3-0-automatic      # a NASCAR race car
+toyota/gr-supra/3-0-manual         # a NASCAR race car

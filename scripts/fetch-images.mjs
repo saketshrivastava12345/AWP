@@ -18,7 +18,7 @@
  * ATTRIBUTION
  * Most Commons photos are CC BY-SA, which legally requires crediting the
  * photographer. Every image is stored with its author and licence in
- * `car_media.credit`, which the card and viewer render. Do not strip it.
+ * `car_media.credit`, and listed in public/images/CREDITS.md. Do not strip it.
  *
  * Usage:
  *   node scripts/fetch-images.mjs --car porsche/911/turbo-s
@@ -28,6 +28,13 @@
  *
  * Nothing is written or uploaded without --download.
  *
+ * Safe to re-run. A car whose photograph works is left alone. A car whose
+ * `car_media` row points at a file under public/ that is not on disk (it was
+ * never committed, say) has that broken row removed and a photograph fetched
+ * again. Cars listed in scripts/image-skip.txt — automatic picks that were
+ * checked by eye and showed the wrong car — are never fetched; add those by
+ * hand instead.
+ *
  * Storage:
  *   default     → public/images/cars/  (no credentials needed)
  *   --supabase  → the `cars` bucket; needs SUPABASE_SERVICE_ROLE_KEY in
@@ -36,7 +43,7 @@
  *                 committed, and never referenced from application code.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "pg";
@@ -137,8 +144,9 @@ const { rows: cars } = await db.query(
   `select mf.slug as mf, m.slug as model, v.slug as variant,
           mf.name as mf_name, m.name as model_name, v.name as variant_name,
           m.generation, v.year_start, v.id as variant_id,
-          exists (select 1 from car_media cm
-                  where cm.variant_id = v.id and cm.type = 'image') as has_image
+          coalesce((select json_agg(json_build_object('id', cm.id, 'url', cm.url))
+                    from car_media cm
+                    where cm.variant_id = v.id and cm.type = 'image'), '[]') as images
    from car_variants v
    join car_models m on m.id = v.model_id
    join manufacturers mf on mf.id = m.manufacturer_id
@@ -152,6 +160,31 @@ if (cars.length === 0) {
   await db.end();
   process.exit(1);
 }
+
+/**
+ * Cars whose automatic pick was checked by eye and showed the wrong car — a
+ * race car, a concept, an older generation. The ranking is deterministic, so
+ * re-running would install the same wrong photograph again. These get a
+ * photograph by hand instead.
+ */
+const SKIP_FILE = path.join(ROOT, "scripts", "image-skip.txt");
+const skipList = new Set(
+  (existsSync(SKIP_FILE) ? readFileSync(SKIP_FILE, "utf8") : "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/#.*$/, "").trim())
+    .filter(Boolean),
+);
+
+/**
+ * True for a `car_media` URL that points into public/ but whose file is not on
+ * disk. The card renders an <Image> for any row it finds, so a missing file is
+ * a broken image — worse than having no row, which shows the placeholder.
+ * Remote URLs (Supabase Storage) cannot be checked from here and are trusted.
+ */
+const isBrokenLocal = (url) =>
+  url.startsWith("/") &&
+  !url.startsWith("//") &&
+  !existsSync(path.join(ROOT, "public", ...url.split("/")));
 
 /**
  * Build the Commons search term.
@@ -440,14 +473,34 @@ async function getUploadToken() {
 // --- preview / install ----------------------------------------------------
 
 let installed = 0;
+let removed = 0;
 let skipped = 0;
 let missing = 0;
 let failed = 0;
 
 for (const car of cars) {
   const label = `${car.mf_name} ${car.model_name} ${car.variant_name}`;
+  const broken = car.images.filter((image) => isBrokenLocal(image.url));
 
-  if (car.has_image && doDownload) {
+  if (broken.length > 0) {
+    removed += broken.length;
+    if (doDownload) {
+      await db.query(`delete from car_media where id = any($1::uuid[])`, [
+        broken.map((image) => image.id),
+      ]);
+      console.log(`  − ${label}: removed image row whose file is missing`);
+    } else {
+      console.log(`  − ${label}: image file is missing (--download removes the row)`);
+    }
+  }
+
+  if (skipList.has(`${car.mf}/${car.model}/${car.variant}`)) {
+    console.log(`  — ${label}: listed in scripts/image-skip.txt, skipping`);
+    skipped += 1;
+    continue;
+  }
+
+  if (car.images.length > broken.length) {
     console.log(`  — ${label}: already has an image, skipping`);
     skipped += 1;
     continue;
@@ -488,7 +541,10 @@ for (const car of cars) {
 
     if (!doDownload) continue;
 
-    const filename = `${car.mf}-${car.model}-${car.variant}.jpg`;
+    // Named after what the bytes are: a PNG saved as .jpg serves with the
+    // wrong content type.
+    const ext = pick.mime === "image/png" ? "png" : "jpg";
+    const filename = `${car.mf}-${car.model}-${car.variant}.${ext}`;
     const credit = `Photo: ${pick.author} / Wikimedia Commons (${pick.licence})`;
     const alt = `${label}`;
 
@@ -518,7 +574,7 @@ for (const car of cars) {
         headers: {
           authorization: `Bearer ${token}`,
           apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
-          "content-type": "image/jpeg",
+          "content-type": pick.mime,
           "x-upsert": "true",
         },
         body: bytes,
@@ -553,7 +609,7 @@ for (const car of cars) {
 
 // --- attribution file -----------------------------------------------------
 
-if (doDownload && installed > 0) {
+if (doDownload && (installed > 0 || removed > 0)) {
   const { rows } = await db.query(
     `select cm.url, cm.credit, mf.name as mf, m.name as model, v.name as variant
      from car_media cm
@@ -568,7 +624,7 @@ if (doDownload && installed > 0) {
     "# Photograph credits\n\n" +
     "Car photographs are from [Wikimedia Commons](https://commons.wikimedia.org) " +
     "under free licences. CC BY-SA requires attribution — these credits are also " +
-    "stored in `car_media.credit` and rendered in the interface.\n\n";
+    "stored in `car_media.credit`.\n\n";
   for (const row of rows) {
     doc += `- **${row.mf} ${row.model} ${row.variant}** — ${row.credit}\n`;
   }
@@ -580,8 +636,8 @@ if (doDownload && installed > 0) {
 await db.end();
 
 const summary = doDownload
-  ? `Installed ${installed}, skipped ${skipped}`
-  : "Preview only — nothing downloaded";
+  ? `Installed ${installed}, removed ${removed} broken, skipped ${skipped}`
+  : `Preview only — nothing changed. ${removed} broken to remove, skipped ${skipped}`;
 console.log(`\n${summary}, ${missing} with no match, ${failed} request failure(s).`);
 
 if (failed > 0) {
