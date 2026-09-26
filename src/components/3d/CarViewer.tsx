@@ -10,12 +10,14 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { Sheet } from "@/components/ui/Sheet";
 import { Badge } from "@/components/ui/Badge";
 import type { Part, ViewerGroup } from "@/types/domain";
+import type { CarBuild } from "@/lib/car-build";
 import {
-  CAMERA_PRESETS,
   DEFAULT_PRESET,
   GROUP_LABELS,
-  type DimensionInput,
+  PRESET_OPTIONS,
+  groupsForPowertrain,
 } from "./viewer-config";
+import { DEFAULT_PAINT, PAINTS, type PaintId } from "./car-materials";
 
 /**
  * The Canvas is dynamically imported with ssr:false.
@@ -36,9 +38,8 @@ const CarScene = dynamic(() => import("./CarScene").then((m) => m.CarScene), {
 });
 
 export type CarViewerProps = {
-  bodyType: string | null;
-  dimensions?: DimensionInput | null;
-  powertrain: "combustion" | "electric" | "hybrid";
+  /** The variant's real layout: dimensions, engine, drivetrain, seats. */
+  build: CarBuild;
   glbUrl?: string | null;
   /** Parts keyed by viewer group, for the info panel. */
   partsByGroup?: Partial<Record<ViewerGroup, Part[]>>;
@@ -48,7 +49,6 @@ export type CarViewerProps = {
   className?: string;
   /** Hides the exploded-view control, e.g. on the parts page. */
   showExplode?: boolean;
-  xray?: boolean;
   /** Attribution line for a third-party model (CC-BY requires it). */
   modelCredit?: string | null;
   /** Hides the Engineering Mode toggle. */
@@ -58,16 +58,13 @@ export type CarViewerProps = {
 };
 
 export function CarViewer({
-  bodyType,
-  dimensions,
-  powertrain,
+  build,
   glbUrl,
   partsByGroup = {},
   groupNotes = {},
   highlightGroup = null,
   className,
   showExplode = true,
-  xray = false,
   showEngineering = true,
   dimensionLabels,
   modelCredit,
@@ -82,6 +79,7 @@ export function CarViewer({
   const [selectedGroup, setSelectedGroup] = useState<ViewerGroup | null>(null);
   const [glbFailed, setGlbFailed] = useState(false);
   const [engineering, setEngineering] = useState(false);
+  const [paint, setPaint] = useState<PaintId>(DEFAULT_PAINT);
 
   // Only render while the canvas is on screen. Scrolling past a detail page
   // should not leave a WebGL loop burning battery below the fold.
@@ -91,7 +89,9 @@ export function CarViewer({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const entry = entries[0];
+        // A batch can hold several stale entries for one target; the last is
+        // the current state.
+        const entry = entries.at(-1);
         if (entry) setActive(entry.isIntersecting);
       },
       { rootMargin: "120px" },
@@ -105,6 +105,12 @@ export function CarViewer({
   }, []);
 
   const closePanel = useCallback(() => setSelectedGroup(null), []);
+
+  // The same groups the model draws: no battery on a petrol car, no engine on
+  // an EV, and no engine where its position is not recorded.
+  const subsystems = groupsForPowertrain(build.powertrain).filter(
+    (group) => group !== "engine" || build.enginePosition !== null,
+  );
 
   const usingFallback = !glbUrl || glbFailed;
   // A real model exists, but the segmented car is on screen instead because
@@ -123,9 +129,8 @@ export function CarViewer({
             uses a 120px margin so the canvas is ready by the time it is seen. */}
         {active ? (
           <CarScene
-            bodyType={bodyType}
-            dimensions={dimensions}
-            powertrain={powertrain}
+            build={build}
+            paint={paint}
             glbUrl={glbFailed ? null : glbUrl}
             preset={preset}
             explode={exploded ? 1 : 0}
@@ -135,7 +140,7 @@ export function CarViewer({
             lowDetail={isMobile}
             reducedMotion={reducedMotion}
             active={active}
-            xray={xray || engineering}
+            engineering={engineering}
             onGlbFailed={() => setGlbFailed(true)}
           />
         ) : null}
@@ -147,7 +152,7 @@ export function CarViewer({
         <div className="pointer-events-none absolute top-3 left-3 flex max-w-[85%] flex-col items-start gap-1.5">
           {usingFallback ? (
             <Badge tone="neutral">
-              3D model coming soon — showing concept representation
+              Procedural model · built from published dimensions
             </Badge>
           ) : showingAnatomy ? (
             <Badge tone="neutral">Anatomy model — segmented for inspection</Badge>
@@ -215,7 +220,7 @@ export function CarViewer({
       <div className="mt-px flex flex-wrap items-center gap-2 border-x border-b border-line px-3 py-3">
         <span className="mr-1 hidden text-label sm:inline">View</span>
 
-        {CAMERA_PRESETS.map((entry) => (
+        {PRESET_OPTIONS.map((entry) => (
           <button
             key={entry.id}
             type="button"
@@ -286,6 +291,39 @@ export function CarViewer({
         </div>
       </div>
 
+      {/* Paint. Presentation only: the catalogue does not record colours, so
+          nothing here claims a factory finish for this variant. */}
+      <div
+        className="mt-px flex flex-wrap items-center gap-3 border-x border-b border-line px-3 py-3"
+        role="radiogroup"
+        aria-label="Paint"
+      >
+        <span className="mr-1 text-label">Paint</span>
+        {PAINTS.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            role="radio"
+            aria-checked={paint === entry.id}
+            aria-label={entry.label}
+            title={entry.label}
+            onClick={() => setPaint(entry.id)}
+            className={cn(
+              "size-6 rounded-full border transition-[box-shadow,border-color] duration-200",
+              paint === entry.id
+                ? "border-gold-400 shadow-[0_0_0_2px_var(--color-void),0_0_0_3px_var(--color-gold-500)]"
+                : "border-line-strong hover:border-ink-300",
+            )}
+            style={{
+              background: `radial-gradient(circle at 32% 28%, rgba(255,255,255,0.55), transparent 42%), ${entry.color}`,
+            }}
+          />
+        ))}
+        <span className="ml-1 font-mono text-[10px] text-ink-500">
+          {PAINTS.find((entry) => entry.id === paint)?.label}
+        </span>
+      </div>
+
       {/* Keyboard route into the subsystems. Clicking parts in the canvas is a
           pointer-only affordance, so the same targets are exposed as buttons. */}
       {showExplode ? (
@@ -295,7 +333,7 @@ export function CarViewer({
             Inspect a subsystem
           </summary>
           <div className="flex flex-wrap gap-2 border-t border-line-subtle px-4 py-4">
-            {(Object.keys(GROUP_LABELS) as ViewerGroup[]).map((group) => (
+            {subsystems.map((group) => (
               <button
                 key={group}
                 type="button"

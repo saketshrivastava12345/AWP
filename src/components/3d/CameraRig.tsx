@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import gsap from "gsap";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import { CAMERA_PRESETS, DEFAULT_PRESET } from "./viewer-config";
+import { DEFAULT_PRESET, type CameraPreset } from "./viewer-config";
 
 /**
  * Moves the camera to a preset with a GSAP tween.
@@ -18,11 +18,14 @@ import { CAMERA_PRESETS, DEFAULT_PRESET } from "./viewer-config";
  */
 export function CameraRig({
   preset,
+  presets,
   controlsRef,
   reducedMotion,
   onArrive,
 }: {
   preset: string;
+  /** Presets for this car, from `cameraPresets(layout)`. */
+  presets: CameraPreset[];
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
   reducedMotion: boolean;
   onArrive?: () => void;
@@ -33,8 +36,8 @@ export function CameraRig({
 
   useEffect(() => {
     const target =
-      CAMERA_PRESETS.find((entry) => entry.id === preset) ??
-      CAMERA_PRESETS.find((entry) => entry.id === DEFAULT_PRESET);
+      presets.find((entry) => entry.id === preset) ??
+      presets.find((entry) => entry.id === DEFAULT_PRESET);
     if (!target) return;
 
     const controls = controlsRef.current;
@@ -87,7 +90,7 @@ export function CameraRig({
     return () => {
       tween.kill();
     };
-  }, [preset, camera, controlsRef, invalidate, reducedMotion, onArrive]);
+  }, [preset, presets, camera, controlsRef, invalidate, reducedMotion, onArrive]);
 
   return null;
 }

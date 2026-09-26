@@ -8,6 +8,7 @@ export type TransmissionType = Enums["transmission_type"];
 export type BodyType = Enums["body_type"];
 export type ManufacturerSegment = Enums["manufacturer_segment"];
 export type EngineLayout = Enums["engine_layout"];
+export type EnginePosition = Enums["engine_position"];
 export type Aspiration = Enums["aspiration"];
 export type RangeStandard = Enums["range_standard"];
 export type ViewerGroup = Enums["viewer_group"];

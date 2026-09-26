@@ -41,7 +41,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${fontVariables} h-full antialiased`}>
+    // suppressHydrationWarning: the boot script sets data-booted on <html>
+    // before React hydrates, by design. It only silences this one element's
+    // attributes, not its children.
+    <html
+      lang="en"
+      className={`${fontVariables} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <head>
         {/* Must run before first paint — see src/lib/boot-script.ts. */}
         <script dangerouslySetInnerHTML={{ __html: BOOT_FLAG_SCRIPT }} />

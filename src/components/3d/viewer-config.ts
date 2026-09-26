@@ -1,4 +1,5 @@
-import type { BodyType, ViewerGroup } from "@/types/domain";
+import type { ViewerGroup } from "@/types/domain";
+import type { CarLayout } from "./car-layout";
 
 /**
  * The named subsystems of the procedural car.
@@ -16,7 +17,7 @@ export const VIEWER_GROUPS = [
   "interior",
   "electronics",
   "battery",
-] as const;
+] as const satisfies readonly ViewerGroup[];
 
 export const GROUP_LABELS: Record<ViewerGroup, string> = {
   body: "Body & Aerodynamics",
@@ -31,213 +32,112 @@ export const GROUP_LABELS: Record<ViewerGroup, string> = {
 };
 
 /**
- * Direction and distance each group travels in the exploded view, in metres.
- * Chosen so nothing overlaps at full separation and the layout still reads as
- * a car rather than a cloud of parts.
+ * Direction and distance each group travels in the exploded view, in metres
+ * for a 4.5 m car (scaled with the car). Chosen so nothing overlaps at full
+ * separation and the layout still reads as a car rather than a cloud of parts.
  */
 export const EXPLODE_VECTORS: Record<ViewerGroup, [number, number, number]> = {
-  body: [0, 1.5, 0],
-  engine: [0, 0.35, 1.9],
+  body: [0, 1.6, 0],
+  engine: [0, 0.45, 1.9],
   transmission: [0, -0.15, 0.55],
   suspension: [0, -1.0, 0],
-  brakes: [1.7, -0.25, 0],
-  wheels: [2.5, 0, 0],
-  interior: [0, 0.75, -0.7],
+  // Wheels and brakes also spread outward to their own side (see
+  // ProceduralCar), so these only lift them slightly.
+  brakes: [0, -0.15, 0],
+  wheels: [0, -0.05, 0],
+  interior: [0, 0.85, -0.7],
   electronics: [-1.9, 0.45, -0.6],
   battery: [0, -1.3, -0.5],
 };
+
+export type Vec3 = [number, number, number];
 
 export type CameraPreset = {
   id: string;
   label: string;
   /** Camera position in metres. */
-  position: [number, number, number];
+  position: Vec3;
   /** Point the camera looks at. */
-  target: [number, number, number];
+  target: Vec3;
+  /** How far to ghost the bodywork, so a view inside the car can see in. */
+  ghost?: number;
 };
 
-/**
- * Camera presets. `orbit` is the default resting view and the one auto-rotate
- * uses; the rest frame a specific subsystem.
- */
-export const CAMERA_PRESETS: CameraPreset[] = [
-  { id: "orbit", label: "360°", position: [6.4, 1.7, 7.2], target: [0, 0.5, 0] },
-  { id: "front", label: "Front", position: [0, 1.3, 6.4], target: [0, 0.6, 0.4] },
-  { id: "rear", label: "Rear", position: [0, 1.4, -6.4], target: [0, 0.6, -0.4] },
-  { id: "side", label: "Side", position: [8.0, 0.9, 0.2], target: [0, 0.6, 0] },
-  {
-    id: "interior",
-    label: "Interior",
-    position: [0.0, 1.45, -0.2],
-    target: [0, 1.0, 2.2],
-  },
-  { id: "engine", label: "Engine", position: [1.6, 1.9, 3.3], target: [0, 0.75, 1.55] },
-  {
-    id: "wheels",
-    label: "Wheels",
-    position: [3.0, 0.75, 2.4],
-    target: [0.85, 0.34, 1.35],
-  },
-  {
-    id: "brakes",
-    label: "Brakes",
-    position: [2.4, 0.55, 1.9],
-    target: [0.9, 0.34, 1.35],
-  },
-];
+export const PRESET_IDS = [
+  "orbit",
+  "front",
+  "rear",
+  "side",
+  "interior",
+  "engine",
+  "wheels",
+  "brakes",
+] as const;
 
-export const DEFAULT_PRESET = "orbit";
+export type PresetId = (typeof PRESET_IDS)[number];
+
+export const DEFAULT_PRESET: PresetId = "orbit";
+
+const PRESET_LABELS: Record<PresetId, string> = {
+  orbit: "360°",
+  front: "Front",
+  rear: "Rear",
+  side: "Side",
+  interior: "Interior",
+  engine: "Engine",
+  wheels: "Wheels",
+  brakes: "Brakes",
+};
+
+/** Preset buttons, in display order. */
+export const PRESET_OPTIONS = PRESET_IDS.map((id) => ({ id, label: PRESET_LABELS[id] }));
 
 /**
- * Body proportions in metres, used when a variant has no published dimensions.
+ * Camera presets for a particular car.
  *
- * A coupé sits lower and longer, an SUV taller, a hatchback shorter — so cars
- * in the viewer are not all the same silhouette. When real dimensions exist in
- * the database they override these entirely.
+ * Framed from the car's real size and its real component positions, so the
+ * "Engine" view of a 911 looks in behind the rear axle while the same button
+ * on a saloon looks under the bonnet.
  */
-export type Proportions = {
-  length: number;
-  width: number;
-  height: number;
-  wheelbase: number;
-  /** Height of the cabin greenhouse as a fraction of total height. */
-  cabinRatio: number;
-  /** Wheel radius in metres. */
-  wheelRadius: number;
-  groundClearance: number;
-};
-
-const BODY_PROPORTIONS: Record<BodyType, Proportions> = {
-  coupe: {
-    length: 4.5,
-    width: 1.9,
-    height: 1.28,
-    wheelbase: 2.6,
-    cabinRatio: 0.36,
-    wheelRadius: 0.35,
-    groundClearance: 0.12,
-  },
-  roadster: {
-    length: 4.3,
-    width: 1.88,
-    height: 1.22,
-    wheelbase: 2.5,
-    cabinRatio: 0.3,
-    wheelRadius: 0.34,
-    groundClearance: 0.12,
-  },
-  sedan: {
-    length: 4.8,
-    width: 1.85,
-    height: 1.45,
-    wheelbase: 2.85,
-    cabinRatio: 0.42,
-    wheelRadius: 0.34,
-    groundClearance: 0.14,
-  },
-  hatchback: {
-    length: 4.05,
-    width: 1.78,
-    height: 1.46,
-    wheelbase: 2.55,
-    cabinRatio: 0.46,
-    wheelRadius: 0.32,
-    groundClearance: 0.15,
-  },
-  wagon: {
-    length: 4.95,
-    width: 1.9,
-    height: 1.47,
-    wheelbase: 2.92,
-    cabinRatio: 0.45,
-    wheelRadius: 0.34,
-    groundClearance: 0.14,
-  },
-  suv: {
-    length: 4.65,
-    width: 1.94,
-    height: 1.72,
-    wheelbase: 2.8,
-    cabinRatio: 0.44,
-    wheelRadius: 0.38,
-    groundClearance: 0.2,
-  },
-  off_road: {
-    length: 4.0,
-    width: 1.82,
-    height: 1.84,
-    wheelbase: 2.45,
-    cabinRatio: 0.46,
-    wheelRadius: 0.4,
-    groundClearance: 0.24,
-  },
-  mpv: {
-    length: 4.7,
-    width: 1.85,
-    height: 1.75,
-    wheelbase: 2.8,
-    cabinRatio: 0.5,
-    wheelRadius: 0.34,
-    groundClearance: 0.16,
-  },
-  pickup: {
-    length: 5.6,
-    width: 2.0,
-    height: 1.9,
-    wheelbase: 3.5,
-    cabinRatio: 0.4,
-    wheelRadius: 0.4,
-    groundClearance: 0.22,
-  },
-  convertible: {
-    length: 4.5,
-    width: 1.88,
-    height: 1.3,
-    wheelbase: 2.6,
-    cabinRatio: 0.28,
-    wheelRadius: 0.34,
-    groundClearance: 0.13,
-  },
-};
-
-export type DimensionInput = {
-  length_mm?: number | null;
-  width_mm?: number | null;
-  height_mm?: number | null;
-  wheelbase_mm?: number | null;
-};
-
-/**
- * Resolve proportions for a car.
- *
- * Real published dimensions win wherever they exist; anything missing falls
- * back to the body-type profile. So a car with known dimensions is modelled at
- * its actual size, and one without still looks like the right kind of car.
- */
-export function resolveProportions(
-  bodyType: BodyType | null,
-  dimensions?: DimensionInput | null,
-): Proportions {
-  const base = BODY_PROPORTIONS[bodyType ?? "coupe"] ?? BODY_PROPORTIONS.coupe;
-
-  const mm = (value: number | null | undefined): number | null =>
-    value !== null && value !== undefined && value > 0 ? value / 1000 : null;
-
-  const length = mm(dimensions?.length_mm) ?? base.length;
-  const width = mm(dimensions?.width_mm) ?? base.width;
-  const height = mm(dimensions?.height_mm) ?? base.height;
-  const wheelbase = mm(dimensions?.wheelbase_mm) ?? base.wheelbase;
-
-  return {
-    length,
-    width,
-    height,
-    // A wheelbase longer than the car would be nonsense; clamp defensively.
-    wheelbase: Math.min(wheelbase, length * 0.72),
-    cabinRatio: base.cabinRatio,
-    wheelRadius: Math.min(base.wheelRadius, height * 0.3),
-    groundClearance: base.groundClearance,
+export function cameraPresets(layout: CarLayout): CameraPreset[] {
+  const { spec, anchors, cabin } = layout;
+  const k = spec.length / 4.5;
+  const H = spec.height;
+  const engine = anchors.engine;
+  // Approach the engine from whichever end it is nearer to.
+  const engineSide = engine.z >= 0 ? 1 : -1;
+  const wheel = anchors.frontWheel;
+  const presets: Record<PresetId, Omit<CameraPreset, "id" | "label">> = {
+    orbit: { position: [4.7 * k, 1.35 + H * 0.2, 5.4 * k], target: [0, H * 0.36, 0] },
+    front: {
+      position: [0.9 * k, H * 0.8, spec.noseZ + 4.4 * k],
+      target: [0, H * 0.4, spec.noseZ * 0.2],
+    },
+    rear: {
+      position: [-0.9 * k, H * 0.9, spec.tailZ - 4.4 * k],
+      target: [0, H * 0.42, spec.tailZ * 0.2],
+    },
+    side: { position: [spec.length * 1.5, H * 0.55, 0], target: [0, H * 0.4, 0] },
+    interior: {
+      position: [cabin.driverX * 0.6, H + 0.55, (cabin.seatRows[0] ?? 0) - 0.9],
+      target: [0, cabin.dashY - 0.1, cabin.dashZ + 0.3],
+      ghost: 0.85,
+    },
+    engine: {
+      position: [engine.x + 1.7, engine.y + 1.5, engine.z + engineSide * 1.9],
+      target: [engine.x, engine.y, engine.z],
+      ghost: 1,
+    },
+    wheels: {
+      position: [wheel.x + 1.9, wheel.y + 0.45, wheel.z + 1.1],
+      target: [wheel.x - 0.1, wheel.y, wheel.z],
+    },
+    brakes: {
+      position: [wheel.x + 1.05, wheel.y + 0.2, wheel.z + 0.6],
+      target: [wheel.x - 0.15, wheel.y + 0.02, wheel.z],
+    },
   };
+  return PRESET_IDS.map((id) => ({ id, label: PRESET_LABELS[id], ...presets[id] }));
 }
 
 /** Which groups exist for a given powertrain. */

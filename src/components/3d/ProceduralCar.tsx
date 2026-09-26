@@ -1,78 +1,91 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
-import { useThree } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import gsap from "gsap";
-import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
-import type { Group } from "three";
 import type { ViewerGroup } from "@/types/domain";
+import type { CarBuild } from "@/lib/car-build";
+import { EXPLODE_VECTORS, VIEWER_GROUPS, groupsForPowertrain } from "./viewer-config";
+import { computeLayout, type CarLayout } from "./car-layout";
 import {
-  EXPLODE_VECTORS,
-  groupsForPowertrain,
-  resolveProportions,
-  type DimensionInput,
-  type Proportions,
-} from "./viewer-config";
+  DEFAULT_PAINT,
+  MaterialKit,
+  setDim,
+  setHighlight,
+  type PaintId,
+} from "./car-materials";
+import {
+  caliperGeometry,
+  discGeometry,
+  hubDetailGeometry,
+  rimBarrelGeometry,
+  spokesGeometry,
+  tyreGeometry,
+} from "./car-parts";
+import {
+  buildBattery,
+  buildElectronics,
+  buildEngine,
+  buildInterior,
+  buildSuspension,
+  buildTransmission,
+  type Part,
+} from "./car-systems";
+import { CarBody } from "./CarBody";
 
 /**
- * A stylised car assembled from primitives.
+ * The procedural car.
  *
- * Realistic licensed car models are not available, and an exploded view needs
- * the parts separated anyway — so the car is built here instead. Every
- * subsystem is its own named `<group>`, which is what the exploded view
- * animates and what the parts encyclopedia highlights.
- *
- * Proportions come from the variant's published dimensions when they exist and
- * from a body-type profile otherwise, so a coupé, an SUV and a hatchback are
- * visibly different shapes rather than one silhouette in three sizes.
+ * No licensed model exists for most of the catalogue, and an exploded view
+ * needs the parts separated anyway — so the car is generated. The body is a
+ * lofted surface drawn from the variant's real dimensions (car-shape.ts); the
+ * mechanical layout follows its real engine, drivetrain and seating
+ * (car-layout.ts). Every subsystem is its own named group, which is what the
+ * exploded view animates, the anatomy tour highlights, and a click selects.
  */
+
+/** Distance travelled, in metres. The tour drives it; the wheels roll to match. */
+export type CarMotion = { distance: number };
 
 export type ProceduralCarProps = {
-  bodyType: string | null;
-  dimensions?: DimensionInput | null;
-  powertrain: "combustion" | "electric" | "hybrid";
+  /** From `useCarLayout(build)`, shared with whatever frames the camera. */
+  layout: CarLayout;
+  paint?: PaintId;
   /** 0 = assembled, 1 = fully exploded. */
   explode?: number;
-  /** Group currently selected, highlighted in gold. */
+  /** Group chosen by the visitor. */
   selectedGroup?: ViewerGroup | null;
-  /** Group to emphasise without selecting (parts-page highlight). */
+  /** Group the page is pointing at (the tour, or a part's page). */
   highlightGroup?: ViewerGroup | null;
   onSelectGroup?: (group: ViewerGroup) => void;
-  /** Fewer segments and no glass refraction on small devices. */
+  /** Fewer segments and fewer details on small devices. */
   lowDetail?: boolean;
-  /** Wireframe / x-ray look for Engineering Mode. */
-  xray?: boolean;
+  /** 0 = solid bodywork, 1 = translucent shell showing the systems inside. */
+  ghost?: number;
   /** Skips the explode tween and snaps instead. */
   reducedMotion?: boolean;
+  motion?: RefObject<CarMotion | null>;
 };
 
-/**
- * Body width as a fraction of the car's real track width.
- *
- * Under 1 on purpose: the wheels sit at the full half-width, so a body this
- * much narrower lets them break the silhouette at all four corners. That one
- * ratio is the difference between the shape reading as a car and reading as a
- * van.
- */
-const BODY_WIDTH_RATIO = 0.84;
-
-const PAINT_COLOR = "#14141b";
-const ACCENT_GOLD = "#c8a34a";
+/** The layout of a car, memoised on its build. */
+export function useCarLayout(build: CarBuild): CarLayout {
+  return useMemo(() => computeLayout(build), [build]);
+}
 
 /**
- * A subsystem group: handles its own explode offset, selection and pointer.
+ * A subsystem group: its own explode offset, highlight and pointer handling.
  *
- * The explode offset is animated with GSAP rather than set directly, and each
- * group is given a small stagger based on its index so the car comes apart in
- * sequence instead of all at once. `invalidate()` is called on every tick so
- * the tween still renders under a demand-driven frameloop.
+ * The explode offset is tweened with GSAP and staggered by index so the car
+ * comes apart in sequence rather than all at once.
  */
 function Subsystem({
   name,
   index,
   explode,
-  selected,
+  explodeScale,
+  kit,
+  highlighted,
   dimmed,
   reducedMotion,
   onSelect,
@@ -81,32 +94,32 @@ function Subsystem({
   name: ViewerGroup;
   index: number;
   explode: number;
-  selected: boolean;
+  explodeScale: number;
+  kit: MaterialKit;
+  highlighted: boolean;
+  /** Another subsystem is the subject: fade this one so it can be seen. */
   dimmed: boolean;
   reducedMotion: boolean;
   onSelect?: (group: ViewerGroup) => void;
   children: ReactNode;
 }) {
-  const ref = useRef<Group>(null);
+  const ref = useRef<THREE.Group>(null);
   const vector = EXPLODE_VECTORS[name];
   const invalidate = useThree((state) => state.invalidate);
 
   useEffect(() => {
     const group = ref.current;
     if (!group) return;
-
     const target = {
-      x: vector[0] * explode,
-      y: vector[1] * explode,
-      z: vector[2] * explode,
+      x: vector[0] * explode * explodeScale,
+      y: vector[1] * explode * explodeScale,
+      z: vector[2] * explode * explodeScale,
     };
-
     if (reducedMotion) {
       group.position.set(target.x, target.y, target.z);
       invalidate();
       return;
     }
-
     const tween = gsap.to(group.position, {
       ...target,
       duration: 0.9,
@@ -114,11 +127,30 @@ function Subsystem({
       ease: "power3.inOut",
       onUpdate: invalidate,
     });
-
     return () => {
       tween.kill();
     };
-  }, [explode, vector, index, invalidate, reducedMotion]);
+  }, [explode, explodeScale, vector, index, invalidate, reducedMotion]);
+
+  // The subsystem being discussed keeps its materials and gains a faint
+  // warmth; the rest fade back. Both eased, so a change of subject dissolves.
+  const amount = useRef(0);
+  const dim = useRef(0);
+  useFrame((_, delta) => {
+    const step = Math.min(delta, 0.1);
+    const target = highlighted ? 1 : 0;
+    if (amount.current !== target) {
+      const next = THREE.MathUtils.damp(amount.current, target, 5, step);
+      amount.current = Math.abs(next - target) < 0.01 ? target : next;
+      setHighlight(kit, amount.current);
+    }
+    const dimTarget = dimmed ? 1 : 0;
+    if (dim.current !== dimTarget) {
+      const next = THREE.MathUtils.damp(dim.current, dimTarget, 5, step);
+      dim.current = Math.abs(next - dimTarget) < 0.01 ? dimTarget : next;
+      setDim(kit, dim.current);
+    }
+  });
 
   return (
     <group
@@ -148,298 +180,253 @@ function Subsystem({
           : undefined
       }
     >
-      <group visible={!dimmed || selected}>{children}</group>
-      {/* Dimmed groups stay in the scene at low opacity so the car keeps its
-          silhouette while one subsystem is emphasised. */}
-      {dimmed && !selected ? <group>{children}</group> : null}
+      {children}
     </group>
   );
 }
 
-function useMaterials(xray: boolean, lowDetail: boolean) {
-  return useMemo(() => {
-    const base = (color: string, metalness: number, roughness: number) =>
-      xray
-        ? new THREE.MeshBasicMaterial({
-            color,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.55,
-          })
-        : new THREE.MeshStandardMaterial({ color, metalness, roughness });
-
-    const glass = xray
-      ? new THREE.MeshBasicMaterial({
-          color: "#8fb3bf",
-          wireframe: true,
-          transparent: true,
-          opacity: 0.4,
-        })
-      : new THREE.MeshPhysicalMaterial({
-          color: "#0d1418",
-          metalness: 0,
-          roughness: 0.08,
-          transmission: lowDetail ? 0 : 0.85,
-          thickness: 0.4,
-          opacity: lowDetail ? 0.55 : 1,
-          transparent: lowDetail,
-          ior: 1.45,
-        });
-
-    return {
-      paint: base(PAINT_COLOR, 0.72, 0.28),
-      glass,
-      tyre: base("#0b0b0e", 0.1, 0.95),
-      rim: base("#8a8a93", 0.9, 0.22),
-      disc: base("#55555f", 0.85, 0.35),
-      caliper: base(ACCENT_GOLD, 0.7, 0.35),
-      engine: base("#4a4a55", 0.8, 0.4),
-      gearbox: base("#3a3a44", 0.85, 0.35),
-      suspension: base("#6b6b76", 0.8, 0.4),
-      spring: base(ACCENT_GOLD, 0.6, 0.45),
-      interior: base("#1c1c25", 0.15, 0.85),
-      electronics: base("#2a6b6b", 0.5, 0.5),
-      battery: base("#2f4f5a", 0.55, 0.45),
-      trim: base("#26262f", 0.6, 0.5),
-    };
-  }, [xray, lowDetail]);
-}
-
-type Mats = ReturnType<typeof useMaterials>;
-
-/** Body shell, glass and aero surfaces. */
-function BodyGroup({ p, m, lowDetail }: { p: Proportions; m: Mats; lowDetail: boolean }) {
-  // The body is deliberately NARROWER than the track. A box spanning the full
-  // width swallows the wheels entirely and the result reads as a bus — the
-  // wheels have to break the silhouette for the shape to look like a car.
-  const bodyWidth = p.width * BODY_WIDTH_RATIO;
-
-  const cabinHeight = p.height * p.cabinRatio;
-  const lowerHeight = p.height - cabinHeight;
-  const beltline = p.groundClearance + lowerHeight;
-  const segments = lowDetail ? 2 : 4;
-
+function PartList({
+  parts,
+  kit,
+  shadows,
+}: {
+  parts: Part[];
+  kit: MaterialKit;
+  shadows: boolean;
+}) {
   return (
-    <group>
-      {/* Main mass: sills, doors and flanks up to the beltline. */}
-      <RoundedBox
-        args={[bodyWidth, lowerHeight, p.length]}
-        radius={Math.min(0.2, lowerHeight * 0.4)}
-        smoothness={segments}
-        position={[0, p.groundClearance + lowerHeight / 2, 0]}
-        material={m.paint}
-      />
-
-      {/* Shoulder line: a thin capping strip flush with the top of the main
-          mass. It must not rise ABOVE the beltline — a box stacked on top adds
-          height and the silhouette immediately reads as a truck cab rather
-          than a car. The step down from the cabin does the shaping instead. */}
-      <RoundedBox
-        args={[bodyWidth * 1.01, lowerHeight * 0.18, p.length * 0.98]}
-        radius={0.04}
-        smoothness={segments}
-        position={[0, beltline - lowerHeight * 0.09, 0]}
-        material={m.trim}
-      />
-
-      {/* Cabin greenhouse, set back and tapered inboard. */}
-      <RoundedBox
-        args={[bodyWidth * 0.86, cabinHeight, p.length * 0.42]}
-        radius={Math.min(0.12, cabinHeight * 0.28)}
-        smoothness={segments}
-        position={[0, beltline + cabinHeight / 2 - 0.03, -p.length * 0.04]}
-        material={m.glass}
-      />
-
-      {/* Roof panel capping the glass. */}
-      <RoundedBox
-        args={[bodyWidth * 0.76, 0.05, p.length * 0.26]}
-        radius={0.02}
-        smoothness={2}
-        position={[0, beltline + cabinHeight - 0.04, -p.length * 0.07]}
-        material={m.paint}
-      />
-
-      {/* Wheel-arch flares, so the wheels look enclosed rather than bolted on. */}
-      {[1, -1].map((side) =>
-        [p.wheelbase / 2, -p.wheelbase / 2].map((z) => (
-          <RoundedBox
-            key={`${side}-${z}`}
-            args={[0.1, p.wheelRadius * 1.5, p.wheelRadius * 2.5]}
-            radius={0.04}
-            smoothness={2}
-            position={[
-              side * (bodyWidth / 2 + 0.02),
-              p.groundClearance + p.wheelRadius * 0.85,
-              z,
-            ]}
-            material={m.paint}
-          />
-        )),
-      )}
-
-      {/* Front splitter */}
-      <RoundedBox
-        args={[p.width * BODY_WIDTH_RATIO * 0.95, 0.06, 0.28]}
-        radius={0.02}
-        smoothness={2}
-        position={[0, p.groundClearance + 0.05, p.length / 2 - 0.1]}
-        material={m.trim}
-      />
-
-      {/* Rear diffuser */}
-      <RoundedBox
-        args={[p.width * BODY_WIDTH_RATIO * 0.9, 0.12, 0.34]}
-        radius={0.02}
-        smoothness={2}
-        position={[0, p.groundClearance + 0.07, -p.length / 2 + 0.12]}
-        material={m.trim}
-      />
-
-      {/* Rear wing — only on low, sporting bodies */}
-      {p.height < 1.4 ? (
-        <>
-          <RoundedBox
-            args={[p.width * BODY_WIDTH_RATIO * 0.8, 0.04, 0.24]}
-            radius={0.015}
-            smoothness={2}
-            position={[0, p.groundClearance + p.height * 0.92, -p.length / 2 + 0.16]}
-            material={m.trim}
-          />
-          {[-1, 1].map((side) => (
-            <mesh
-              key={side}
-              position={[
-                side * p.width * BODY_WIDTH_RATIO * 0.3,
-                p.groundClearance + p.height * 0.84,
-                -p.length / 2 + 0.16,
-              ]}
-              material={m.trim}
-            >
-              <boxGeometry args={[0.03, 0.16, 0.1]} />
-            </mesh>
-          ))}
-        </>
-      ) : null}
-
-      {/* Headlights and tail lights */}
-      {[-1, 1].map((side) => (
+    <>
+      {parts.map((part, index) => (
         <mesh
-          key={`head-${side}`}
-          position={[
-            side * p.width * BODY_WIDTH_RATIO * 0.32,
-            beltline - lowerHeight * 0.32,
-            p.length / 2 - 0.02,
-          ]}
-          material={m.rim}
-        >
-          <boxGeometry args={[p.width * BODY_WIDTH_RATIO * 0.24, 0.07, 0.04]} />
-        </mesh>
+          key={index}
+          geometry={part.geometry}
+          material={kit.get(part.material)}
+          castShadow={shadows}
+        />
       ))}
-      <mesh
-        position={[0, beltline - lowerHeight * 0.3, -p.length / 2 + 0.01]}
-        material={m.caliper}
-      >
-        <boxGeometry args={[p.width * BODY_WIDTH_RATIO * 0.74, 0.05, 0.03]} />
-      </mesh>
-    </group>
+    </>
   );
 }
 
-/** One wheel: tyre, rim and spokes. */
-function Wheel({
-  position,
-  radius,
-  width,
-  m,
+/**
+ * Eases each corner outward to its own side in the exploded view. A single
+ * explode vector per group would push all four wheels the same way.
+ */
+function useSpread(
+  layout: CarLayout,
+  explode: number,
+  distance: number,
+  reducedMotion: boolean,
+) {
+  const groups = useRef<(THREE.Group | null)[]>([]);
+  const current = useRef(0);
+  const invalidate = useThree((state) => state.invalidate);
+  useFrame((_, delta) => {
+    const target = explode * distance * (layout.spec.length / 4.5);
+    if (current.current === target) return;
+    const next = reducedMotion
+      ? target
+      : THREE.MathUtils.damp(current.current, target, 4, Math.min(delta, 0.1));
+    current.current = Math.abs(next - target) < 0.001 ? target : next;
+    layout.wheels.forEach(({ position, side }, index) => {
+      const group = groups.current[index];
+      if (group) group.position.x = position.x + side * current.current;
+    });
+    invalidate();
+  });
+  return groups;
+}
+
+/** Road wheels. The rolling parts turn with `motion.distance`. */
+function Wheels({
+  layout,
+  kit,
   lowDetail,
+  motion,
+  explode,
+  reducedMotion,
 }: {
-  position: [number, number, number];
-  radius: number;
-  width: number;
-  m: Mats;
+  layout: CarLayout;
+  kit: MaterialKit;
   lowDetail: boolean;
+  motion?: RefObject<CarMotion | null>;
+  explode: number;
+  reducedMotion: boolean;
 }) {
-  const segments = lowDetail ? 12 : 28;
+  const corners = useSpread(layout, explode, 1.25, reducedMotion);
+  const { spec } = layout;
+  const geometry = useMemo(() => {
+    const segments = lowDetail ? 28 : 56;
+    return {
+      tyre: tyreGeometry(spec.wheelRadius, spec.tyreWidth, spec.rimRadius, segments),
+      barrel: rimBarrelGeometry(spec.rimRadius, spec.tyreWidth, segments),
+      spokes: spokesGeometry(spec.def.spokes, spec.rimRadius, spec.tyreWidth),
+      hub: hubDetailGeometry(spec.tyreWidth),
+    };
+  }, [spec, lowDetail]);
+  useEffect(() => () => Object.values(geometry).forEach((g) => g.dispose()), [geometry]);
+
+  const spinners = useRef<(THREE.Group | null)[]>([]);
+  useFrame(() => {
+    const distance = motion?.current?.distance ?? 0;
+    const angle = distance / spec.wheelRadius;
+    layout.wheels.forEach(({ side }, index) => {
+      const group = spinners.current[index];
+      if (group) group.rotation.x = side === 1 ? angle : -angle;
+    });
+  });
+
+  // Dark wheels on the performance styles, bright alloys elsewhere.
+  const dark =
+    spec.style === "supercar" ||
+    spec.style === "sports-rear" ||
+    spec.style === "gt" ||
+    spec.style === "electric-sedan";
+  const rim = kit.get(dark ? "rimDark" : "rim");
+
   return (
-    <group position={position} rotation={[0, 0, Math.PI / 2]}>
-      <mesh material={m.tyre}>
-        <cylinderGeometry args={[radius, radius, width, segments]} />
-      </mesh>
-      <mesh material={m.rim} scale={[0.62, 1.02, 0.62]}>
-        <cylinderGeometry args={[radius, radius, width, segments]} />
-      </mesh>
-      {/* Spokes */}
-      {!lowDetail
-        ? Array.from({ length: 5 }, (_, index) => (
-            <mesh
-              key={index}
-              material={m.rim}
-              rotation={[0, (index / 5) * Math.PI * 2, 0]}
-              position={[0, width * 0.5, 0]}
-            >
-              <boxGeometry args={[radius * 1.15, 0.012, 0.045]} />
-            </mesh>
-          ))
-        : null}
-    </group>
+    <>
+      {layout.wheels.map(({ position, side }, index) => (
+        <group
+          key={index}
+          ref={(node) => {
+            corners.current[index] = node;
+          }}
+          position={position}
+          rotation={[0, side === 1 ? 0 : Math.PI, 0]}
+        >
+          <group
+            ref={(node) => {
+              spinners.current[index] = node;
+            }}
+          >
+            <mesh geometry={geometry.tyre} material={kit.get("tyre")} castShadow />
+            <mesh geometry={geometry.barrel} material={rim} />
+            <mesh geometry={geometry.spokes} material={rim} castShadow />
+            <mesh geometry={geometry.hub} material={kit.get("chrome")} />
+          </group>
+        </group>
+      ))}
+    </>
   );
 }
 
-/** Brake disc and caliper behind a wheel. */
-function Brake({
-  position,
-  radius,
-  m,
-  lowDetail,
+/** Discs turn with the wheels; calipers are fixed to the upright. */
+function Brakes({
+  layout,
+  kit,
+  motion,
+  explode,
+  reducedMotion,
 }: {
-  position: [number, number, number];
-  radius: number;
-  m: Mats;
-  lowDetail: boolean;
+  layout: CarLayout;
+  kit: MaterialKit;
+  motion?: RefObject<CarMotion | null>;
+  explode: number;
+  reducedMotion: boolean;
 }) {
-  const segments = lowDetail ? 10 : 24;
+  const corners = useSpread(layout, explode, 0.7, reducedMotion);
+  const { spec } = layout;
+  const geometry = useMemo(
+    () => ({
+      disc: discGeometry(spec.rimRadius),
+      caliper: caliperGeometry(spec.rimRadius),
+    }),
+    [spec],
+  );
+  useEffect(() => () => Object.values(geometry).forEach((g) => g.dispose()), [geometry]);
+
+  const spinners = useRef<(THREE.Group | null)[]>([]);
+  useFrame(() => {
+    const angle = (motion?.current?.distance ?? 0) / spec.wheelRadius;
+    layout.wheels.forEach(({ side }, index) => {
+      const group = spinners.current[index];
+      if (group) group.rotation.x = side === 1 ? angle : -angle;
+    });
+  });
+
+  const inboard = -spec.tyreWidth * 0.12;
   return (
-    <group position={position} rotation={[0, 0, Math.PI / 2]}>
-      <mesh material={m.disc}>
-        <cylinderGeometry args={[radius * 0.68, radius * 0.68, 0.035, segments]} />
-      </mesh>
-      <mesh material={m.caliper} position={[radius * 0.42, 0.06, 0]}>
-        <boxGeometry args={[0.1, 0.06, 0.2]} />
-      </mesh>
-    </group>
+    <>
+      {layout.wheels.map(({ position, side }, index) => (
+        <group
+          key={index}
+          ref={(node) => {
+            corners.current[index] = node;
+          }}
+          position={position}
+          rotation={[0, side === 1 ? 0 : Math.PI, 0]}
+        >
+          <group
+            position={[inboard, 0, 0]}
+            ref={(node) => {
+              spinners.current[index] = node;
+            }}
+          >
+            <mesh geometry={geometry.disc} material={kit.get("disc")} />
+          </group>
+          <mesh
+            geometry={geometry.caliper}
+            material={kit.get("caliper")}
+            position={[inboard, 0, 0]}
+            castShadow
+          />
+        </group>
+      ))}
+    </>
   );
 }
 
 export function ProceduralCar({
-  bodyType,
-  dimensions,
-  powertrain,
+  layout,
+  paint = DEFAULT_PAINT,
   explode = 0,
   selectedGroup = null,
   highlightGroup = null,
   onSelectGroup,
   lowDetail = false,
-  xray = false,
+  ghost = 0,
   reducedMotion = false,
+  motion,
 }: ProceduralCarProps) {
-  const p = useMemo(
-    () => resolveProportions(bodyType as never, dimensions),
-    [bodyType, dimensions],
+  const { build } = layout;
+
+  // One material kit per subsystem, so a highlight tints only its own group.
+  const kits = useMemo(
+    () =>
+      Object.fromEntries(
+        VIEWER_GROUPS.map((group) => [group, new MaterialKit()]),
+      ) as Record<ViewerGroup, MaterialKit>,
+    [],
   );
-  const m = useMaterials(xray, lowDetail);
-  const active = groupsForPowertrain(powertrain);
+  useEffect(() => () => Object.values(kits).forEach((kit) => kit.dispose()), [kits]);
 
-  const axleY = p.groundClearance + p.wheelRadius;
-  const frontZ = p.wheelbase / 2;
-  const rearZ = -p.wheelbase / 2;
-  const tyreWidth = 0.26;
-  // Outer face of the tyre sits flush with the car's stated width.
-  const trackX = p.width / 2 - tyreWidth * 0.45;
+  const systems = useMemo(
+    () => ({
+      engine: buildEngine(layout, lowDetail),
+      transmission: buildTransmission(layout, lowDetail),
+      suspension: buildSuspension(layout, lowDetail),
+      battery: buildBattery(layout, lowDetail),
+      interior: buildInterior(layout, lowDetail),
+      electronics: buildElectronics(layout, lowDetail),
+    }),
+    [layout, lowDetail],
+  );
+  useEffect(
+    () => () => {
+      for (const parts of Object.values(systems))
+        for (const part of parts) part.geometry.dispose();
+    },
+    [systems],
+  );
 
-  // A group is dimmed when something else is explicitly highlighted.
-  const isDimmed = (group: ViewerGroup) =>
-    highlightGroup !== null && highlightGroup !== group;
+  // Groups follow the powertrain: an EV has a battery and no engine, a hybrid
+  // both. An engine whose position is not recorded is not drawn at all.
+  const active = groupsForPowertrain(build.powertrain).filter(
+    (group) => group !== "engine" || layout.engine !== null,
+  );
+  const explodeScale = layout.spec.length / 4.5;
+  const shadows = !lowDetail;
 
   const sub = (group: ViewerGroup, children: ReactNode) =>
     active.includes(group) ? (
@@ -448,269 +435,84 @@ export function ProceduralCar({
         name={group}
         index={active.indexOf(group)}
         explode={explode}
+        explodeScale={explodeScale}
+        kit={kits[group]}
+        highlighted={selectedGroup === group || highlightGroup === group}
+        // The body has its own ghosting; every other system steps back when
+        // the page is pointing at a different one.
+        dimmed={
+          group !== "body" &&
+          highlightGroup !== null &&
+          highlightGroup !== group &&
+          selectedGroup !== group
+        }
         reducedMotion={reducedMotion}
-        selected={selectedGroup === group || highlightGroup === group}
-        dimmed={isDimmed(group)}
         onSelect={onSelectGroup}
       >
         {children}
       </Subsystem>
     ) : null;
 
-  const wheelPositions: [number, number, number][] = [
-    [trackX, axleY, frontZ],
-    [-trackX, axleY, frontZ],
-    [trackX, axleY, rearZ],
-    [-trackX, axleY, rearZ],
-  ];
-
   return (
     <group name="procedural-car">
-      {sub("body", <BodyGroup p={p} m={m} lowDetail={lowDetail} />)}
-
+      {sub(
+        "body",
+        <CarBody
+          layout={layout}
+          kit={kits.body}
+          lowDetail={lowDetail}
+          ghost={ghost}
+          paint={paint}
+        />,
+      )}
       {sub(
         "wheels",
-        <group>
-          {wheelPositions.map((position, index) => (
-            <Wheel
-              key={index}
-              position={position}
-              radius={p.wheelRadius}
-              width={tyreWidth}
-              m={m}
-              lowDetail={lowDetail}
-            />
-          ))}
-        </group>,
+        <Wheels
+          layout={layout}
+          kit={kits.wheels}
+          lowDetail={lowDetail}
+          motion={motion}
+          explode={explode}
+          reducedMotion={reducedMotion}
+        />,
       )}
-
       {sub(
         "brakes",
-        <group>
-          {wheelPositions.map((position, index) => (
-            <Brake
-              key={index}
-              position={position}
-              radius={p.wheelRadius}
-              m={m}
-              lowDetail={lowDetail}
-            />
-          ))}
-        </group>,
+        <Brakes
+          layout={layout}
+          kit={kits.brakes}
+          motion={motion}
+          explode={explode}
+          reducedMotion={reducedMotion}
+        />,
       )}
-
       {sub(
         "suspension",
-        <group>
-          {wheelPositions.map(([x, y, z], index) => (
-            <group key={index}>
-              {/* Control arm reaching inboard from the hub */}
-              <mesh
-                position={[x * 0.55, y - 0.04, z]}
-                rotation={[0, 0, Math.PI / 2]}
-                material={m.suspension}
-              >
-                <cylinderGeometry args={[0.028, 0.028, Math.abs(x) * 0.9, 8]} />
-              </mesh>
-              {/* Coil-over damper */}
-              <mesh position={[x * 0.82, y + 0.16, z]} material={m.spring}>
-                <cylinderGeometry args={[0.052, 0.052, 0.3, 10]} />
-              </mesh>
-            </group>
-          ))}
-          {/* Anti-roll bars */}
-          {[frontZ, rearZ].map((z) => (
-            <mesh
-              key={z}
-              position={[0, axleY - 0.08, z]}
-              rotation={[0, 0, Math.PI / 2]}
-              material={m.suspension}
-            >
-              <cylinderGeometry args={[0.018, 0.018, p.width * 0.8, 8]} />
-            </mesh>
-          ))}
-        </group>,
+        <PartList parts={systems.suspension} kit={kits.suspension} shadows={shadows} />,
       )}
-
       {sub(
         "engine",
-        <group>
-          {/* Block, sitting ahead of the front axle */}
-          <RoundedBox
-            args={[p.width * 0.5, 0.42, 0.62]}
-            radius={0.04}
-            smoothness={2}
-            position={[0, axleY + 0.2, frontZ + 0.42]}
-            material={m.engine}
-          />
-          {/* Intake plenum */}
-          <RoundedBox
-            args={[p.width * 0.4, 0.12, 0.42]}
-            radius={0.03}
-            smoothness={2}
-            position={[0, axleY + 0.46, frontZ + 0.42]}
-            material={m.trim}
-          />
-          {/* Turbochargers */}
-          {[-1, 1].map((side) => (
-            <mesh
-              key={side}
-              position={[side * p.width * 0.19, axleY + 0.12, frontZ + 0.72]}
-              material={m.gearbox}
-            >
-              <cylinderGeometry args={[0.08, 0.1, 0.12, lowDetail ? 8 : 16]} />
-            </mesh>
-          ))}
-          {/* Radiator */}
-          <mesh position={[0, axleY + 0.1, p.length / 2 - 0.18]} material={m.trim}>
-            <boxGeometry args={[p.width * 0.66, 0.34, 0.06]} />
-          </mesh>
-        </group>,
+        <PartList parts={systems.engine} kit={kits.engine} shadows={shadows} />,
       )}
-
       {sub(
         "transmission",
-        <group>
-          <RoundedBox
-            args={[0.3, 0.26, 0.7]}
-            radius={0.04}
-            smoothness={2}
-            position={[0, axleY + 0.02, frontZ - 0.35]}
-            material={m.gearbox}
-          />
-          {/* Driveshaft down the tunnel */}
-          <mesh
-            position={[0, axleY - 0.02, 0]}
-            rotation={[Math.PI / 2, 0, 0]}
-            material={m.suspension}
-          >
-            <cylinderGeometry args={[0.045, 0.045, p.wheelbase * 0.82, 10]} />
-          </mesh>
-          {/* Rear differential */}
-          <mesh position={[0, axleY, rearZ]} material={m.gearbox}>
-            <sphereGeometry args={[0.16, lowDetail ? 8 : 16, lowDetail ? 6 : 12]} />
-          </mesh>
-        </group>,
+        <PartList
+          parts={systems.transmission}
+          kit={kits.transmission}
+          shadows={shadows}
+        />,
       )}
-
-      {sub(
-        "interior",
-        <group>
-          {/* Seats */}
-          {[-1, 1].map((side) => (
-            <group key={side}>
-              <RoundedBox
-                args={[0.42, 0.1, 0.46]}
-                radius={0.03}
-                smoothness={2}
-                position={[
-                  side * p.width * 0.19,
-                  p.groundClearance + p.height * 0.42,
-                  -0.1,
-                ]}
-                material={m.interior}
-              />
-              <RoundedBox
-                args={[0.42, 0.54, 0.1]}
-                radius={0.03}
-                smoothness={2}
-                position={[
-                  side * p.width * 0.19,
-                  p.groundClearance + p.height * 0.62,
-                  -0.34,
-                ]}
-                material={m.interior}
-              />
-            </group>
-          ))}
-          {/* Dashboard */}
-          <RoundedBox
-            args={[p.width * 0.78, 0.18, 0.22]}
-            radius={0.03}
-            smoothness={2}
-            position={[0, p.groundClearance + p.height * 0.55, 0.52]}
-            material={m.interior}
-          />
-          {/* Steering wheel */}
-          <mesh
-            position={[p.width * 0.19, p.groundClearance + p.height * 0.58, 0.34]}
-            rotation={[Math.PI / 2.6, 0, 0]}
-            material={m.trim}
-          >
-            <torusGeometry
-              args={[0.15, 0.022, lowDetail ? 6 : 12, lowDetail ? 12 : 24]}
-            />
-          </mesh>
-        </group>,
-      )}
-
-      {sub(
-        "electronics",
-        <group>
-          {/* ECU */}
-          <RoundedBox
-            args={[0.22, 0.08, 0.16]}
-            radius={0.015}
-            smoothness={2}
-            position={[-p.width * 0.28, axleY + 0.3, frontZ + 0.02]}
-            material={m.electronics}
-          />
-          {/* 12 V battery */}
-          <RoundedBox
-            args={[0.26, 0.18, 0.18]}
-            radius={0.015}
-            smoothness={2}
-            position={[p.width * 0.28, axleY + 0.26, frontZ + 0.05]}
-            material={m.electronics}
-          />
-          {/* Harness run along the sill */}
-          {[-1, 1].map((side) => (
-            <mesh
-              key={side}
-              position={[side * (p.width / 2 - 0.05), p.groundClearance + 0.1, 0]}
-              rotation={[Math.PI / 2, 0, 0]}
-              material={m.electronics}
-            >
-              <cylinderGeometry args={[0.018, 0.018, p.length * 0.6, 6]} />
-            </mesh>
-          ))}
-        </group>,
-      )}
-
       {sub(
         "battery",
-        <group>
-          {/* Flat traction pack in the floor — the defining EV package */}
-          <RoundedBox
-            args={[p.width * 0.78, 0.13, p.wheelbase * 0.94]}
-            radius={0.03}
-            smoothness={2}
-            position={[0, p.groundClearance + 0.07, 0]}
-            material={m.battery}
-          />
-          {/* Module divisions */}
-          {!lowDetail
-            ? Array.from({ length: 4 }, (_, index) => (
-                <mesh
-                  key={index}
-                  position={[
-                    0,
-                    p.groundClearance + 0.14,
-                    (index - 1.5) * (p.wheelbase * 0.22),
-                  ]}
-                  material={m.trim}
-                >
-                  <boxGeometry args={[p.width * 0.76, 0.012, 0.03]} />
-                </mesh>
-              ))
-            : null}
-          {/* Drive units on the axles */}
-          {[frontZ, rearZ].map((z) => (
-            <mesh key={z} position={[0, axleY, z]} material={m.electronics}>
-              <cylinderGeometry args={[0.14, 0.14, 0.36, lowDetail ? 8 : 16]} />
-            </mesh>
-          ))}
-        </group>,
+        <PartList parts={systems.battery} kit={kits.battery} shadows={shadows} />,
+      )}
+      {sub(
+        "interior",
+        <PartList parts={systems.interior} kit={kits.interior} shadows={false} />,
+      )}
+      {sub(
+        "electronics",
+        <PartList parts={systems.electronics} kit={kits.electronics} shadows={false} />,
       )}
     </group>
   );

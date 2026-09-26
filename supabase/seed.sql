@@ -948,6 +948,68 @@ from (values
 join public.manufacturers mf on mf.slug = v.manufacturer_slug
 join public.categories cat on cat.slug = v.category_slug
 on conflict (manufacturer_id, slug) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Engine position (migration 0006)
+--
+-- Set with an UPDATE rather than in the insert above, so re-running this seed
+-- fills the column in on a database seeded before the column existed. Models
+-- not listed are battery-electric and keep NULL: they have no engine.
+--
+-- rear: behind the rear axle. mid: between the cabin and the rear axle.
+-- ---------------------------------------------------------------------------
+
+do $do$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'car_models'
+      and column_name = 'engine_position'
+  ) then
+    update public.car_models m
+       set engine_position = v.engine_position::public.engine_position
+      from (values
+        ('porsche', '911', 'rear'),
+
+        ('audi', 'r8', 'mid'),
+        ('ferrari', '296-gtb', 'mid'),
+        ('ferrari', 'f8-tributo', 'mid'),
+        ('ferrari', 'sf90-stradale', 'mid'),
+        ('koenigsegg', 'jesko', 'mid'),
+        ('lamborghini', 'huracan', 'mid'),
+        ('lamborghini', 'revuelto', 'mid'),
+        ('mclaren', '750s', 'mid'),
+        ('mclaren', 'artura', 'mid'),
+
+        ('audi', 'rs6-avant', 'front'),
+        ('bmw', 'm3', 'front'),
+        ('ford', 'f-150', 'front'),
+        ('ford', 'mustang', 'front'),
+        ('honda', 'civic-type-r', 'front'),
+        ('hyundai', 'creta', 'front'),
+        ('jaguar', 'f-type', 'front'),
+        ('kia', 'seltos', 'front'),
+        ('lamborghini', 'urus', 'front'),
+        ('mahindra', 'scorpio-n', 'front'),
+        ('mahindra', 'thar', 'front'),
+        ('mahindra', 'xuv700', 'front'),
+        ('mercedes-benz', 'amg-gt-4-door', 'front'),
+        ('nissan', 'gt-r', 'front'),
+        ('peugeot', '3008', 'front'),
+        ('renault', 'clio', 'front'),
+        ('tata', 'altroz', 'front'),
+        ('tata', 'harrier', 'front'),
+        ('toyota', 'corolla', 'front'),
+        ('toyota', 'gr-supra', 'front'),
+        ('volvo', 'xc90', 'front')
+      ) as v(manufacturer_slug, model_slug, engine_position)
+      join public.manufacturers mf on mf.slug = v.manufacturer_slug
+     where m.manufacturer_id = mf.id
+       and m.slug = v.model_slug
+       and m.engine_position is distinct from v.engine_position::public.engine_position;
+  end if;
+end;
+$do$;
 -- ---------------------------------------------------------------------------
 -- Car variants
 --

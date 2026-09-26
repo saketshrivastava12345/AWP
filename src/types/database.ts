@@ -84,6 +84,7 @@ export type Database = {
           production_end: number | null;
           created_at: string;
           updated_at: string;
+          engine_position: Database["public"]["Enums"]["engine_position"] | null;
         };
         Insert: {
           id?: string;
@@ -98,6 +99,7 @@ export type Database = {
           production_end?: number | null;
           created_at?: string;
           updated_at?: string;
+          engine_position?: Database["public"]["Enums"]["engine_position"] | null;
         };
         Update: {
           id?: string;
@@ -112,6 +114,7 @@ export type Database = {
           production_end?: number | null;
           created_at?: string;
           updated_at?: string;
+          engine_position?: Database["public"]["Enums"]["engine_position"] | null;
         };
         Relationships: [
           {
@@ -935,6 +938,7 @@ export type Database = {
       body_type: "hatchback" | "sedan" | "coupe" | "convertible" | "roadster" | "suv" | "wagon" | "mpv" | "pickup" | "off_road";
       drive_type: "fwd" | "rwd" | "awd" | "4wd";
       engine_layout: "inline" | "vee" | "flat" | "w" | "rotary";
+      engine_position: "front" | "mid" | "rear";
       fuel_type: "petrol" | "diesel" | "hybrid" | "phev" | "electric" | "hydrogen";
       manufacturer_segment: "luxury" | "performance" | "mass" | "ev" | "commercial";
       media_type: "image" | "glb";

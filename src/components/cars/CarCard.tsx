@@ -1,10 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
-import { Car } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge, fuelTone } from "@/components/ui/Badge";
 import { formatEnumLabel, formatNumber, formatPrice, NOT_AVAILABLE } from "@/lib/format";
-import type { CatalogCar } from "@/types/domain";
+import { powertrainKind, type CatalogCar } from "@/types/domain";
+import { CarPhoto } from "./CarPhoto";
+import { carSilhouette } from "./car-silhouette";
 
 export function carHref(car: CatalogCar): string {
   return `/cars/${car.manufacturer_slug}/${car.model_slug}/${car.variant_slug}`;
@@ -29,11 +29,58 @@ function CardStat({ label, value }: { label: string; value: string }) {
 }
 
 /**
+ * Placeholder for a car without a usable photograph: a side elevation of its
+ * body style, drawn from the same profiles as the 3D model. It says what it
+ * is — a body-style drawing — rather than posing as the car.
+ */
+function NoPhotograph({ car }: { car: CatalogCar }) {
+  const shape = carSilhouette(car.body_type, powertrainKind(car.fuel_type));
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-surface-2/40 to-surface-1/80">
+      <svg
+        viewBox={shape.viewBox}
+        className="w-[62%] max-w-72 overflow-visible"
+        aria-hidden="true"
+        fill="none"
+      >
+        <path
+          d={shape.body}
+          className="fill-surface-3 stroke-ink-600"
+          strokeWidth={2.5}
+        />
+        {shape.glass ? <path d={shape.glass} className="fill-void/70" /> : null}
+        {shape.wheels.map((wheel) => (
+          <g key={wheel.cx}>
+            <circle
+              cx={wheel.cx}
+              cy={wheel.cy}
+              r={wheel.r}
+              className="fill-void stroke-ink-600"
+              strokeWidth={2.5}
+            />
+            <circle
+              cx={wheel.cx}
+              cy={wheel.cy}
+              r={wheel.r * 0.62}
+              className="stroke-gold-700"
+              strokeWidth={2}
+            />
+          </g>
+        ))}
+      </svg>
+      <span className="font-display text-[9px] tracking-[0.18em] text-ink-500 uppercase">
+        No photograph yet
+      </span>
+    </div>
+  );
+}
+
+/**
  * A car in the collection grid.
  *
  * Deliberately has no 3D: the grid never mounts a canvas. It shows the primary
- * image when one is registered in `car_media`, and a typographic placeholder
- * otherwise — which is currently every car, since no real image URLs exist yet.
+ * image registered in `car_media`, and a drawing of the body style when there
+ * is none — or when the registered file turns out not to load.
  */
 export function CarCard({
   car,
@@ -49,22 +96,23 @@ export function CarCard({
       {/* Image / placeholder */}
       <div className="relative aspect-[16/10] overflow-hidden bg-surface-2/60">
         {car.primary_image_url ? (
-          <Image
+          <CarPhoto
             src={car.primary_image_url}
             alt={`${title} ${car.variant_name ?? ""}`.trim()}
-            fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             priority={priority}
-            className="object-cover transition-transform duration-700 ease-[var(--ease-cinematic)] group-hover:scale-[1.04]"
+            className="transition-transform duration-700 ease-[var(--ease-cinematic)] group-hover:scale-[1.04]"
+            fallback={<NoPhotograph car={car} />}
           />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-            <Car className="size-8 text-ink-600" strokeWidth={1} aria-hidden="true" />
-            <span className="font-display text-[9px] tracking-[0.18em] text-ink-600 uppercase">
-              No photograph
-            </span>
-          </div>
+          <NoPhotograph car={car} />
         )}
+
+        {/* Keeps the badges legible over a bright photograph. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-void/85 via-void/40 to-transparent"
+        />
 
         {/* Light sweep on hover. Purely decorative, and the reduced-motion
             backstop neutralises the transition. */}

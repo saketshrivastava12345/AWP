@@ -3,33 +3,23 @@
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Points, PointMaterial } from "@react-three/drei";
 import { useMemo, useRef, type RefObject } from "react";
-import * as THREE from "three";
-import { Lighting } from "./Lighting";
-import { ProceduralCar } from "./ProceduralCar";
-import type { CameraState } from "./HeroStory";
+import type * as THREE from "three";
+import { GENERIC_BUILD } from "@/lib/car-build";
+import { Lighting, StudioFloor } from "./Lighting";
+import { ProceduralCar, useCarLayout, type CarMotion } from "./ProceduralCar";
+import { Director, Road, type TourProgress } from "./StageDirector";
+import { storyShots, type StoryShotId } from "./tour-cameras";
 
 /**
- * The home page hero scene.
+ * The home page story scene.
  *
- * Reads its camera from a ref that GSAP mutates, and applies it inside
- * `useFrame` — so the scroll sequence drives the camera without a single React
- * re-render.
+ * A generic coupé: the story is about the anatomy of a car in general, not
+ * about any one model in the catalogue. The page writes the scroll position
+ * into `progressRef`, and the Director shared with the car pages turns it into
+ * camera moves — the same layout-derived framing, the same ghosting of the
+ * bodywork when a beat looks inside it. The finale pulls the car apart into
+ * its subsystems.
  */
-
-/** Follows the externally-tweened camera state. */
-function CameraFollower({ cameraRef }: { cameraRef: RefObject<CameraState> }) {
-  const lookAt = useMemo(() => new THREE.Vector3(), []);
-
-  useFrame(({ camera }) => {
-    const state = cameraRef.current;
-    if (!state) return;
-    camera.position.set(state.position[0], state.position[1], state.position[2]);
-    lookAt.set(state.target[0], state.target[1], state.target[2]);
-    camera.lookAt(lookAt);
-  });
-
-  return null;
-}
 
 /**
  * Drifting particles. Only on the home hero, per the brief — they would be
@@ -74,34 +64,76 @@ function Particles({ count = 180 }: { count?: number }) {
   );
 }
 
+/** The car rolls forward steadily while the story is scrolled. */
+const drive = (beat: number) => beat * 4.5;
+
 export function HeroScene({
-  cameraRef,
+  beats,
+  progressRef,
+  active,
+  running,
   lowDetail = false,
 }: {
-  cameraRef: RefObject<CameraState>;
+  /** The story's beats, in order. Must be a stable array. */
+  beats: readonly StoryShotId[];
+  /** Written by the page on scroll; read here every frame. */
+  progressRef: RefObject<TourProgress>;
+  /** Index of the beat in view. */
+  active: number;
+  /** False when the story is off-screen — stops the render loop entirely. */
+  running: boolean;
   lowDetail?: boolean;
 }) {
+  const layout = useCarLayout(GENERIC_BUILD);
+  const shots = useMemo(() => storyShots(layout, beats), [layout, beats]);
+  const motionRef = useRef<CarMotion>({ distance: 0 });
+  const shownRef = useRef<number>(0);
+
+  const shot = shots[Math.min(shots.length - 1, Math.max(0, active))];
+  const exploded = beats[active] === "whole";
+
   return (
     <Canvas
-      dpr={lowDetail ? [1, 1.5] : [1, 2]}
+      frameloop={running ? "always" : "never"}
+      dpr={lowDetail ? [1, 1.5] : [1, 1.75]}
       shadows={!lowDetail}
-      gl={{ antialias: !lowDetail, powerPreference: "high-performance" }}
-      camera={{ position: [6.4, 1.8, 7], fov: 38, near: 0.1, far: 120 }}
-      // No OrbitControls here: the scroll position owns the camera, and giving
-      // the visitor a second way to move it would fight the pinned sequence.
-      style={{ touchAction: "pan-y" }}
+      gl={{ antialias: true, powerPreference: "high-performance" }}
+      camera={{
+        position: shots[0]?.position.toArray() ?? [6.4, 1.8, 7],
+        fov: 32,
+        near: 0.05,
+        far: 140,
+      }}
+      aria-hidden="true"
+      // No OrbitControls here: the scroll position owns the camera. The canvas
+      // is scenery and must never swallow the scroll that drives it.
+      style={{ pointerEvents: "none" }}
     >
       <color attach="background" args={["#06060a"]} />
       <fog attach="fog" args={["#06060a", 12, 34]} />
 
       <Lighting lowDetail={lowDetail} />
+      <StudioFloor lowDetail={lowDetail} />
+      <Road layout={layout} motionRef={motionRef} />
       <Particles count={lowDetail ? 70 : 180} />
 
-      {/* A generic coupé: the hero is about the anatomy of a car in general,
-          not about any one model in the catalogue. */}
-      <ProceduralCar bodyType="coupe" powertrain="combustion" lowDetail={lowDetail} />
+      <ProceduralCar
+        layout={layout}
+        explode={exploded ? 1 : 0}
+        ghost={exploded ? 0 : (shot?.ghost ?? 0)}
+        highlightGroup={shot?.highlight ?? null}
+        lowDetail={lowDetail}
+        motion={motionRef}
+      />
 
-      <CameraFollower cameraRef={cameraRef} />
+      <Director
+        shots={shots}
+        progressRef={progressRef}
+        shownRef={shownRef}
+        motionRef={motionRef}
+        reducedMotion={false}
+        drive={drive}
+      />
     </Canvas>
   );
 }

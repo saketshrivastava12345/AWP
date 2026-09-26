@@ -9,6 +9,7 @@ import { SpecSection } from "@/components/cars/SpecSection";
 import { SectionNav } from "@/components/cars/SectionNav";
 import { CarGrid } from "@/components/cars/CarGrid";
 import { CarViewer } from "@/components/3d/CarViewer";
+import { CarShowcase } from "@/components/3d/CarShowcase";
 import { FavoriteButton } from "@/components/cars/FavoriteButton";
 import { CarDNA } from "@/components/cars/CarDNA";
 import { PowertrainVisualizer } from "@/components/cars/PowertrainVisualizer";
@@ -25,6 +26,9 @@ import { buildSpecSections, visibleSections } from "@/lib/spec-sections";
 import { powertrainKind, type Part, type ViewerGroup } from "@/types/domain";
 import { formatEnumLabel, formatNumber, formatYearRange } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
+import { carBuildFromDetail } from "@/lib/car-build";
+import { buildAnatomyTour } from "@/lib/anatomy-tour";
+import { listPartCategories } from "@/lib/queries/parts";
 
 type Params = { manufacturer: string; model: string; variant: string };
 
@@ -78,10 +82,11 @@ export default async function VariantPage({
 
   if (!detail) notFound();
 
-  const [siblings, sessionUser, dnaPopulation] = await Promise.all([
+  const [siblings, sessionUser, dnaPopulation, partCategories] = await Promise.all([
     getSiblingVariants(detail.model.id, detail.variant.id),
     getSessionUser(),
     getDnaPopulation(),
+    listPartCategories(),
   ]);
   // Only ask about favourite state when there is someone to ask about.
   const favorited = sessionUser ? await isFavorited(detail.variant.id) : false;
@@ -163,6 +168,25 @@ export default async function VariantPage({
 
   const fullName = `${detail.manufacturer.name} ${detail.model.name}`;
 
+  // The 3D car and its anatomy tour are both built from this variant's own
+  // rows: dimensions, engine layout and position, drivetrain, seats, and the
+  // parts and features catalogued against it.
+  const build = carBuildFromDetail(detail);
+  const allParts = partCategories.flatMap((category) => category.parts);
+  const tour = buildAnatomyTour(detail, allParts);
+
+  // Most variants have few parts catalogued against them yet, which left most
+  // viewer panels empty. Add the general components the tour names for this
+  // car — chosen by the same rules, so a turbocharger only appears on a
+  // turbocharged engine — after the variant's own.
+  const partsBySlug = new Map(allParts.map((part) => [part.slug, part]));
+  for (const { slug } of tour.flatMap((stop) => stop.components)) {
+    const part = partsBySlug.get(slug);
+    if (!part?.viewer_group) continue;
+    const list = (partsByGroup[part.viewer_group] ??= []);
+    if (!list.some((entry) => entry.slug === slug)) list.push(part);
+  }
+
   // JSON-LD for the car. Only asserts figures that actually exist.
   const jsonLd = {
     "@context": "https://schema.org",
@@ -216,7 +240,7 @@ export default async function VariantPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <Container className="py-10">
+      <Container className="pt-8">
         <Breadcrumbs
           items={[
             { label: "Cars", href: "/cars" },
@@ -228,89 +252,75 @@ export default async function VariantPage({
             { label: detail.variant.name },
           ]}
         />
+      </Container>
 
-        {/* ------------------------------------------------------- Identity */}
-        <header className="mt-8">
-          <div className="flex flex-wrap items-center gap-2">
-            {detail.variant.fuel_type ? (
-              <Badge tone={fuelTone(detail.variant.fuel_type)}>
-                {formatEnumLabel(detail.variant.fuel_type)}
-              </Badge>
-            ) : null}
-            <Badge>{formatEnumLabel(detail.variant.drive_type)}</Badge>
-            <Badge>{detail.category.name}</Badge>
-            {detail.model.generation ? <Badge>{detail.model.generation}</Badge> : null}
-          </div>
+      {/* ------------------------------------------ Scroll-driven 3D tour */}
+      <CarShowcase
+        build={build}
+        stops={tour}
+        label={`${fullName} ${detail.variant.name}`}
+        intro={
+          <header>
+            <div className="flex flex-wrap items-center gap-2">
+              {detail.variant.fuel_type ? (
+                <Badge tone={fuelTone(detail.variant.fuel_type)}>
+                  {formatEnumLabel(detail.variant.fuel_type)}
+                </Badge>
+              ) : null}
+              <Badge>{formatEnumLabel(detail.variant.drive_type)}</Badge>
+              <Badge>{detail.category.name}</Badge>
+              {detail.model.generation ? <Badge>{detail.model.generation}</Badge> : null}
+            </div>
 
-          <p className="mt-6 text-label">
-            <Link
-              href={`/countries/${detail.country.slug}`}
-              className="transition-colors hover:text-gold-300"
-            >
-              {detail.country.flag_emoji} {detail.country.name}
-            </Link>
-            {" · "}
-            <Link
-              href={`/manufacturers/${detail.manufacturer.slug}`}
-              className="transition-colors hover:text-gold-300"
-            >
-              {detail.manufacturer.name}
-            </Link>
-          </p>
-
-          <h1 className="mt-4 font-display text-3xl leading-tight tracking-[0.04em] text-ink-50 sm:text-4xl lg:text-5xl">
-            {detail.model.name}
-            <span className="block gold-gradient-text text-2xl sm:text-3xl lg:text-4xl">
-              {detail.variant.name}
-            </span>
-          </h1>
-
-          <p className="mt-4 font-mono text-xs text-ink-500">
-            {formatYearRange(detail.variant.year_start, detail.variant.year_end)}
-            {detail.model.body_type
-              ? ` · ${formatEnumLabel(detail.model.body_type)}`
-              : ""}
-          </p>
-
-          <FavoriteButton
-            className="mt-8"
-            variantId={detail.variant.id}
-            initialFavorited={favorited}
-            signedIn={sessionUser !== null}
-          />
-
-          {detail.variant.description ? (
-            <p className="mt-7 max-w-2xl leading-relaxed text-ink-300">
-              {detail.variant.description}
+            <p className="mt-6 text-label">
+              <Link
+                href={`/countries/${detail.country.slug}`}
+                className="transition-colors hover:text-gold-300"
+              >
+                {detail.country.flag_emoji} {detail.country.name}
+              </Link>
+              {" · "}
+              <Link
+                href={`/manufacturers/${detail.manufacturer.slug}`}
+                className="transition-colors hover:text-gold-300"
+              >
+                {detail.manufacturer.name}
+              </Link>
             </p>
-          ) : null}
-        </header>
 
-        {/* ------------------------------------------------------- 3D viewer */}
-        <CarViewer
-          className="mt-12"
-          bodyType={detail.model.body_type}
-          dimensions={detail.dimensions}
-          powertrain={kind}
-          glbUrl={glbUrl}
-          modelCredit={glbMedia?.credit ?? null}
-          partsByGroup={partsByGroup}
-          groupNotes={groupNotes}
-          dimensionLabels={{
-            ...(detail.dimensions?.length_mm
-              ? { length: `${formatNumber(detail.dimensions.length_mm)} mm` }
-              : {}),
-            ...(detail.dimensions?.width_mm
-              ? { width: `${formatNumber(detail.dimensions.width_mm)} mm` }
-              : {}),
-            ...(detail.dimensions?.wheelbase_mm
-              ? { wheelbase: `${formatNumber(detail.dimensions.wheelbase_mm)} mm` }
-              : {}),
-          }}
-        />
+            <h1 className="mt-4 font-display text-3xl leading-tight tracking-[0.04em] text-ink-50 sm:text-4xl lg:text-5xl">
+              {detail.model.name}
+              <span className="block gold-gradient-text text-2xl sm:text-3xl lg:text-4xl">
+                {detail.variant.name}
+              </span>
+            </h1>
 
+            <p className="mt-4 font-mono text-xs text-ink-400">
+              {formatYearRange(detail.variant.year_start, detail.variant.year_end)}
+              {detail.model.body_type
+                ? ` · ${formatEnumLabel(detail.model.body_type)}`
+                : ""}
+            </p>
+
+            {detail.variant.description ? (
+              <p className="mt-6 max-w-lg text-sm leading-relaxed text-ink-300 sm:text-base">
+                {detail.variant.description}
+              </p>
+            ) : null}
+
+            <FavoriteButton
+              className="mt-7"
+              variantId={detail.variant.id}
+              initialFavorited={favorited}
+              signedIn={sessionUser !== null}
+            />
+          </header>
+        }
+      />
+
+      <Container className="pb-10">
         {/* ---------------------------------------------------- Key figures */}
-        <StatRow className="mt-12">
+        <StatRow className="mt-4">
           <StatCard
             label="0–100 km/h"
             value={
@@ -355,6 +365,44 @@ export default async function VariantPage({
             unit={kind === "electric" ? "KWH" : "NM"}
           />
         </StatRow>
+
+        {/* ------------------------------------------- Interactive viewer */}
+        <section
+          id="explore-3d"
+          aria-labelledby="explore-heading"
+          className="scroll-mt-24 pt-20"
+        >
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
+            <h2
+              id="explore-heading"
+              className="font-display text-sm tracking-[0.18em] text-ink-50 uppercase"
+            >
+              Explore in 3D
+            </h2>
+            <p className="text-xs text-ink-500">
+              Orbit, pick a view, explode the car or open a subsystem.
+            </p>
+          </div>
+          <CarViewer
+            className="mt-6"
+            build={build}
+            glbUrl={glbUrl}
+            modelCredit={glbMedia?.credit ?? null}
+            partsByGroup={partsByGroup}
+            groupNotes={groupNotes}
+            dimensionLabels={{
+              ...(detail.dimensions?.length_mm
+                ? { length: `${formatNumber(detail.dimensions.length_mm)} mm` }
+                : {}),
+              ...(detail.dimensions?.width_mm
+                ? { width: `${formatNumber(detail.dimensions.width_mm)} mm` }
+                : {}),
+              ...(detail.dimensions?.wheelbase_mm
+                ? { wheelbase: `${formatNumber(detail.dimensions.wheelbase_mm)} mm` }
+                : {}),
+            }}
+          />
+        </section>
 
         {/* ------------------------------------------- Specifications + nav */}
         <div className="mt-8 gap-12 lg:grid lg:grid-cols-[minmax(0,13rem)_1fr]">
