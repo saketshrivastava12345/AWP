@@ -9,11 +9,13 @@ import { ButtonLink } from "@/components/ui/Button";
 import { CarGrid } from "@/components/cars/CarGrid";
 import { CarPhoto } from "@/components/cars/CarPhoto";
 import { Silhouette } from "@/components/cars/catalogue/Silhouette";
+import { CatalogueUnavailable } from "@/components/cars/catalogue/CatalogueUnavailable";
 import { JsonLdScript } from "@/components/cars/catalogue/JsonLdScript";
 import { SpecRange } from "@/components/cars/catalogue/SpecRange";
 import {
   getAllModelPaths,
   getModelCatalogue,
+  READ_FAILED,
   type NumberRange,
 } from "@/lib/queries/models";
 import { compareHref, toCompareSlug, MAX_COMPARE } from "@/lib/compare-slug";
@@ -39,6 +41,8 @@ export async function generateMetadata({
 }: PageProps<"/cars/[manufacturer]/[model]">): Promise<Metadata> {
   const { manufacturer, model } = await params;
   const catalogue = await getModelCatalogue(manufacturer, model);
+  if (catalogue === READ_FAILED)
+    return { title: "Catalogue unavailable", robots: { index: false } };
   if (!catalogue) return { title: "Model not found", robots: { index: false } };
 
   const name = `${catalogue.manufacturer.name} ${catalogue.model.name}`;
@@ -92,6 +96,7 @@ export default async function ModelPage({
 }: PageProps<"/cars/[manufacturer]/[model]">) {
   const { manufacturer: makerSlug, model: modelSlug } = await params;
   const catalogue = await getModelCatalogue(makerSlug, modelSlug);
+  if (catalogue === READ_FAILED) return <CatalogueUnavailable retryHref={`/cars/${makerSlug}/${modelSlug}`} />;
   if (!catalogue) notFound();
 
   const { manufacturer, country, model, category, generations, variants, years, ranges } =

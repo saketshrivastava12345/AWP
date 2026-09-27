@@ -105,14 +105,22 @@ function byYearThenName(a: GenerationSummary, b: GenerationSummary): number {
 }
 
 /**
+ * Returned instead of a catalogue when a read failed (or the database is not
+ * configured). Kept apart from `null` ("does not exist") so a transient error
+ * is never presented as an empty maker or a 404.
+ */
+export const READ_FAILED = "read-failed" as const;
+export type ReadFailed = typeof READ_FAILED;
+
+/**
  * One maker's catalogue: its models (only those with a published variant),
  * each with generation badges, year span, variant count and power range.
- * Null when the maker does not exist.
+ * Null when the maker does not exist; READ_FAILED when any read failed.
  */
 export const getManufacturerCatalogue = cache(async function getManufacturerCatalogue(
   slug: string,
-): Promise<ManufacturerCatalogue | null> {
-  if (!isConfigured()) return null;
+): Promise<ManufacturerCatalogue | ReadFailed | null> {
+  if (!isConfigured()) return READ_FAILED;
 
   try {
     const supabase = createStaticClient();
@@ -145,16 +153,19 @@ export const getManufacturerCatalogue = cache(async function getManufacturerCata
 
     if (makerResult.error) {
       console.error("getManufacturerCatalogue failed:", makerResult.error.message);
-      return null;
+      return READ_FAILED;
     }
     const row = makerResult.data?.[0];
     if (!row?.countries) return null;
     const { countries: country, ...manufacturer } = row;
 
-    if (modelsResult.error)
-      console.error("getManufacturerCatalogue models:", modelsResult.error.message);
-    if (carsResult.error)
-      console.error("getManufacturerCatalogue cars:", carsResult.error.message);
+    if (modelsResult.error || carsResult.error) {
+      console.error(
+        "getManufacturerCatalogue models/cars:",
+        modelsResult.error?.message ?? carsResult.error?.message,
+      );
+      return READ_FAILED;
+    }
 
     const cars = carsResult.data ?? [];
     const byModel = new Map<string, CatalogCardRow[]>();
@@ -229,7 +240,7 @@ export const getManufacturerCatalogue = cache(async function getManufacturerCata
     };
   } catch (error) {
     console.error("getManufacturerCatalogue threw:", error);
-    return null;
+    return READ_FAILED;
   }
 });
 
@@ -263,12 +274,13 @@ type ModelDetailRow = CarModel & {
  * One model: its generations, every published variant as a card row, and the
  * spread of its published figures. Null when the path does not resolve, or
  * when the model has no published variant (there is nothing to show).
+ * READ_FAILED when a read failed.
  */
 export const getModelCatalogue = cache(async function getModelCatalogue(
   manufacturerSlug: string,
   modelSlug: string,
-): Promise<ModelCatalogue | null> {
-  if (!isConfigured()) return null;
+): Promise<ModelCatalogue | ReadFailed | null> {
+  if (!isConfigured()) return READ_FAILED;
 
   try {
     const supabase = createStaticClient();
@@ -294,11 +306,11 @@ export const getModelCatalogue = cache(async function getModelCatalogue(
 
     if (modelResult.error) {
       console.error("getModelCatalogue failed:", modelResult.error.message);
-      return null;
+      return READ_FAILED;
     }
     if (carsResult.error) {
       console.error("getModelCatalogue cars:", carsResult.error.message);
-      return null;
+      return READ_FAILED;
     }
 
     const row = modelResult.data?.[0];
@@ -337,7 +349,7 @@ export const getModelCatalogue = cache(async function getModelCatalogue(
     };
   } catch (error) {
     console.error("getModelCatalogue threw:", error);
-    return null;
+    return READ_FAILED;
   }
 });
 

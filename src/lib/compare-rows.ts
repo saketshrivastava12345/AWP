@@ -434,8 +434,8 @@ function listedPrice(car: CompareInput): { display: string; note: string | null 
   if (!display) return null;
   const parts = [
     priceTypeLabel(listed.type),
-    listed.market,
-    listed.verifiedAt ? `verified ${formatDate(listed.verifiedAt, "")}` : null,
+    listed.market ?? "market not recorded",
+    listed.verifiedAt ? `verified ${formatDate(listed.verifiedAt, "")}` : "unverified",
   ].filter((part): part is string => Boolean(part));
   return { display, note: parts.length > 0 ? parts.join(" · ") : null };
 }

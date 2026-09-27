@@ -8,11 +8,13 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ButtonLink } from "@/components/ui/Button";
 import { ModelCard } from "@/components/cars/catalogue/ModelCard";
+import { CatalogueUnavailable } from "@/components/cars/catalogue/CatalogueUnavailable";
 import { JsonLdScript } from "@/components/cars/catalogue/JsonLdScript";
 import { formatRange } from "@/components/cars/catalogue/SpecRange";
 import {
   getCatalogueManufacturerSlugs,
   getManufacturerCatalogue,
+  READ_FAILED,
 } from "@/lib/queries/models";
 import { catalogueHref } from "@/lib/search-params";
 import { breadcrumbJsonLd } from "@/lib/json-ld";
@@ -34,6 +36,8 @@ export async function generateMetadata({
 }: PageProps<"/cars/[manufacturer]">): Promise<Metadata> {
   const { manufacturer: slug } = await params;
   const catalogue = await getManufacturerCatalogue(slug);
+  if (catalogue === READ_FAILED)
+    return { title: "Catalogue unavailable", robots: { index: false } };
   if (!catalogue) return { title: "Manufacturer not found", robots: { index: false } };
 
   const { manufacturer, modelCount, variantCount } = catalogue;
@@ -57,6 +61,7 @@ export default async function ManufacturerCataloguePage({
 }: PageProps<"/cars/[manufacturer]">) {
   const { manufacturer: slug } = await params;
   const catalogue = await getManufacturerCatalogue(slug);
+  if (catalogue === READ_FAILED) return <CatalogueUnavailable retryHref={`/cars/${slug}`} />;
   if (!catalogue) notFound();
 
   const { manufacturer, country, groups, modelCount, variantCount, power } = catalogue;

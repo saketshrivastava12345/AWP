@@ -431,6 +431,7 @@ export function HeroScene(props: HeroSceneProps) {
       gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
       camera={{ position: [6.2, 1.2, 5.4], fov: BASE_FOV, near: 0.05, far: 400 }}
       aria-hidden="true"
+      data-scene-active={props.active}
       // Scenery: the page scrolls through it and the parallax is read from
       // the window, so the canvas never takes a pointer event.
       style={{ pointerEvents: "none" }}

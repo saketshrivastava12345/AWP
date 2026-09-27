@@ -67,6 +67,12 @@ export function Navbar({
   if (menuOpen && isDesktop) setMenuOpen(false);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+  // Searching from the menu closes it first: "search all" can land on the
+  // same pathname (/cars?q=…), which the menu's navigation check cannot see.
+  const openSearchFromMenu = useCallback(() => {
+    setMenuOpen(false);
+    openSearch();
+  }, [openSearch]);
 
   return (
     <>
@@ -137,7 +143,7 @@ export function Navbar({
       <MobileMenu
         open={menuOpen && !isDesktop}
         onClose={closeMenu}
-        onOpenSearch={openSearch}
+        onOpenSearch={openSearchFromMenu}
         favoritesCount={favoritesCount}
         account={mobileAccount}
       />

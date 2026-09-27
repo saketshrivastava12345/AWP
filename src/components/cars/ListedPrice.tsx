@@ -94,9 +94,14 @@ export function ListedPrice({
   const market = price.listed_price_market?.trim() || null;
   // "Pune, Maharashtra, India" -> "Pune": the most specific part fits a card.
   const shortMarket = market?.split(",")[0]?.trim() ?? null;
-  const qualifier = [type, size === "hero" ? market : shortMarket]
+  // A figure with no recorded market says so rather than leaving it implicit.
+  const qualifier = [
+    type,
+    size === "hero" ? market : shortMarket,
+    market ? null : "market not recorded",
+  ]
     .filter(Boolean)
-    .join(", ");
+    .join(size === "card" && !market ? " · " : ", ");
   const verified = price.listed_price_verified_at
     ? formatDate(price.listed_price_verified_at, "")
     : "";
@@ -142,6 +147,9 @@ export function ListedPrice({
           ) : null}
         </p>
       ) : null}
+      <p className="mt-0.5 truncate text-[11px] text-ink-500">
+        {verified ? `Verified ${verified}` : "Unverified"}
+      </p>
     </div>
   );
 }
