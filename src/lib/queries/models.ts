@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { cache } from "react";
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import { CARD_COLUMNS, type CatalogCardRow } from "@/lib/queries/catalog-columns";
@@ -152,7 +154,7 @@ export const getManufacturerCatalogue = cache(async function getManufacturerCata
     ]);
 
     if (makerResult.error) {
-      console.error("getManufacturerCatalogue failed:", makerResult.error.message);
+      reportQueryError("getManufacturerCatalogue failed:", makerResult.error.message);
       return READ_FAILED;
     }
     const row = makerResult.data?.[0];
@@ -160,7 +162,7 @@ export const getManufacturerCatalogue = cache(async function getManufacturerCata
     const { countries: country, ...manufacturer } = row;
 
     if (modelsResult.error || carsResult.error) {
-      console.error(
+      reportQueryError(
         "getManufacturerCatalogue models/cars:",
         modelsResult.error?.message ?? carsResult.error?.message,
       );
@@ -239,7 +241,7 @@ export const getManufacturerCatalogue = cache(async function getManufacturerCata
       power: rangeOf(cars.map((car) => car.power_hp)),
     };
   } catch (error) {
-    console.error("getManufacturerCatalogue threw:", error);
+    reportQueryError("getManufacturerCatalogue threw:", error);
     return READ_FAILED;
   }
 });
@@ -305,11 +307,11 @@ export const getModelCatalogue = cache(async function getModelCatalogue(
     ]);
 
     if (modelResult.error) {
-      console.error("getModelCatalogue failed:", modelResult.error.message);
+      reportQueryError("getModelCatalogue failed:", modelResult.error.message);
       return READ_FAILED;
     }
     if (carsResult.error) {
-      console.error("getModelCatalogue cars:", carsResult.error.message);
+      reportQueryError("getModelCatalogue cars:", carsResult.error.message);
       return READ_FAILED;
     }
 
@@ -348,7 +350,7 @@ export const getModelCatalogue = cache(async function getModelCatalogue(
       },
     };
   } catch (error) {
-    console.error("getModelCatalogue threw:", error);
+    reportQueryError("getModelCatalogue threw:", error);
     return READ_FAILED;
   }
 });
@@ -364,12 +366,12 @@ export async function getCatalogueManufacturerSlugs(): Promise<string[]> {
       .order("slug")
       .returns<{ slug: string }[]>();
     if (error) {
-      console.error("getCatalogueManufacturerSlugs failed:", error.message);
+      reportQueryError("getCatalogueManufacturerSlugs failed:", error.message);
       return [];
     }
     return (data ?? []).map((row) => row.slug);
   } catch (error) {
-    console.error("getCatalogueManufacturerSlugs threw:", error);
+    reportQueryError("getCatalogueManufacturerSlugs threw:", error);
     return [];
   }
 }
@@ -390,14 +392,14 @@ export async function getAllModelPaths(): Promise<
       .order("slug")
       .returns<{ slug: string; manufacturers: { slug: string } | null }[]>();
     if (error) {
-      console.error("getAllModelPaths failed:", error.message);
+      reportQueryError("getAllModelPaths failed:", error.message);
       return [];
     }
     return (data ?? [])
       .filter((row) => row.manufacturers !== null)
       .map((row) => ({ manufacturer: row.manufacturers!.slug, model: row.slug }));
   } catch (error) {
-    console.error("getAllModelPaths threw:", error);
+    reportQueryError("getAllModelPaths threw:", error);
     return [];
   }
 }
@@ -425,7 +427,7 @@ export async function getVariantModelFiles(
         { variant_id: string | null; url: string; compression: string[] | null }[]
       >();
     if (error) {
-      console.error("getVariantModelFiles failed:", error.message);
+      reportQueryError("getVariantModelFiles failed:", error.message);
       return files;
     }
     for (const row of data ?? []) {
@@ -434,7 +436,7 @@ export async function getVariantModelFiles(
     }
     return files;
   } catch (error) {
-    console.error("getVariantModelFiles threw:", error);
+    reportQueryError("getVariantModelFiles threw:", error);
     return files;
   }
 }

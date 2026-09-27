@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { cache } from "react";
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import { CARD_COLUMNS, type CatalogCardRow } from "@/lib/queries/catalog-columns";
@@ -53,7 +55,7 @@ export async function listCountries(): Promise<CountryListItem[]> {
       .returns<CountryRow[]>();
 
     if (error) {
-      console.error("listCountries failed:", error.message);
+      reportQueryError("listCountries failed:", error.message);
       return [];
     }
 
@@ -81,7 +83,7 @@ export async function listCountries(): Promise<CountryListItem[]> {
       };
     });
   } catch (error) {
-    console.error("listCountries threw:", error);
+    reportQueryError("listCountries threw:", error);
     return [];
   }
 }
@@ -177,17 +179,17 @@ export const getCountryDetail = cache(async function getCountryDetail(
     ]);
 
     if (countryResult.error) {
-      console.error("getCountryDetail failed:", countryResult.error.message);
+      reportQueryError("getCountryDetail failed:", countryResult.error.message);
       return null;
     }
     const country = countryResult.data?.[0];
     if (!country) return null;
 
     if (makersResult.error) {
-      console.error("getCountryDetail makers failed:", makersResult.error.message);
+      reportQueryError("getCountryDetail makers failed:", makersResult.error.message);
     }
     if (carsResult.error) {
-      console.error("getCountryDetail cars failed:", carsResult.error.message);
+      reportQueryError("getCountryDetail cars failed:", carsResult.error.message);
     }
 
     const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
@@ -220,7 +222,7 @@ export const getCountryDetail = cache(async function getCountryDetail(
       totalCars: carsResult.count ?? cars.length,
     };
   } catch (error) {
-    console.error("getCountryDetail threw:", error);
+    reportQueryError("getCountryDetail threw:", error);
     return null;
   }
 });
@@ -234,12 +236,12 @@ export async function getAllCountrySlugs(): Promise<string[]> {
       .select("slug")
       .returns<{ slug: string }[]>();
     if (error) {
-      console.error("getAllCountrySlugs failed:", error.message);
+      reportQueryError("getAllCountrySlugs failed:", error.message);
       return [];
     }
     return (data ?? []).map((row) => row.slug);
   } catch (error) {
-    console.error("getAllCountrySlugs threw:", error);
+    reportQueryError("getAllCountrySlugs threw:", error);
     return [];
   }
 }

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import { FACET_COLUMNS, type FacetRow } from "@/lib/facets";
 
@@ -57,7 +59,7 @@ export async function getFacetRows(
         .returns<FacetRow[]>();
 
       if (error) {
-        console.error("getFacetRows failed:", error.message);
+        reportQueryError("getFacetRows failed:", error.message);
         return { rows: [], ok: false };
       }
       rows.push(...(data ?? []));
@@ -65,7 +67,7 @@ export async function getFacetRows(
     }
     return { rows, ok: true };
   } catch (error) {
-    console.error("getFacetRows threw:", error);
+    reportQueryError("getFacetRows threw:", error);
     return { rows: [], ok: false };
   }
 }

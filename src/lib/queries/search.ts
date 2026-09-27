@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import type { SearchResult, SearchResultKind } from "@/types/domain";
 
@@ -49,7 +51,7 @@ export async function searchCatalogue(
       .returns<SearchRow[]>();
 
     if (error) {
-      console.error("searchCatalogue failed:", error.message);
+      reportQueryError("searchCatalogue failed:", error.message);
       return null;
     }
 
@@ -67,7 +69,7 @@ export async function searchCatalogue(
         score: Number(row.score) || 0,
       }));
   } catch (error) {
-    console.error("searchCatalogue threw:", error);
+    reportQueryError("searchCatalogue threw:", error);
     return null;
   }
 }

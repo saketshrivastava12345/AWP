@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import type { MarketGeography, MarketPrice, VariantPricing } from "@/types/domain";
@@ -53,7 +55,7 @@ export async function getMarketGeography(): Promise<MarketGeography> {
       .returns<GeographyRow[]>();
 
     if (error) {
-      console.error("getMarketGeography failed:", error.message);
+      reportQueryError("getMarketGeography failed:", error.message);
       return empty;
     }
 
@@ -78,7 +80,7 @@ export async function getMarketGeography(): Promise<MarketGeography> {
       })),
     };
   } catch (error) {
-    console.error("getMarketGeography threw:", error);
+    reportQueryError("getMarketGeography threw:", error);
     return empty;
   }
 }
@@ -113,12 +115,14 @@ export async function getVariantPricing(variantId: string): Promise<VariantPrici
         .returns<MarketPrice[]>(),
     ]);
 
-    if (current.error) console.error("getVariantPricing current:", current.error.message);
-    if (history.error) console.error("getVariantPricing history:", history.error.message);
+    if (current.error)
+      reportQueryError("getVariantPricing current:", current.error.message);
+    if (history.error)
+      reportQueryError("getVariantPricing history:", history.error.message);
 
     return { current: current.data ?? [], history: history.data ?? [] };
   } catch (error) {
-    console.error("getVariantPricing threw:", error);
+    reportQueryError("getVariantPricing threw:", error);
     return empty;
   }
 }

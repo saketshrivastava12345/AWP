@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import { mediaCredit, type GalleryCredit } from "@/lib/detail/gallery";
 import { carDisplayName } from "@/lib/format";
@@ -67,7 +69,7 @@ export async function listMediaCredits(): Promise<MediaCreditEntry[]> {
       .returns<CreditRow[]>();
 
     if (error) {
-      console.error("listMediaCredits failed:", error.message);
+      reportQueryError("listMediaCredits failed:", error.message);
       return [];
     }
 
@@ -91,7 +93,7 @@ export async function listMediaCredits(): Promise<MediaCreditEntry[]> {
     }
     return entries.sort((a, b) => collator.compare(a.carName, b.carName));
   } catch (error) {
-    console.error("listMediaCredits threw:", error);
+    reportQueryError("listMediaCredits threw:", error);
     return [];
   }
 }

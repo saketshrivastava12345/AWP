@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { cache } from "react";
 import { unstable_rethrow } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -52,7 +54,7 @@ export const getAuthUser = cache(async function getAuthUser(): Promise<AuthUser 
     if (error || !user) return null;
     return { id: user.id, email: user.email ?? null };
   } catch (error) {
-    if (!isExpectedBailout(error)) console.error("getAuthUser threw:", error);
+    if (!isExpectedBailout(error)) reportQueryError("getAuthUser threw:", error);
     return null;
   }
 });
@@ -86,7 +88,7 @@ export const getSessionUser = cache(
         role: profile?.role ?? "user",
       };
     } catch (error) {
-      if (!isExpectedBailout(error)) console.error("getSessionUser threw:", error);
+      if (!isExpectedBailout(error)) reportQueryError("getSessionUser threw:", error);
       return null;
     }
   },
@@ -146,7 +148,7 @@ export async function getPasswordChangeContext(): Promise<PasswordChangeContext 
     return { user, viaEmailLink };
   } catch (error) {
     if (!isExpectedBailout(error))
-      console.error("getPasswordChangeContext threw:", error);
+      reportQueryError("getPasswordChangeContext threw:", error);
     return { user, viaEmailLink: false };
   }
 }
@@ -185,7 +187,7 @@ export async function verifyPassword(
     }
     return "valid";
   } catch (error) {
-    console.error("verifyPassword threw:", error);
+    reportQueryError("verifyPassword threw:", error);
     return "unavailable";
   }
 }

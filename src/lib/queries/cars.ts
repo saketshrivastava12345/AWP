@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { cache } from "react";
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import type {
@@ -159,13 +161,13 @@ export async function listCars(options: ListCarsOptions = {}): Promise<Catalogue
         const counted = await filteredCatalogue(supabase, "variant_id", filters, true);
         if (!counted.error) return result(counted.count ?? 0, [], false);
       }
-      console.error("listCars failed:", error.message);
+      reportQueryError("listCars failed:", error.message);
       return result(0, [], true);
     }
 
     return result(count ?? 0, data ?? [], false);
   } catch (error) {
-    console.error("listCars threw:", error);
+    reportQueryError("listCars threw:", error);
     return result(0, [], true);
   }
 }
@@ -272,7 +274,7 @@ export const getVariantDetail = cache(async function getVariantDetail(
       .returns<DetailRow[]>();
 
     if (error) {
-      console.error("getVariantDetail failed:", error.message);
+      reportQueryError("getVariantDetail failed:", error.message);
       return null;
     }
 
@@ -304,8 +306,8 @@ export const getVariantDetail = cache(async function getVariantDetail(
         .returns<CarColor[]>(),
     ]);
     if (modelMedia.error)
-      console.error("getVariantDetail model media:", modelMedia.error.message);
-    if (colors.error) console.error("getVariantDetail colors:", colors.error.message);
+      reportQueryError("getVariantDetail model media:", modelMedia.error.message);
+    if (colors.error) reportQueryError("getVariantDetail colors:", colors.error.message);
 
     return {
       variant: row,
@@ -337,7 +339,7 @@ export const getVariantDetail = cache(async function getVariantDetail(
         .sort((a, b) => a.country.name.localeCompare(b.country.name)),
     };
   } catch (error) {
-    console.error("getVariantDetail threw:", error);
+    reportQueryError("getVariantDetail threw:", error);
     return null;
   }
 });
@@ -377,12 +379,12 @@ export const getVariantListedPrice = cache(async function getVariantListedPrice(
       .returns<VariantListedPrice[]>();
 
     if (error) {
-      console.error("getVariantListedPrice failed:", error.message);
+      reportQueryError("getVariantListedPrice failed:", error.message);
       return null;
     }
     return data?.[0] ?? null;
   } catch (error) {
-    console.error("getVariantListedPrice threw:", error);
+    reportQueryError("getVariantListedPrice threw:", error);
     return null;
   }
 });
@@ -406,12 +408,12 @@ export async function getSiblingVariants(
       .returns<CatalogCardRow[]>();
 
     if (error) {
-      console.error("getSiblingVariants failed:", error.message);
+      reportQueryError("getSiblingVariants failed:", error.message);
       return [];
     }
     return data ?? [];
   } catch (error) {
-    console.error("getSiblingVariants threw:", error);
+    reportQueryError("getSiblingVariants threw:", error);
     return [];
   }
 }
@@ -430,7 +432,7 @@ export async function getAllVariantPaths(): Promise<
       .returns<Pick<CatalogCar, "manufacturer_slug" | "model_slug" | "variant_slug">[]>();
 
     if (error) {
-      console.error("getAllVariantPaths failed:", error.message);
+      reportQueryError("getAllVariantPaths failed:", error.message);
       return [];
     }
 
@@ -450,7 +452,7 @@ export async function getAllVariantPaths(): Promise<
         variant: row.variant_slug,
       }));
   } catch (error) {
-    console.error("getAllVariantPaths threw:", error);
+    reportQueryError("getAllVariantPaths threw:", error);
     return [];
   }
 }
@@ -471,12 +473,12 @@ export async function getFeaturedCars(limit = 6): Promise<CatalogCardRow[]> {
       .returns<CatalogCardRow[]>();
 
     if (error) {
-      console.error("getFeaturedCars failed:", error.message);
+      reportQueryError("getFeaturedCars failed:", error.message);
       return [];
     }
     return data ?? [];
   } catch (error) {
-    console.error("getFeaturedCars threw:", error);
+    reportQueryError("getFeaturedCars threw:", error);
     return [];
   }
 }
@@ -516,12 +518,12 @@ export async function getDnaPopulation(): Promise<
       >();
 
     if (error) {
-      console.error("getDnaPopulation failed:", error.message);
+      reportQueryError("getDnaPopulation failed:", error.message);
       return [];
     }
     return data ?? [];
   } catch (error) {
-    console.error("getDnaPopulation threw:", error);
+    reportQueryError("getDnaPopulation threw:", error);
     return [];
   }
 }
@@ -557,7 +559,7 @@ export async function getCatalogueCounts(): Promise<{
       parts: parts.count ?? 0,
     };
   } catch (error) {
-    console.error("getCatalogueCounts threw:", error);
+    reportQueryError("getCatalogueCounts threw:", error);
     return zero;
   }
 }

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { createServerSupabaseClient, isConfigured } from "@/lib/supabase/server";
 import { MAX_RECENT_STORED } from "@/lib/favorites/constants";
 
@@ -27,12 +29,12 @@ export async function listRecentlyViewed(
       .returns<{ variant_id: string; viewed_at: string }[]>();
 
     if (error) {
-      console.error("listRecentlyViewed failed:", error.message);
+      reportQueryError("listRecentlyViewed failed:", error.message);
       return null;
     }
     return (data ?? []).map((row) => ({ id: row.variant_id, viewedAt: row.viewed_at }));
   } catch (error) {
-    console.error("listRecentlyViewed threw:", error);
+    reportQueryError("listRecentlyViewed threw:", error);
     return null;
   }
 }

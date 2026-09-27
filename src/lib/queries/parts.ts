@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { cache } from "react";
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import { CARD_COLUMNS, type CatalogCardRow } from "@/lib/queries/catalog-columns";
@@ -35,7 +37,7 @@ export async function listPartCategories(): Promise<PartCategoryWithParts[]> {
       .returns<(PartCategory & { parts: Part[] | null })[]>();
 
     if (error) {
-      console.error("listPartCategories failed:", error.message);
+      reportQueryError("listPartCategories failed:", error.message);
       return [];
     }
 
@@ -44,7 +46,7 @@ export async function listPartCategories(): Promise<PartCategoryWithParts[]> {
       parts: [...(category.parts ?? [])].sort(byDisplayOrder),
     }));
   } catch (error) {
-    console.error("listPartCategories threw:", error);
+    reportQueryError("listPartCategories threw:", error);
     return [];
   }
 }
@@ -72,7 +74,7 @@ async function readUsageCounts(supabase: StaticClient): Promise<Map<string, numb
     .select("id, variant_parts ( count, car_variants!inner () )")
     .returns<UsageRow[]>();
   if (error) {
-    console.error("part usage counts failed:", error.message);
+    reportQueryError("part usage counts failed:", error.message);
     return new Map();
   }
   return new Map((data ?? []).map((row) => [row.id, row.variant_parts?.[0]?.count ?? 0]));
@@ -100,7 +102,7 @@ export const getPartsIndex = cache(async function getPartsIndex(): Promise<
     ]);
 
     if (categoriesResult.error) {
-      console.error("getPartsIndex failed:", categoriesResult.error.message);
+      reportQueryError("getPartsIndex failed:", categoriesResult.error.message);
       return [];
     }
 
@@ -111,7 +113,7 @@ export const getPartsIndex = cache(async function getPartsIndex(): Promise<
         .map((part) => ({ ...part, usageCount: usage.get(part.id) ?? 0 })),
     }));
   } catch (error) {
-    console.error("getPartsIndex threw:", error);
+    reportQueryError("getPartsIndex threw:", error);
     return [];
   }
 });
@@ -185,7 +187,7 @@ async function readApplications(
       .sort(byCarName);
   }
 
-  console.error("part applications (embedded) failed:", embedded.error.message);
+  reportQueryError("part applications (embedded) failed:", embedded.error.message);
   const links = await supabase
     .from("variant_parts")
     .select("detail, variant_id, parts!inner ( slug )")
@@ -203,7 +205,7 @@ async function readApplications(
     )
     .returns<CatalogCardRow[]>();
   if (cars.error) {
-    console.error("part applications (fallback) failed:", cars.error.message);
+    reportQueryError("part applications (fallback) failed:", cars.error.message);
     return [];
   }
   const detailById = new Map(rows.map((row) => [row.variant_id, row.detail]));
@@ -235,7 +237,7 @@ export const getPartDetail = cache(async function getPartDetail(
     ]);
 
     if (partResult.error) {
-      console.error("getPartDetail failed:", partResult.error.message);
+      reportQueryError("getPartDetail failed:", partResult.error.message);
       return null;
     }
     const row = partResult.data?.[0];
@@ -254,7 +256,7 @@ export const getPartDetail = cache(async function getPartDetail(
 
     return { part, category, related, applications };
   } catch (error) {
-    console.error("getPartDetail threw:", error);
+    reportQueryError("getPartDetail threw:", error);
     return null;
   }
 });
@@ -300,7 +302,7 @@ export async function getAllPartsRouteSlugs(): Promise<string[]> {
       .select("slug, parts ( slug )")
       .returns<{ slug: string; parts: { slug: string }[] | null }[]>();
     if (error) {
-      console.error("getAllPartsRouteSlugs failed:", error.message);
+      reportQueryError("getAllPartsRouteSlugs failed:", error.message);
       return [];
     }
     const rows = data ?? [];
@@ -309,7 +311,7 @@ export async function getAllPartsRouteSlugs(): Promise<string[]> {
       rows.flatMap((row) => (row.parts ?? []).map((part) => part.slug)),
     );
   } catch (error) {
-    console.error("getAllPartsRouteSlugs threw:", error);
+    reportQueryError("getAllPartsRouteSlugs threw:", error);
     return [];
   }
 }

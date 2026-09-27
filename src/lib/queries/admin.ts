@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { PRICE_COLUMNS } from "@/lib/queries/pricing";
 
 import { cache } from "react";
@@ -52,7 +54,7 @@ import type {
 type PgError = { message: string; code?: string } | null;
 
 function report(label: string, error: PgError): void {
-  if (error) console.error(`admin query ${label} failed:`, error.message);
+  if (error) reportQueryError(`admin query ${label} failed:`, error.message);
 }
 
 /** The public URL path of a variant. */

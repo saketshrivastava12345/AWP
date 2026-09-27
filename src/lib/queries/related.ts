@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import type { FuelType, RangeStandard, VariantDetail } from "@/types/domain";
 import { CARD_COLUMNS, type CatalogCardRow } from "@/lib/queries/catalog-columns";
@@ -78,7 +80,7 @@ export async function getRelatedCars(
       ["similar power", similarPower],
     ] as const) {
       if (result.error)
-        console.error(`getRelatedCars (${name}) failed:`, result.error.message);
+        reportQueryError(`getRelatedCars (${name}) failed:`, result.error.message);
     }
 
     return orderRelated({
@@ -90,7 +92,7 @@ export async function getRelatedCars(
       limit,
     });
   } catch (error) {
-    console.error("getRelatedCars threw:", error);
+    reportQueryError("getRelatedCars threw:", error);
     return [];
   }
 }
@@ -128,12 +130,12 @@ export async function getCatalogueFigures(): Promise<CatalogueFigureRow[]> {
       .returns<CatalogueFigureRow[]>();
 
     if (error) {
-      console.error("getCatalogueFigures failed:", error.message);
+      reportQueryError("getCatalogueFigures failed:", error.message);
       return [];
     }
     return data ?? [];
   } catch (error) {
-    console.error("getCatalogueFigures threw:", error);
+    reportQueryError("getCatalogueFigures threw:", error);
     return [];
   }
 }

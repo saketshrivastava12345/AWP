@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { cache } from "react";
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import type { BodyType, CatalogCar, FuelType, VariantDetail } from "@/types/domain";
@@ -134,7 +136,7 @@ async function lookupCandidates(
       .returns<LookupRow[]>();
 
     if (error) {
-      console.error("compare lookup failed:", error.message);
+      reportQueryError("compare lookup failed:", error.message);
       return null;
     }
 
@@ -145,7 +147,7 @@ async function lookupCandidates(
     }
     return found;
   } catch (error) {
-    console.error("compare lookup threw:", error);
+    reportQueryError("compare lookup threw:", error);
     return null;
   }
 }
@@ -278,7 +280,7 @@ export const getComparePickerOptions = cache(
         .returns<PickerRow[]>();
 
       if (error) {
-        console.error("getComparePickerOptions failed:", error.message);
+        reportQueryError("getComparePickerOptions failed:", error.message);
         return { options: [], truncated: false, reachable: false };
       }
 
@@ -311,7 +313,7 @@ export const getComparePickerOptions = cache(
 
       return { options, truncated: rows.length > PICKER_LIMIT, reachable: true };
     } catch (error) {
-      console.error("getComparePickerOptions threw:", error);
+      reportQueryError("getComparePickerOptions threw:", error);
       return { options: [], truncated: false, reachable: false };
     }
   },

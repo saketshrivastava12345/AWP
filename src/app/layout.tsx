@@ -16,6 +16,7 @@ import { Footer } from "@/components/layout/Footer";
 import { LoadingScreen } from "@/components/layout/LoadingScreen";
 import { LOADING_SCREEN_NOSCRIPT } from "@/components/layout/loading-screen-shared";
 import { SearchProvider } from "@/components/layout/SearchProvider";
+import { SetupNotice } from "@/components/layout/SetupNotice";
 import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
@@ -121,6 +122,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 or menu a page has open; Dialog tracks open order, so its
                 position in the document does not matter. */}
             <CommandPalette />
+
+            {/* Development only: explains a missing .env.local or an
+                unmigrated database in one sentence. */}
+            <Suspense fallback={null}>
+              <SetupNotice />
+            </Suspense>
           </SearchProvider>
         </ToastProvider>
       </body>

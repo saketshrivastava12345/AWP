@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 
 /** One indexable catalogue page and when its data last changed. */
@@ -90,7 +92,7 @@ export async function getSitemapData(): Promise<SitemapData> {
       ["parts", parts],
     ] as const) {
       if (result.error)
-        console.error(`getSitemapData ${label} failed:`, result.error.message);
+        reportQueryError(`getSitemapData ${label} failed:`, result.error.message);
     }
 
     return {
@@ -131,7 +133,7 @@ export async function getSitemapData(): Promise<SitemapData> {
       partCategories: categoryEntries(parts.data ?? []),
     };
   } catch (error) {
-    console.error("getSitemapData threw:", error);
+    reportQueryError("getSitemapData threw:", error);
     return EMPTY;
   }
 }

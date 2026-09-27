@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import {
   createServerSupabaseClient,
   createStaticClient,
@@ -34,12 +36,12 @@ export async function listFavoriteIds(): Promise<string[] | null> {
       .returns<{ variant_id: string; created_at: string }[]>();
 
     if (error) {
-      console.error("listFavoriteIds failed:", error.message);
+      reportQueryError("listFavoriteIds failed:", error.message);
       return null;
     }
     return (data ?? []).map((row) => row.variant_id);
   } catch (error) {
-    console.error("listFavoriteIds threw:", error);
+    reportQueryError("listFavoriteIds threw:", error);
     return null;
   }
 }
@@ -58,12 +60,12 @@ export async function isFavorited(variantId: string): Promise<boolean> {
       .maybeSingle();
 
     if (error) {
-      console.error("isFavorited failed:", error.message);
+      reportQueryError("isFavorited failed:", error.message);
       return false;
     }
     return data !== null;
   } catch (error) {
-    console.error("isFavorited threw:", error);
+    reportQueryError("isFavorited threw:", error);
     return false;
   }
 }
@@ -77,12 +79,12 @@ export async function countFavorites(): Promise<number> {
       .from("favorites")
       .select("variant_id", { count: "exact", head: true });
     if (error) {
-      console.error("countFavorites failed:", error.message);
+      reportQueryError("countFavorites failed:", error.message);
       return 0;
     }
     return count ?? 0;
   } catch (error) {
-    console.error("countFavorites threw:", error);
+    reportQueryError("countFavorites threw:", error);
     return 0;
   }
 }
@@ -110,7 +112,7 @@ export async function getCatalogCardsByIds(
       .returns<CatalogCardRow[]>();
 
     if (error) {
-      console.error("getCatalogCardsByIds failed:", error.message);
+      reportQueryError("getCatalogCardsByIds failed:", error.message);
       return null;
     }
 
@@ -120,7 +122,7 @@ export async function getCatalogCardsByIds(
       return row ? [row] : [];
     });
   } catch (error) {
-    console.error("getCatalogCardsByIds threw:", error);
+    reportQueryError("getCatalogCardsByIds threw:", error);
     return null;
   }
 }
@@ -144,13 +146,13 @@ export async function filterCatalogueIds(
       .returns<{ variant_id: string | null }[]>();
 
     if (error) {
-      console.error("filterCatalogueIds failed:", error.message);
+      reportQueryError("filterCatalogueIds failed:", error.message);
       return null;
     }
     const found = new Set((data ?? []).map((row) => row.variant_id));
     return ids.filter((id) => found.has(id));
   } catch (error) {
-    console.error("filterCatalogueIds threw:", error);
+    reportQueryError("filterCatalogueIds threw:", error);
     return null;
   }
 }

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { cache } from "react";
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import { CARD_COLUMNS, type CatalogCardRow } from "@/lib/queries/catalog-columns";
@@ -69,12 +71,12 @@ export async function listManufacturers(): Promise<ManufacturerListItem[]> {
       .returns<ListRow[]>();
 
     if (error) {
-      console.error("listManufacturers failed:", error.message);
+      reportQueryError("listManufacturers failed:", error.message);
       return [];
     }
     return (data ?? []).map(toListItem);
   } catch (error) {
-    console.error("listManufacturers threw:", error);
+    reportQueryError("listManufacturers threw:", error);
     return [];
   }
 }
@@ -152,7 +154,7 @@ export const getManufacturerDetail = cache(async function getManufacturerDetail(
     ]);
 
     if (makerResult.error) {
-      console.error("getManufacturerDetail failed:", makerResult.error.message);
+      reportQueryError("getManufacturerDetail failed:", makerResult.error.message);
       return null;
     }
     const row = makerResult.data?.[0];
@@ -162,10 +164,13 @@ export const getManufacturerDetail = cache(async function getManufacturerDetail(
     // The maker still renders if its cars or models cannot be read; the page
     // then shows its honest empty state rather than failing outright.
     if (carsResult.error) {
-      console.error("getManufacturerDetail cars failed:", carsResult.error.message);
+      reportQueryError("getManufacturerDetail cars failed:", carsResult.error.message);
     }
     if (modelsResult.error) {
-      console.error("getManufacturerDetail models failed:", modelsResult.error.message);
+      reportQueryError(
+        "getManufacturerDetail models failed:",
+        modelsResult.error.message,
+      );
     }
 
     const models: LineupModelInput[] = (modelsResult.data ?? []).map((model) => ({
@@ -182,7 +187,7 @@ export const getManufacturerDetail = cache(async function getManufacturerDetail(
 
     return { manufacturer, country, cars: carsResult.data ?? [], models };
   } catch (error) {
-    console.error("getManufacturerDetail threw:", error);
+    reportQueryError("getManufacturerDetail threw:", error);
     return null;
   }
 });
@@ -197,12 +202,12 @@ export async function getAllManufacturerSlugs(): Promise<string[]> {
       .select("slug")
       .returns<{ slug: string }[]>();
     if (error) {
-      console.error("getAllManufacturerSlugs failed:", error.message);
+      reportQueryError("getAllManufacturerSlugs failed:", error.message);
       return [];
     }
     return (data ?? []).map((row) => row.slug);
   } catch (error) {
-    console.error("getAllManufacturerSlugs threw:", error);
+    reportQueryError("getAllManufacturerSlugs threw:", error);
     return [];
   }
 }

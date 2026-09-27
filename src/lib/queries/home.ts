@@ -1,5 +1,7 @@
 import "server-only";
 
+import { reportQueryError } from "@/lib/queries/report";
+
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
 import { carBuildFromDetail, type CarBuild } from "@/lib/car-build";
 import { buildAnatomyTour } from "@/lib/anatomy-tour";
@@ -87,14 +89,14 @@ export async function getHomeCounts(): Promise<HomeCounts> {
     COUNT_KEYS.forEach((key, index) => {
       const result = results[index];
       if (!result || result.error) {
-        console.error(`getHomeCounts ${key} failed:`, result?.error?.message);
+        reportQueryError(`getHomeCounts ${key} failed:`, result?.error?.message);
         return;
       }
       counts[key] = typeof result.count === "number" ? result.count : null;
     });
     return counts;
   } catch (error) {
-    console.error("getHomeCounts threw:", error);
+    reportQueryError("getHomeCounts threw:", error);
     return NO_COUNTS;
   }
 }
@@ -127,12 +129,12 @@ async function readDimensions(ids: string[]): Promise<DimensionRow[]> {
       .in("variant_id", ids)
       .returns<DimensionRow[]>();
     if (error) {
-      console.error("hero dimensions failed:", error.message);
+      reportQueryError("hero dimensions failed:", error.message);
       return [];
     }
     return data ?? [];
   } catch (error) {
-    console.error("hero dimensions threw:", error);
+    reportQueryError("hero dimensions threw:", error);
     return [];
   }
 }
