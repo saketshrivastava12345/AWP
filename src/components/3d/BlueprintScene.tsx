@@ -383,8 +383,11 @@ export function BlueprintLabels({
     }
 
     // Measurements in drawing order; one that would cover an earlier label
-    // (a narrow screen, a steep angle) is left out — its line still shows.
+    // (a narrow screen, a steep angle) is left out — its line still shows —
+    // as is one that would land under the text column on a wide screen. The
+    // card beside the drawing lists every figure.
     const taken: { x: number; y: number; w: number; h: number }[] = [];
+    const column = size.width >= 1024 ? size.width * 0.4 : -Infinity;
     for (const [id, point] of dimensionLabels ?? []) {
       const element = overlay.dimensions.get(id);
       if (!element) continue;
@@ -392,11 +395,12 @@ export function BlueprintLabels({
       const { width, height } = sizeOf(element, 1);
       const clash =
         at !== null &&
-        taken.some(
-          (box) =>
-            Math.abs(box.x - at.x) < (box.w + width) / 2 + 4 &&
-            Math.abs(box.y - at.y) < (box.h + height) / 2 + 2,
-        );
+        (at.x < column ||
+          taken.some(
+            (box) =>
+              Math.abs(box.x - at.x) < (box.w + width) / 2 + 4 &&
+              Math.abs(box.y - at.y) < (box.h + height) / 2 + 2,
+          ));
       place(element, point, clash ? 0 : values.dimensions);
       if (at && !clash) taken.push({ x: at.x, y: at.y, w: width, h: height });
     }

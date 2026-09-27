@@ -347,7 +347,7 @@ export function CarShowcase({
           )}
         >
           {still && fallback ? (
-            <div className="tech-grid absolute inset-0 flex items-center justify-center p-4 md:pl-[34%] md:pr-16 lg:pl-[40%]">
+            <div className="tech-grid absolute inset-0 flex items-center justify-center p-4 pt-8 md:pr-16 md:pl-[34%] lg:pr-60 lg:pl-[40%]">
               {fallback}
             </div>
           ) : (
@@ -424,7 +424,7 @@ export function CarShowcase({
                 }}
                 className="absolute top-0 left-0 opacity-0 will-change-transform"
               >
-                <div className="-translate-1/2 border border-gold-700/50 bg-void/85 px-1.5 py-0.5 whitespace-nowrap">
+                <div className="-translate-1/2 border border-gold-700/50 bg-void/85 px-1.5 py-1 leading-none whitespace-nowrap">
                   <span className="font-mono text-micro tracking-hud text-ink-300 uppercase max-md:hidden">
                     {DIMENSION_LABELS[dimension]}{" "}
                   </span>
@@ -446,7 +446,7 @@ export function CarShowcase({
                 {/* The point sits on the part; the scene sets the leader's
                     length (--lead) so neighbouring labels never overlap. */}
                 <div className="flex -translate-x-1/2 -translate-y-full flex-col items-center">
-                  <span className="border border-gold-700/60 bg-void/85 px-1.5 py-0.5 font-mono text-nano tracking-hud whitespace-nowrap text-gold-200 uppercase md:text-micro">
+                  <span className="border border-gold-700/60 bg-void/85 px-1.5 py-1 font-mono text-nano leading-none tracking-hud whitespace-nowrap text-gold-200 uppercase md:text-micro md:leading-none">
                     <span className="text-gold-500">
                       {String(index + 1).padStart(2, "0")}
                     </span>

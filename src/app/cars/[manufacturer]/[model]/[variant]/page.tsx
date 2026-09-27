@@ -16,6 +16,7 @@ import { ChapterHeader, DetailChapter } from "@/components/cars/detail/DetailCha
 import { ChapterIndicator } from "@/components/cars/detail/ChapterIndicator";
 import { VehicleHeader } from "@/components/cars/detail/VehicleHeader";
 import { DetailViewer } from "@/components/cars/detail/DetailViewer";
+import { BlueprintDiagram } from "@/components/cars/detail/BlueprintDiagram";
 import { Gallery } from "@/components/cars/detail/Gallery";
 import { PerformancePanel } from "@/components/cars/detail/PerformancePanel";
 import { EvPanel } from "@/components/cars/detail/EvPanel";
@@ -190,12 +191,8 @@ export default async function VariantPage({
   const tour = buildAnatomyTour(detail, allParts);
   // The tour, told as an exploded drawing: one card per subsystem the 3D car
   // actually draws (an EV has no engine or exhaust), in the order it comes apart.
-  const blueprint = buildBlueprint(
-    detail,
-    tour,
-    allParts,
-    blueprintGroups(drawnGroups(build)),
-  );
+  const blueprintOrder = blueprintGroups(drawnGroups(build));
+  const blueprint = buildBlueprint(detail, tour, allParts, blueprintOrder);
   const photo = primaryPhoto(detail);
 
   // ------------------------------------------------------------ Figures
@@ -373,6 +370,9 @@ export default async function VariantPage({
               steps={blueprint}
               label={carName}
               intro={engineeringHeader}
+              fallback={
+                <BlueprintDiagram build={build} groups={blueprintOrder} label={carName} />
+              }
             />
           </div>
         ) : null}
