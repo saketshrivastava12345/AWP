@@ -8,88 +8,119 @@
    =========================================================================== */
 
 @theme {
-  /* --- Grounds: near-black, very slightly blue to read as "cold metal" --- */
-  --color-void: #06060a;
-  --color-surface-1: #0c0c11;
-  --color-surface-2: #14141b;
-  --color-surface-3: #1c1c25;
-  --color-surface-4: #262630;
+  /* ===========================================================================
+     AURIX — futuristic automotive HUD (FX redesign).
+     A supercar's digital cockpit: cold blue-black grounds, cyan light as the
+     "tech" signal, gold as the brand, violet sparingly for gradients.
+     Glow is for emphasis only; body text stays crisp and un-glowed.
+     =========================================================================== */
 
-  /* --- Metallic gold accent (the only saturated hue in the system) --- */
-  --color-gold-200: #f2e4c0;
-  --color-gold-300: #e8d19a;
-  --color-gold-400: #d9bc72;
-  --color-gold-500: #c8a34a;
-  --color-gold-600: #a88534;
+  /* --- Grounds: near-black with a cold blue tint --- */
+  --color-void: #04060b;
+  --color-surface-1: #090d15;
+  --color-surface-2: #0e131d;
+  --color-surface-3: #151b27;
+  --color-surface-4: #1e2533;
+
+  /* --- Gold: the brand (wordmark, "best" markers, premium highlights) --- */
+  --color-gold-200: #f6e7c1;
+  --color-gold-300: #eed59a;
+  --color-gold-400: #e2bf6d;
+  --color-gold-500: #d4a849;
+  --color-gold-600: #ad8634;
   --color-gold-700: #7e6323;
   --color-gold-800: #55431a;
 
-  /* --- Typography greys (AA contrast against --color-void) --- */
-  --color-ink-50: #f7f7f8;
-  --color-ink-100: #e8e8ec;
-  --color-ink-200: #c9c9d1;
-  --color-ink-300: #a1a1ae;
-  /* The bottom of this scale is set by contrast, not taste. Against a
-     near-black ground there is only so much room for distinguishable greys
-     that still pass WCAG AA, so ink-400 and ink-500 are tuned to clear 4.5:1
-     for body text and ink-600 to clear 3:1 — it is reserved for decorative
-     and non-essential marks, never for prose. */
-  --color-ink-400: #8a8a96; /* 6.0:1  — AA body */
-  --color-ink-500: #83838e; /* 5.4:1 on void, 4.9:1 on surface-2 — AA body */
-  --color-ink-600: #5b5b64; /* 3.0:1  — decorative only, never meaning */
+  /* --- Cyan / electric blue: the primary tech glow (active, focus, lines,
+         data highlights, primary buttons). Overrides Tailwind's cyan with
+         sRGB values so glows and gradients mix predictably. --- */
+  --color-cyan-100: #d5fbff;
+  --color-cyan-200: #a8f2fc;
+  --color-cyan-300: #6fe6f8;
+  --color-cyan-400: #2ed3ee;
+  --color-cyan-500: #10b5d6;
+  --color-cyan-600: #0b8fb0;
+  --color-cyan-700: #0d6f8a;
+  --color-cyan-800: #0f4f63;
+  --color-cyan-900: #0c3140;
 
-  /* --- Hairline borders --- */
-  --color-line-subtle: oklch(1 0 0 / 6%);
-  --color-line: oklch(1 0 0 / 10%);
-  --color-line-strong: oklch(1 0 0 / 18%);
+  /* --- Violet / magenta: secondary glow, sparingly (gradients, hybrid) --- */
+  --color-violet-300: #c9b8ff;
+  --color-violet-400: #a98bff;
+  --color-violet-500: #8b5cf6;
+  --color-violet-600: #6d3fe0;
+  --color-magenta-400: #e879f9;
+  --color-magenta-500: #d946ef;
+
+  /* --- Typography greys, cool-tinted (AA contrast checked on surface-2) --- */
+  --color-ink-50: #f5f8fc;
+  --color-ink-100: #e4eaf3;
+  --color-ink-200: #c5cfdc;
+  --color-ink-300: #a3afc0;
+  /* The bottom of this scale is set by contrast, not taste: ink-400 and
+     ink-500 clear 4.5:1 on every surface up to surface-3; ink-600 clears 3:1
+     and is decorative only, never meaning. */
+  --color-ink-400: #909cae;
+  --color-ink-500: #8793a6;
+  --color-ink-600: #586375;
+
+  /* --- Hairline borders (cool white) and luminous cyan lines --- */
+  --color-line-subtle: oklch(0.9 0.03 230 / 7%);
+  --color-line: oklch(0.9 0.03 230 / 12%);
+  --color-line-strong: oklch(0.9 0.03 230 / 22%);
+  --color-line-glow: oklch(0.83 0.13 210 / 45%);
 
   /* --- Image overlay for text set on photographs and drawings --- */
-  --color-scrim: oklch(0 0 0 / 55%);
+  --color-scrim: oklch(0.08 0.02 250 / 62%);
 
-  /* --- Muted signal colours (compare winners, powertrain tags).
-         Deliberately desaturated so they never read as "gaming UI". --- */
-  --color-signal-positive: #9dbf8e;
-  --color-signal-negative: #c08b7a;
-  --color-signal-electric: #8fb3bf;
-  --color-signal-hybrid: #b6ae8a;
+  /* --- Signal colours: saturated now, but every one passes AA as text on
+         surface-2. Electric = cyan-blue, hybrid = violet. --- */
+  --color-signal-positive: #4ade80;
+  --color-signal-negative: #fb7185;
+  --color-signal-electric: #38bdf8;
+  --color-signal-hybrid: #b197fc;
+
+  /* --- Glows (box-shadow). shadow-glow-cyan / -gold / -violet. --- */
+  --shadow-glow-cyan: 0 0 0 1px oklch(0.83 0.13 210 / 35%), 0 0 24px -4px oklch(0.8 0.14 210 / 55%);
+  --shadow-glow-gold: 0 0 0 1px oklch(0.8 0.11 85 / 35%), 0 0 24px -4px oklch(0.78 0.12 80 / 50%);
+  --shadow-glow-violet: 0 0 0 1px oklch(0.72 0.17 290 / 35%), 0 0 26px -4px oklch(0.65 0.2 290 / 50%);
 
   /* --- Radii: tight and technical --- */
   --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 16px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   /* Role-named radii (rounded-control / rounded-card / rounded-pill). */
-  --radius-control: 4px;
-  --radius-card: 8px;
+  --radius-control: 3px;
+  --radius-card: 6px;
   --radius-pill: 999px;
 
-  /* --- Motion: slow, weighted, cinematic --- */
+  /* --- Motion --- */
   --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-metal: cubic-bezier(0.65, 0, 0.35, 1);
-  /* The default for everything (ease-standard), and for things leaving. */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  /* A little overshoot, for magnetic spring-back and hover lifts. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* --- Motion system. Used as duration-(--duration-*).
-         fast      = colour, opacity, underline
-         base      = toggles, chips, menus opening, nav condense
-         normal    = panels, sheets, reveals, image hover zoom
-         cinematic = hero entrance and camera moves only --- */
+  /* fast = colour/opacity/underline; base = toggles, menus, nav condense;
+     normal = panels, sheets, reveals; cinematic = hero entrances, camera. */
   --duration-fast: 150ms;
   --duration-base: 250ms;
   --duration-normal: 450ms;
+  --duration-slow: 700ms;
   --duration-cinematic: 900ms;
 
-  /* --- Letter spacing. The display face is a grotesk now, so large sizes
-         tighten rather than open up; labels keep only a whisper of tracking. */
-  --tracking-display: -0.02em;
-  --tracking-label: 0.06em;
-  --tracking-button: 0;
-  --tracking-hud: 0.04em;
+  /* --- Letter spacing --- */
+  --tracking-display: -0.01em;
+  --tracking-label: 0.14em;
+  --tracking-button: 0.08em;
+  --tracking-hud: 0.12em;
+  --tracking-wide-hud: 0.22em;
 
   /* --- Small type. 12px is the floor for anything a reader must read;
-         11px (nano) is for photo credits and IDs only. --- */
+         11px (nano) is for photo credits, IDs and decorative HUD labels. --- */
   --text-micro: 0.75rem;
   --text-micro--line-height: 1.5;
   --text-nano: 0.6875rem;
