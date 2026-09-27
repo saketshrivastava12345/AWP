@@ -301,6 +301,39 @@ function FirstFrame({ armed, onFrame }: { armed: boolean; onFrame: () => void })
   return null;
 }
 
+/**
+ * Keeps each material's compiled program in step with its `transparent` flag.
+ *
+ * The bodywork ghosting (CarBody) and the stepping back of other systems
+ * (setDim) switch `material.transparent` without flagging the material for
+ * recompilation. three.js compiles an OPAQUE variant for a non-transparent
+ * material that forces alpha to 1, so until the program is rebuilt the shell
+ * stays solid. At MEDIUM and above the mirrored floor happens to rebuild
+ * programs every frame, which hides the problem; at LOW, with no mirror, the
+ * story's ghosted body and highlighted system never appeared. This flags a
+ * material whenever its transparency has changed since the last frame — a
+ * no-op once W1's material code sets `needsUpdate` itself.
+ */
+function ProgramSync() {
+  const scene = useThree((state) => state.scene);
+  const seen = useRef(new WeakMap<THREE.Material, boolean>());
+  useFrame(() => {
+    const known = seen.current;
+    scene.traverse((object) => {
+      const { material } = object as THREE.Mesh;
+      if (!material) return;
+      for (const entry of Array.isArray(material) ? material : [material]) {
+        const previous = known.get(entry);
+        if (previous !== undefined && previous !== entry.transparent) {
+          entry.needsUpdate = true;
+        }
+        known.set(entry, entry.transparent);
+      }
+    });
+  });
+  return null;
+}
+
 /** Reports a lost context on a canvas still in the page (not R3F's own unmount). */
 function ContextWatch({ onLost }: { onLost: () => void }) {
   const gl = useThree((state) => state.gl);
@@ -399,6 +432,7 @@ function Scene({
       />
       <FirstFrame armed={built} onFrame={onReady} />
       <ContextWatch onLost={onContextLost} />
+      <ProgramSync />
     </>
   );
 }

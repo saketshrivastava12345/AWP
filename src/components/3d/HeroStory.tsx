@@ -15,7 +15,7 @@ import type { CarBuild } from "@/lib/car-build";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useGpuTier } from "@/hooks/useGpuTier";
-import { heroProfile } from "@/components/home/hero-mode";
+import { QUALITY_PROFILES } from "@/lib/viewer-quality";
 import { beatAt, type HeroBeatId } from "@/components/home/hero-beats";
 import { POSTER_NOTES, heroMode } from "@/components/home/hero-mode";
 import { HeroStageContext, type HeroStageState } from "@/components/home/HeroStageStatus";
@@ -187,7 +187,7 @@ export function HeroStory({
         : null;
   const total = railLabels.length;
   const canOptIn = mode.kind === "poster" && mode.canOptIn;
-  const quality = mode.kind === "scene" ? heroProfile(mode.level) : null;
+  const quality = mode.kind === "scene" ? QUALITY_PROFILES[mode.level] : null;
   const optIn = useCallback(() => setOptedIn(true), []);
   const stageState = useMemo<HeroStageState>(
     () => ({ note, canOptIn, optIn }),
