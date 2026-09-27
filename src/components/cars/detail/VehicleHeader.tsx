@@ -102,14 +102,15 @@ export async function VehicleHeader({
           {meta.length > 0 || lifecycle ? (
             <p className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-s text-ink-400">
               {meta.map((part, index) => (
+                // The separator trails its part, so a wrapped line never
+                // starts with a dot.
                 <span key={part} className="inline-flex items-center gap-2">
-                  {index > 0 ? <Dot /> : null}
                   {part}
+                  {index < meta.length - 1 || lifecycle ? <Dot /> : null}
                 </span>
               ))}
               {lifecycle ? (
                 <span className="inline-flex items-center gap-2">
-                  {meta.length > 0 ? <Dot /> : null}
                   <span>{lifecycle.label}</span>
                   <InfoHint
                     label={`About the status: ${lifecycle.label}`}

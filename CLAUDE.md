@@ -155,13 +155,22 @@ Tokens live in `src/app/globals.css` (Tailwind v4 `@theme`):
 - text `--color-ink-50..600`
 - hairlines `--color-line-subtle` / `line` / `line-strong`
 - muted signals `--color-signal-positive|negative|electric|hybrid`
-- utilities `grain`, `glass`, `edge-light`, `gold-gradient-text`, `text-label`
+- utilities `bleed-under-nav`, `scrim-top/bottom`, `edge-fade-x`, `stat-row`,
+  `shadow-overlay`; radii `rounded-control` / `rounded-card` / `rounded-pill`
+- layout vars `--nav-h`, `--subnav-h`, and `--nav-offset` + `--subnav-offset`
+  for anything sticky
 
 Fonts (`src/lib/fonts.ts`, via `next/font/google`):
 
-- **Michroma** → `font-display` — headlines, wordmark, big stat numbers
+- **Michroma** → `font-brand` — the wordmark (and at most an optional nameplate)
+- **Inter Tight** → `font-display` — every heading and key figure
 - **Inter** → `font-sans` — body
-- **JetBrains Mono** → `font-mono` — spec tables, compare columns
+- **JetBrains Mono** → `font-mono` — spec values, compare columns, the 3D HUD
+
+Type comes from preset utilities, not ad-hoc sizes: `text-display-xl/l`,
+`text-h1..h4`, `text-lead`, `text-body`, `text-body-s`, `text-caption`,
+`text-eyebrow`, `text-figure-xl`, `text-figure`, `text-data`. Sentence case
+everywhere outside the 3D viewer; `text-label`/`text-hud` are legacy.
 
 ---
 
@@ -748,6 +757,40 @@ then reviewed adversarially. The decisions worth keeping:
   refuses during prerender otherwise.
 - The hatchback profile in `car-styles.ts` was lowered and raked; it read as
   an SUV.
+
+**Phase 13 — a car-brand redesign of the whole frontend**
+
+Audited first (every page at 390 and 1440, written up as a defect list and a
+spec), then rebuilt as a design system followed by seven page workstreams on
+disjoint files. The direction is a manufacturer's product site: large quiet
+type, photography and 3D first, sentence case, lots of space, gold only for
+the primary action, the active underline and "best" markers — never for
+headings, prices or statistics.
+
+- **Design system first, additive only.** New tokens and presets, Inter Tight
+  for display, `Button` `link` variant, `StatRow`/`StatCard` (value above
+  label, "—" plus "not published" for a null), `SubNav`, and a navbar that is
+  transparent over heroes. Legacy utilities were remapped rather than
+  deleted, so every page kept compiling while its own workstream was pending.
+  `cn()` had to learn the new utility names, or tailwind-merge silently drops
+  `text-h4` next to `text-ink-300`.
+- **`SubNav`** is the in-page navigation on the car, brand, model, country
+  and about pages. It must be a direct child of the page (a short wrapper or
+  an `overflow-hidden` ancestor stops it sticking). While present, the navbar
+  hides on scroll-down and `--nav-offset` drops to 0; sticky stages such as
+  the blueprint tour sit at `--nav-offset + --subnav-offset`.
+- **Cards and figures.** One card shell for cars and models (brand, name with
+  the repeated model name removed, a meta line, three figures). A price shows
+  only when one is recorded, at full figure. No count-up numbers anywhere.
+- **Catalogue** headings follow the filters ("Electric cars", "Porsche"),
+  zero-count facets are hidden, and sort is a select. Filters stay URL-only
+  and work without JavaScript.
+- **Compare** draws bars only on headline performance rows (`showBar`) and no
+  longer ranks kerb weight.
+- The admin pages now export `instant = false` like their layout: they block
+  on the role check by design, and dev-mode instant-navigation validation
+  otherwise logged an error for every admin page.
+- Ported Creative Commons licences ("CC BY-SA 3.0 de") now link to their deed.
 
 **Open items**
 

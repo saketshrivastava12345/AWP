@@ -43,7 +43,7 @@ or a representation.
 | Area                  | What it does                                                                                                                                                                                                                                                                                      |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **3D viewer**         | Loads a GLB/glTF model (Draco and KTX2 decoders self-hosted) or falls back to a parametric car built from the variant's published dimensions. Camera presets, lighting presets, exploded view, X-ray/engineering mode, hotspots, dimension overlay, paint configurator from sourced colours only. |
-| **Car pages**         | A long-scroll page per variant: key figures and price above the fold, a scroll-driven anatomy tour, specifications grouped by powertrain, Car DNA percentiles, powertrain diagram, gallery, pricing, parts, related cars and a data-provenance section.                                           |
+| **Car pages**         | A long-scroll page per variant: key figures and price above the fold, a scroll-driven 3D blueprint that takes the car apart system by system, specifications grouped by powertrain, Car DNA percentiles, powertrain diagram, gallery, pricing, parts, related cars and a data-provenance section. |
 | **Market pricing**    | Country → state → city selection with a full on-road breakdown (ex-showroom, RTO, registration, insurance, handling, FASTag). Every price shows its type, source, source link and verification date. Nothing is converted between currencies.                                                     |
 | **Catalogue**         | Filters and sorts that live in the URL (shareable, back/forward works, usable without JavaScript), plain-English search ("german supercars under 700 hp"), cards with quick stats. No WebGL on listing pages.                                                                                     |
 | **Compare**           | Two to four cars, grouped rows, visual bars, best-in-row only when at least two cars publish the figure, "differences only", shareable URL.                                                                                                                                                       |
@@ -549,7 +549,7 @@ npm run verify        # lint → typecheck → unit tests → production build
 npm run format:check
 ```
 
-- **Unit tests (Vitest): 700+ tests in 54 files**, all passing. They cover the pure logic: the search-query parser, the
+- **Unit tests (Vitest): 774 tests in 58 files**, all passing. They cover the pure logic: the search-query parser, the
   pricing engine (scope fallback, on-road breakdown, calculated totals,
   history), market selection, the anatomy tour, compare rows, filters and
   URL parsing, the command palette, the 3D viewer's quality and preset logic,
