@@ -17,6 +17,12 @@ export type AnimatedCaretInputProps = ComponentPropsWithRef<"input"> & {
 const IDLE_BLINK_MS = 560;
 /** The caret's height as a multiple of the font size. */
 const CARET_HEIGHT_EM = 1.2;
+/**
+ * The most time one animation frame may advance the spring. A frame that
+ * arrives late (a busy main thread, a throttled tab) then slows the glide
+ * instead of skipping it to the end.
+ */
+const MAX_FRAME_MS = 100;
 
 function assignRef<T>(ref: Ref<T> | undefined, node: T | null) {
   if (typeof ref === "function") ref(node);
@@ -98,7 +104,7 @@ export function AnimatedCaretInput({
     };
 
     const tick = (time: number) => {
-      const dt = lastTime ? time - lastTime : 1000 / 60;
+      const dt = lastTime ? Math.min(time - lastTime, MAX_FRAME_MS) : 1000 / 60;
       lastTime = time;
       state = stepSpring(state, target, CARET_SPRING, dt);
       if (isSettled(state, target)) {

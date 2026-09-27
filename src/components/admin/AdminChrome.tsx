@@ -32,7 +32,7 @@ export function AdminShell({
               <p aria-hidden="true" className="hud-label">
                 SYS // ADMIN
               </p>
-              <p className="mt-2 font-hud text-[13px] tracking-hud text-ink-50 uppercase">
+              <p className="mt-2 font-hud text-[11.5px] tracking-hud whitespace-nowrap text-ink-50 uppercase">
                 Mission control
               </p>
               <p className="mt-2 flex items-center gap-2 text-hud">

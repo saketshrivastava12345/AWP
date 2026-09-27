@@ -140,10 +140,10 @@ export function AuthShell({
             label="AUTH // TERMINAL"
             code={code}
             padded={false}
-            className="isolate w-full max-w-[26rem] overflow-hidden p-6 [--hud-l:18px] sm:p-8"
+            className="isolate w-full max-w-[26rem] p-6 [--hud-l:18px] sm:p-8"
           >
-            {/* The panel's own slow scanning beam. */}
-            <Scanlines beam className="opacity-80 [--scan-speed:9s]" />
+            {/* The panel's own slow scanning beam (the layer clips itself). */}
+            <Scanlines beam className="rounded-card opacity-80 [--scan-speed:9s]" />
             <div className="relative">{children}</div>
           </HudFrame>
         </div>

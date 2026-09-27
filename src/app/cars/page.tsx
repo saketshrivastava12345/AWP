@@ -399,7 +399,7 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
                   {result.pageCount > 1 ? (
                     <span className="text-ink-400">
                       {" "}
-                      <span aria-hidden="true">//</span> showing{" "}
+                      <span aria-hidden="true">{"//"}</span> showing{" "}
                       <span className="tabular text-ink-200">
                         {first === last
                           ? formatNumber(first)

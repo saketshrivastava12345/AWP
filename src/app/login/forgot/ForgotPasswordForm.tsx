@@ -2,8 +2,9 @@
 
 import { useActionState } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
-import { FormField, Input, describedBy } from "@/components/ui/Field";
+import { FormField, describedBy } from "@/components/ui/Field";
 import { FormMessage } from "@/components/account/AuthShell";
+import { TerminalEmailInput } from "@/components/account/TerminalEmailInput";
 import { requestPasswordReset } from "@/app/auth/actions";
 import { INITIAL_FORM_STATE } from "@/app/auth/form-state";
 
@@ -19,10 +20,9 @@ export function ForgotPasswordForm() {
     <div>
       <form action={formAction} className="space-y-5">
         <FormField id="email" label="Email address" error={emailError}>
-          <Input
+          <TerminalEmailInput
             id="email"
             name="email"
-            type="email"
             autoComplete="email"
             inputMode="email"
             required

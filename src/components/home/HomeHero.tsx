@@ -238,7 +238,10 @@ export function HomeHero({ car, counts }: { car: HeroCar | null; counts: HomeCou
             <h1 id="hero-heading" className="mt-5 text-display-l">
               <ScrambleText
                 text="The world of automotive engineering."
-                className="gradient-text"
+                // The gradient is clipped to the span's box, which the tight display
+                // line-height makes shallower than Michroma's descenders: pad the box
+                // (and take the padding back in margin) so every tail is painted.
+                className="-my-[0.14em] gradient-text py-[0.14em]"
               />
             </h1>
             <p

@@ -4,8 +4,9 @@ import { useActionState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
-import { FormField, Input, describedBy } from "@/components/ui/Field";
+import { FormField, describedBy } from "@/components/ui/Field";
 import { FormMessage } from "@/components/account/AuthShell";
+import { TerminalEmailInput } from "@/components/account/TerminalEmailInput";
 import { PasswordInput } from "@/components/account/PasswordInput";
 import { signIn, signUp } from "@/app/auth/actions";
 import { AUTH_MESSAGES, INITIAL_FORM_STATE, type FormState } from "@/app/auth/form-state";
@@ -74,10 +75,9 @@ function SignInForm({ next }: { next: string | null }) {
     <form action={formAction} className="space-y-5" aria-label="Sign in">
       <NextField next={next} />
       <FormField id="signin-email" label="Email address" error={emailError}>
-        <Input
+        <TerminalEmailInput
           id="signin-email"
           name="email"
-          type="email"
           autoComplete="username"
           inputMode="email"
           required
@@ -227,10 +227,9 @@ function SignUpFormBound({
     <form action={action} className="space-y-5" aria-label="Create account">
       <NextField next={next} />
       <FormField id="signup-email" label="Email address" error={emailError}>
-        <Input
+        <TerminalEmailInput
           id="signup-email"
           name="email"
-          type="email"
           autoComplete="email"
           inputMode="email"
           required

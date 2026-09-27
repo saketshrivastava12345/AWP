@@ -13,6 +13,7 @@ import {
 import { LoaderCircle, Plus, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonClasses } from "@/components/ui/Button";
+import { AnimatedCaretInput } from "@/components/inputs/AnimatedCaretInput";
 import { formatNumber } from "@/lib/format";
 import { MAX_COMPARE, parseCompareSlug, withCar } from "@/lib/compare-slug";
 import { shortCarName } from "@/lib/compare-rows";
@@ -309,8 +310,8 @@ export function CompareCombobox({
         className={cn(
           "flex items-center gap-3 rounded-control border bg-surface-1 transition-colors duration-(--duration-fast)",
           // The field's focus indicator (the input itself draws no outline).
-          "focus-within:border-gold-500",
-          expanded ? "border-ink-400" : "border-line-strong hover:border-ink-500",
+          "focus-within:border-cyan-400 focus-within:glow-cyan",
+          expanded ? "border-cyan-400/70" : "border-line-strong hover:border-ink-500",
           hero ? "h-14 pr-2 pl-5" : "h-12 px-4",
           full && "opacity-60",
         )}
@@ -323,7 +324,9 @@ export function CompareCombobox({
         ) : (
           <Search className="size-[18px] shrink-0 text-ink-400" aria-hidden="true" />
         )}
-        <input
+        <AnimatedCaretInput
+          wrapperClassName="h-full min-w-0 flex-1"
+          caretClassName="bg-cyan-300 shadow-[0_0_8px_var(--color-cyan-400)]"
           ref={inputRef}
           id={inputId}
           type="text"

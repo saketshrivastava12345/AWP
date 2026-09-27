@@ -26,8 +26,12 @@ export function HeroBackdrop() {
       {/* The pool of light under the car: bottom-centre on phones, right on
           wide screens. It is wider than the stage, so its own layer clips
           it — it must never widen the page. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      >
         <div className="absolute top-[62%] left-1/2 h-[40%] w-[120%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] bg-[radial-gradient(closest-side,oklch(0.8_0.14_210/16%),transparent)] lg:top-[52%] lg:left-[72%] lg:w-[64%]" />
+      </div>
     </>
   );
 }

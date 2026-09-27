@@ -463,16 +463,17 @@ export function rangeLabel(
  */
 export function chipClasses(active: boolean): string {
   return [
-    "relative inline-flex h-10 shrink-0 items-center gap-2 rounded-pill border px-4",
-    "text-body-s whitespace-nowrap transition-colors duration-(--duration-fast)",
+    "relative inline-flex h-10 shrink-0 items-center gap-2 rounded-xs border px-3.5",
+    "font-mono text-[11px] tracking-hud uppercase whitespace-nowrap",
+    "transition-[color,border-color,background-color,box-shadow] duration-(--duration-fast)",
     "after:absolute after:inset-x-0 after:-inset-y-0.5 after:content-['']",
     active
-      ? "border-gold-500 bg-white/4 text-ink-50"
-      : "border-line text-ink-300 hover:border-ink-500 hover:text-ink-50",
+      ? "border-cyan-300 bg-cyan-400/12 text-cyan-100 shadow-[0_0_16px_-4px_oklch(0.8_0.14_210/60%)]"
+      : "border-line-strong text-ink-300 hover:border-cyan-600 hover:text-ink-50",
   ].join(" ");
 }
 
 /** The count inside a chip. */
 export function chipCountClasses(active: boolean): string {
-  return `text-caption tabular-nums ${active ? "text-ink-300" : "text-ink-400"}`;
+  return `font-mono text-[11px] tabular-nums ${active ? "text-cyan-200" : "text-ink-400"}`;
 }

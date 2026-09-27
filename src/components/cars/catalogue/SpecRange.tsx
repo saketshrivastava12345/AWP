@@ -39,10 +39,11 @@ export function SpecRange({
       value={range ? formatRange(range, decimals) : null}
       unit={unit}
       hint={note}
-      // A range ("470–800") is twice as wide as a single figure: set it a
-      // step smaller and never break it at the dash.
+      // A range ("470–800") is twice as wide as a single figure, and Michroma
+      // is a wide face: set it smaller (down to 24px two-up on a phone) and
+      // never break it at the dash.
       className={cn(
-        "[&_dd]:text-[clamp(2rem,3.4vw,3rem)] [&_dd>span:first-child]:whitespace-nowrap",
+        "[&_dd]:text-[clamp(1.5rem,3.2vw,3rem)] [&_dd>span:first-child]:whitespace-nowrap",
         className,
       )}
     />

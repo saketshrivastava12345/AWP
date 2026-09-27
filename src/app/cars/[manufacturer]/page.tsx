@@ -166,7 +166,7 @@ export default async function ManufacturerCataloguePage({
           {models.length > 0 ? (
             <p className="font-mono text-xs tracking-hud text-ink-400 uppercase">
               {formatNumber(modelCount)} {modelCount === 1 ? "model" : "models"}{" "}
-              <span aria-hidden="true">//</span> {formatNumber(variantCount)}{" "}
+              <span aria-hidden="true">{"//"}</span> {formatNumber(variantCount)}{" "}
               {variantCount === 1 ? "variant" : "variants"}
             </p>
           ) : null}
