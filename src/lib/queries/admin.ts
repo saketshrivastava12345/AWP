@@ -752,7 +752,7 @@ export const getAdminVehicle = cache(async function getAdminVehicle(
   const { data, error } = await supabase
     .from("car_variants")
     .select(
-      "*, car_models!inner ( *, manufacturers!inner ( id, name, slug, country_id ), categories!inner ( id, name, slug ) ), car_generations (*), engines (*), transmissions (*), performance_specs (*), dimensions (*), fuel_specs (*), ev_specs (*)",
+      "*, car_models!inner ( *, manufacturers!inner ( id, name, slug, country_id ), categories!inner ( id, name, slug ) ), car_generations!car_variants_generation_same_model (*), engines (*), transmissions (*), performance_specs (*), dimensions (*), fuel_specs (*), ev_specs (*)",
     )
     .eq("id", id)
     .maybeSingle()

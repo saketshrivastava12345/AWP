@@ -173,6 +173,9 @@ export async function listCars(options: ListCarsOptions = {}): Promise<Catalogue
 }
 
 /** The PostgREST embed backing the detail page — one round trip. */
+// Two foreign keys join a variant to its generation (the plain one and the
+// composite "same model" one from migration 0008), so PostgREST refuses an
+// unnamed car_generations embed with PGRST201. The constraint is named.
 const DETAIL_SELECT = `
   *,
   car_models!inner (
@@ -189,7 +192,7 @@ const DETAIL_SELECT = `
   variant_features ( detail, features (*) ),
   variant_parts ( detail, parts (*) ),
   car_media (*),
-  car_generations (*),
+  car_generations!car_variants_generation_same_model (*),
   variant_markets ( *, countries ( id, name, slug, flag_emoji, iso_code ) )
 `;
 
