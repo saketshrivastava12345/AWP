@@ -44,6 +44,18 @@ export function MobileFilters({
           event.preventDefault();
           setOpen(true);
         }}
+        // Announced as a button once hydrated, so Space must open it too (an
+        // anchor alone activates only on Enter).
+        onKeyDown={
+          hydrated
+            ? (event) => {
+                if (event.key === " ") {
+                  event.preventDefault();
+                  setOpen(true);
+                }
+              }
+            : undefined
+        }
         className={cn(
           "inline-flex h-11 items-center gap-2.5 rounded-xs border border-line-strong bg-surface-1 px-4",
           "font-display text-micro tracking-button text-ink-100 uppercase transition-colors",

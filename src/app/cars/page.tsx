@@ -27,6 +27,7 @@ import {
   SORT_KEYS,
   SORT_OPTIONS,
   isGroupedPriceSort,
+  isGroupedRangeSort,
 } from "@/lib/car-query";
 import {
   EMPTY_FILTER_OPTIONS,
@@ -193,6 +194,7 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
   const first = result.total === 0 ? 0 : (result.page - 1) * result.pageSize + 1;
   const last = Math.min(result.total, result.page * result.pageSize);
   const groupedPrice = isGroupedPriceSort(state.sort, state.effective);
+  const groupedRange = isGroupedRangeSort(state.sort);
   const pricedCurrencies = (options.price?.currencies ?? [])
     .filter((option) => option.count > 0)
     .map((option) => option.value)
@@ -359,6 +361,20 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
                 . Prices are grouped by currency and never converted — choose a currency
                 under Price to rank like with like. Cars without a recorded price come
                 last.
+              </span>
+            </p>
+          ) : null}
+
+          {groupedRange && result.total > 0 ? (
+            <p className="mt-4 flex max-w-3xl items-start gap-2 text-xs leading-relaxed text-ink-400">
+              <Info
+                className="mt-0.5 size-3.5 shrink-0 text-gold-500"
+                aria-hidden="true"
+              />
+              <span>
+                Sorted by range within each test cycle (WLTP, EPA, ARAI…). Figures from
+                different cycles are grouped, not ranked against each other. Cars without
+                a published range come last.
               </span>
             </p>
           ) : null}

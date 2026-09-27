@@ -35,6 +35,7 @@ export const CARD_COLUMN_LIST = [
   "top_speed_kmh",
   "zero_to_100_s",
   "range_km",
+  "range_standard",
   "year_start",
   "year_end",
   "status",

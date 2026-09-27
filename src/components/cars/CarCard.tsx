@@ -141,7 +141,11 @@ export function CarCard({
   if (car.drive_type) quick.push({ label: "Drive", value: car.drive_type.toUpperCase() });
   if (summary) quick.push({ label: "Powertrain", value: summary });
   if (car.range_km !== null)
-    quick.push({ label: "Range", value: `${formatNumber(car.range_km)} km` });
+    quick.push({
+      label: "Range",
+      // The test cycle travels with the figure: WLTP and ARAI are not alike.
+      value: `${formatNumber(car.range_km)} km${car.range_standard ? ` · ${car.range_standard.toUpperCase()}` : ""}`,
+    });
 
   const card = (
     <article

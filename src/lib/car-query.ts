@@ -39,7 +39,8 @@ export type SortColumn =
   | "manufacturer_name"
   | "model_name"
   | "variant_name"
-  | "range_km";
+  | "range_km"
+  | "range_standard";
 
 export type SortOrder = { column: SortColumn; ascending: boolean };
 
@@ -89,7 +90,13 @@ export const SORT_OPTIONS = {
   "range-desc": {
     label: "Range",
     description: "Longest range",
-    orders: [{ column: "range_km", ascending: false }],
+    // Grouped by test cycle first (WLTP, NEDC, EPA, CLTC, ARAI — reverse
+    // alphabetical), longest within each: an ARAI figure is not ranked
+    // against a WLTP one, the same rule the compare page applies.
+    orders: [
+      { column: "range_standard", ascending: false },
+      { column: "range_km", ascending: false },
+    ],
   },
 } as const satisfies Record<string, SortDefinition>;
 
@@ -150,6 +157,11 @@ export function sortOrders(sort: SortKey, filters: CarFilters): SortOrder[] {
     ];
   }
   return [...SORT_OPTIONS[sort].orders];
+}
+
+/** True when the range sort is active: ranges are grouped by test cycle. */
+export function isGroupedRangeSort(sort: SortKey): boolean {
+  return sort === "range-desc";
 }
 
 /** True when the price sort is active without a single currency to compare in. */

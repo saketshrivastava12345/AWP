@@ -475,7 +475,7 @@ describe("prices", () => {
       "Ex-showroom · Pune, Maharashtra, India · verified 12 Aug 2026",
     );
     expect(price.cells[1]?.display).toBe("$161,100");
-    expect(price.cells[1]?.note).toBe("Base price");
+    expect(price.cells[1]?.note).toBe("Base price · market not recorded · unverified");
     expect(price.cells[2]?.state).toBe("missing");
   });
 

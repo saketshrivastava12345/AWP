@@ -271,6 +271,11 @@ function Rig({
     camera.setViewOffset(width, height, x, y, width, height);
 
     motionRef.current.distance = drive(shown.current);
+    // DEBUG-W9B (temporary)
+    const debugCanvas = state.gl.domElement;
+    debugCanvas.dataset.beat = shown.current.toFixed(3);
+    debugCanvas.dataset.frames = String(Number(debugCanvas.dataset.frames ?? 0) + 1);
+    debugCanvas.dataset.fov = String(lens.fov);
 
     if (shown.current !== goal || pointerMoving) {
       invalidate();

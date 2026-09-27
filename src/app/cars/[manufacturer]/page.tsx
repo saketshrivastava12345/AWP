@@ -61,7 +61,8 @@ export default async function ManufacturerCataloguePage({
 }: PageProps<"/cars/[manufacturer]">) {
   const { manufacturer: slug } = await params;
   const catalogue = await getManufacturerCatalogue(slug);
-  if (catalogue === READ_FAILED) return <CatalogueUnavailable retryHref={`/cars/${slug}`} />;
+  if (catalogue === READ_FAILED)
+    return <CatalogueUnavailable retryHref={`/cars/${slug}`} />;
   if (!catalogue) notFound();
 
   const { manufacturer, country, groups, modelCount, variantCount, power } = catalogue;
