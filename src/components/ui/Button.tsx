@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { type ComponentProps, type ReactNode } from "react";
+import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
@@ -7,8 +8,8 @@ export type ButtonSize = "sm" | "md" | "lg";
 
 const BASE =
   "inline-flex items-center justify-center gap-2 font-display uppercase " +
-  "tracking-[0.14em] whitespace-nowrap rounded-xs transition-colors duration-200 " +
-  "ease-[var(--ease-cinematic)] disabled:pointer-events-none disabled:opacity-40";
+  "tracking-button whitespace-nowrap rounded-xs transition-colors duration-(--duration-fast) " +
+  "ease-cinematic disabled:pointer-events-none disabled:opacity-40";
 
 const VARIANTS: Record<ButtonVariant, string> = {
   // The single filled element in the system. Used sparingly — one per view.
@@ -24,7 +25,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
 };
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-[10px]",
+  sm: "h-9 px-3 text-micro",
   md: "h-11 px-6 text-[11px]",
   lg: "h-14 px-9 text-xs",
 };
@@ -44,7 +45,11 @@ type SharedProps = {
   className?: string;
 };
 
-type ButtonProps = SharedProps & ComponentPropsWithoutRef<"button">;
+type ButtonProps = SharedProps &
+  ComponentProps<"button"> & {
+    /** Shows a spinner, disables the button and marks it busy. */
+    loading?: boolean;
+  };
 
 export function Button({
   variant = "primary",
@@ -52,16 +57,27 @@ export function Button({
   className,
   children,
   type = "button",
+  loading = false,
+  disabled,
   ...props
 }: ButtonProps) {
   return (
-    <button type={type} className={buttonClasses(variant, size, className)} {...props}>
+    <button
+      type={type}
+      className={buttonClasses(variant, size, className)}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      {...props}
+    >
+      {loading ? (
+        <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
+      ) : null}
       {children}
     </button>
   );
 }
 
-type ButtonLinkProps = SharedProps & ComponentPropsWithoutRef<typeof Link>;
+type ButtonLinkProps = SharedProps & ComponentProps<typeof Link>;
 
 /**
  * A link styled as a button.

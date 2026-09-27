@@ -2,7 +2,7 @@
   "name": "aurix",
   "version": "0.1.0",
   "private": true,
-  "description": "AURIX — Global Automotive Intelligence. A 3D automotive encyclopedia.",
+  "description": "AURIX \u2014 Global Automotive Intelligence. A 3D automotive encyclopedia.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -54,6 +54,6 @@
     "vitest": "5.0.1"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22.12.0"
   }
 }

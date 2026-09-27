@@ -10,6 +10,7 @@ import { LoadingScreen } from "@/components/layout/LoadingScreen";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { SearchOverlay } from "@/components/layout/SearchOverlay";
 import { SearchProvider } from "@/components/layout/SearchProvider";
+import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -44,9 +45,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // suppressHydrationWarning: the boot script sets data-booted on <html>
     // before React hydrates, by design. It only silences this one element's
     // attributes, not its children.
+    // data-scroll-behavior: globals.css makes scrolling smooth; this tells Next
+    // to switch that off during route transitions so a navigation does not
+    // visibly glide to the top of the new page.
     <html
       lang="en"
       className={`${fontVariables} h-full antialiased`}
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <head>
@@ -65,28 +70,30 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
 
-        <SearchProvider>
-          <LoadingScreen />
-          <Navbar
-            accountSlot={
-              /* The account menu reads cookies. Behind a Suspense boundary it
+        <ToastProvider>
+          <SearchProvider>
+            <LoadingScreen />
+            <Navbar
+              accountSlot={
+                /* The account menu reads cookies. Behind a Suspense boundary it
                  becomes a streamed hole in an otherwise fully static page,
                  instead of forcing every route to render dynamically. */
-              <Suspense fallback={<div className="h-[34px] w-[34px]" aria-hidden />}>
-                <AccountMenu />
-              </Suspense>
-            }
-          />
-          <SearchOverlay />
+                <Suspense fallback={<div className="h-[34px] w-[34px]" aria-hidden />}>
+                  <AccountMenu />
+                </Suspense>
+              }
+            />
+            <SearchOverlay />
 
-          {/* pt-16 clears the fixed navbar. */}
-          <div className="flex flex-1 flex-col pt-16">
-            <main id="main" className="flex flex-1 flex-col">
-              <PageTransition>{children}</PageTransition>
-            </main>
-            <Footer />
-          </div>
-        </SearchProvider>
+            {/* pt-16 clears the fixed navbar. */}
+            <div className="flex flex-1 flex-col pt-16">
+              <main id="main" className="flex flex-1 flex-col">
+                <PageTransition>{children}</PageTransition>
+              </main>
+              <Footer />
+            </div>
+          </SearchProvider>
+        </ToastProvider>
       </body>
     </html>
   );

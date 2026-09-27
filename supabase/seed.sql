@@ -1871,3 +1871,144 @@ join public.car_models m on m.manufacturer_id = mf.id and m.slug = v.model_slug
 join public.car_variants cv on cv.model_id = m.id and cv.slug = v.variant_slug
 join public.parts p on p.slug = v.part_slug
 on conflict (variant_id, part_id) do nothing;
+
+-- ===========================================================================
+-- Migration 0008 onwards: markets, exhaust group, generations
+--
+-- Guarded so this file still runs against a database that has not had the
+-- later migrations applied. Every statement is idempotent.
+--
+-- DATA HONESTY: geography and currencies are facts; NO prices, colours or
+-- availability are seeded. Those are added through /admin with a source, a
+-- source URL and a verification date.
+-- ===========================================================================
+
+do $do$
+begin
+  -- Currencies prices are quoted in, per market.
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'countries'
+               and column_name = 'currency_code') then
+    update public.countries c
+       set currency_code = v.code
+      from (values
+        ('CN', 'CNY'), ('FR', 'EUR'), ('DE', 'EUR'), ('IN', 'INR'), ('IT', 'EUR'),
+        ('JP', 'JPY'), ('KR', 'KRW'), ('SE', 'SEK'), ('GB', 'GBP'), ('US', 'USD')
+      ) as v(iso, code)
+     where c.iso_code = v.iso
+       and c.currency_code is distinct from v.code;
+  end if;
+
+  -- India: states / union territories and cities for on-road pricing.
+  if to_regclass('public.market_regions') is not null then
+    insert into public.market_regions (country_id, name, slug, display_order)
+    select co.id, v.name, v.slug::public.slug, v.ord::smallint
+    from (values
+      ('Maharashtra', 'maharashtra', 1),
+      ('Delhi', 'delhi', 2),
+      ('Karnataka', 'karnataka', 3),
+      ('Tamil Nadu', 'tamil-nadu', 4),
+      ('Telangana', 'telangana', 5),
+      ('West Bengal', 'west-bengal', 6),
+      ('Gujarat', 'gujarat', 7),
+      ('Haryana', 'haryana', 8),
+      ('Uttar Pradesh', 'uttar-pradesh', 9),
+      ('Rajasthan', 'rajasthan', 10),
+      ('Kerala', 'kerala', 11),
+      ('Madhya Pradesh', 'madhya-pradesh', 12),
+      ('Punjab', 'punjab', 13),
+      ('Chandigarh', 'chandigarh', 14)
+    ) as v(name, slug, ord)
+    cross join public.countries co
+    where co.iso_code = 'IN'
+    on conflict (country_id, slug) do nothing;
+
+    insert into public.market_cities (region_id, name, slug, display_order)
+    select r.id, v.name, v.slug::public.slug, v.ord::smallint
+    from (values
+      ('maharashtra', 'Mumbai', 'mumbai', 1),
+      ('maharashtra', 'Pune', 'pune', 2),
+      ('maharashtra', 'Nagpur', 'nagpur', 3),
+      ('delhi', 'New Delhi', 'new-delhi', 1),
+      ('karnataka', 'Bengaluru', 'bengaluru', 1),
+      ('karnataka', 'Mysuru', 'mysuru', 2),
+      ('tamil-nadu', 'Chennai', 'chennai', 1),
+      ('tamil-nadu', 'Coimbatore', 'coimbatore', 2),
+      ('telangana', 'Hyderabad', 'hyderabad', 1),
+      ('west-bengal', 'Kolkata', 'kolkata', 1),
+      ('gujarat', 'Ahmedabad', 'ahmedabad', 1),
+      ('gujarat', 'Surat', 'surat', 2),
+      ('haryana', 'Gurugram', 'gurugram', 1),
+      ('uttar-pradesh', 'Lucknow', 'lucknow', 1),
+      ('uttar-pradesh', 'Noida', 'noida', 2),
+      ('rajasthan', 'Jaipur', 'jaipur', 1),
+      ('kerala', 'Kochi', 'kochi', 1),
+      ('kerala', 'Thiruvananthapuram', 'thiruvananthapuram', 2),
+      ('madhya-pradesh', 'Indore', 'indore', 1),
+      ('madhya-pradesh', 'Bhopal', 'bhopal', 2),
+      ('punjab', 'Ludhiana', 'ludhiana', 1),
+      ('chandigarh', 'Chandigarh', 'chandigarh', 1)
+    ) as v(region_slug, name, slug, ord)
+    join public.market_regions r on r.slug = v.region_slug
+    join public.countries co on co.id = r.country_id and co.iso_code = 'IN'
+    on conflict (region_id, slug) do nothing;
+  end if;
+
+  -- Generations from the free-text column (see migration 0008).
+  if to_regclass('public.car_generations') is not null then
+    insert into public.car_generations (model_id, name, slug, year_start, year_end)
+    select m.id, trim(m.generation), g.slug, m.production_start, m.production_end
+    from public.car_models m
+    cross join lateral (
+      select lower(regexp_replace(regexp_replace(trim(m.generation), '[^A-Za-z0-9]+', '-', 'g'),
+                                  '(^-+|-+$)', '', 'g')) as slug
+    ) g
+    where m.generation is not null and g.slug <> ''
+    on conflict (model_id, slug) do nothing;
+
+    update public.car_variants v
+       set generation_id = g.id
+      from public.car_generations g
+      join public.car_models m on m.id = g.model_id
+     where v.model_id = m.id
+       and v.generation_id is null
+       and g.name = trim(m.generation);
+  end if;
+end;
+$do$;
+
+-- The exhaust as its own 3D subsystem (migration 0007). A separate block: the
+-- enum value only exists once 0007 has committed.
+do $do$
+begin
+  if exists (select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+             where t.typname = 'viewer_group' and e.enumlabel = 'exhaust') then
+    insert into public.parts (category_id, name, slug, viewer_group, description, "function",
+                              typical_materials, location, common_failure_points,
+                              performance_impact, display_order)
+    select pc.id, 'Silencer (Muffler)', 'exhaust-silencer'::public.slug,
+           'exhaust'::public.viewer_group,
+           'The rear section of the exhaust. Chambers, baffles and perforated tubes reflect and absorb the pressure pulses in the exhaust gas so that far less of their energy leaves the tailpipe as sound.',
+           'Brings exhaust noise within legal limits, shapes the character of the car''s sound, and discharges the gas away from the cabin.',
+           'Stainless or aluminised steel shells; perforated tubes and baffles; mineral-wool or glass-fibre packing.',
+           'At the rear of the exhaust system, usually mounted across the car ahead of the rear bumper.',
+           'Internal corrosion from condensed water on short journeys; packing blow-out; failed hangers and joints.',
+           'A restrictive silencer adds back-pressure and costs power. Valved systems open a straight-through path at high load to cut restriction, then close again to meet drive-by noise limits.',
+           17::smallint
+    from public.part_categories pc
+    where pc.slug = 'engine'
+    on conflict (slug) do nothing;
+
+    update public.parts
+       set viewer_group = 'exhaust'::public.viewer_group
+     where slug in ('exhaust-manifold', 'catalytic-converter', 'exhaust-silencer')
+       and viewer_group is distinct from 'exhaust'::public.viewer_group;
+
+    insert into public.part_relations (part_id, related_part_id)
+    select least(a.id, b.id), greatest(a.id, b.id)
+    from public.parts a, public.parts b
+    where a.slug = 'catalytic-converter' and b.slug = 'exhaust-silencer'
+    on conflict do nothing;
+  end if;
+end;
+$do$;

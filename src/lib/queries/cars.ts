@@ -2,7 +2,13 @@ import "server-only";
 
 import { cache } from "react";
 import { createStaticClient, isConfigured } from "@/lib/supabase/server";
-import type { CatalogCar, Paginated, VariantDetail } from "@/types/domain";
+import type {
+  CarColor,
+  CarMedia,
+  CatalogCar,
+  Paginated,
+  VariantDetail,
+} from "@/types/domain";
 import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_SORT,
@@ -166,7 +172,9 @@ const DETAIL_SELECT = `
   ev_specs (*),
   variant_features ( detail, features (*) ),
   variant_parts ( detail, parts (*) ),
-  car_media (*)
+  car_media (*),
+  car_generations (*),
+  variant_markets ( *, countries ( id, name, slug, flag_emoji, iso_code ) )
 `;
 
 /**
@@ -204,7 +212,20 @@ type DetailRow = VariantDetail["variant"] & {
     | { detail: string | null; parts: VariantDetail["parts"][number]["part"] | null }[]
     | null;
   car_media: VariantDetail["media"] | null;
+  car_generations: VariantDetail["generation"];
+  variant_markets:
+    | (Omit<VariantDetail["markets"][number], "country"> & {
+        countries: VariantDetail["markets"][number]["country"] | null;
+      })[]
+    | null;
 };
+
+/** Primary first, then the editor's order, then oldest first. */
+function byDisplayOrder(a: CarMedia, b: CarMedia): number {
+  if (a.is_primary !== b.is_primary) return a.is_primary ? -1 : 1;
+  if (a.display_order !== b.display_order) return a.display_order - b.display_order;
+  return a.created_at.localeCompare(b.created_at);
+}
 
 /**
  * Full detail for one variant, addressed the way the URL is:
@@ -252,6 +273,26 @@ export const getVariantDetail = cache(async function getVariantDetail(
     // a 404 rather than a half-rendered page.
     if (!row || !model || !manufacturer || !country || !category) return null;
 
+    // Model-level photographs and catalogued paints hang off the model, so
+    // they need its id; both are small and fetched together.
+    const [modelMedia, colors] = await Promise.all([
+      supabase
+        .from("car_media")
+        .select("*")
+        .eq("model_id", model.id)
+        .returns<CarMedia[]>(),
+      supabase
+        .from("car_colors")
+        .select("*")
+        .eq("model_id", model.id)
+        .order("display_order")
+        .order("name")
+        .returns<CarColor[]>(),
+    ]);
+    if (modelMedia.error)
+      console.error("getVariantDetail model media:", modelMedia.error.message);
+    if (colors.error) console.error("getVariantDetail colors:", colors.error.message);
+
     return {
       variant: row,
       model,
@@ -272,7 +313,14 @@ export const getVariantDetail = cache(async function getVariantDetail(
         .filter((entry) => entry.parts !== null)
         .map((entry) => ({ part: entry.parts!, detail: entry.detail }))
         .sort((a, b) => a.part.name.localeCompare(b.part.name)),
-      media: row.car_media ?? [],
+      media: [...(row.car_media ?? [])].sort(byDisplayOrder),
+      modelMedia: [...(modelMedia.data ?? [])].sort(byDisplayOrder),
+      generation: row.car_generations ?? null,
+      colors: colors.data ?? [],
+      markets: (row.variant_markets ?? [])
+        .filter((entry) => entry.countries !== null)
+        .map(({ countries, ...market }) => ({ ...market, country: countries! }))
+        .sort((a, b) => a.country.name.localeCompare(b.country.name)),
     };
   } catch (error) {
     console.error("getVariantDetail threw:", error);

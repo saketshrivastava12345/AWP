@@ -1,0 +1,74 @@
+"use client";
+
+import { useId, type SelectHTMLAttributes } from "react";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export type SelectOption = {
+  value: string;
+  label: string;
+  disabled?: boolean;
+};
+
+/**
+ * A styled native <select>.
+ *
+ * Native on purpose: it is fully accessible, keyboard-complete, and on phones
+ * it opens the platform picker, which beats any custom listbox for choosing a
+ * state from a list of thirty. Only the closed control is styled.
+ */
+export function Select({
+  label,
+  hideLabel = false,
+  options,
+  placeholder,
+  size = "md",
+  className,
+  selectClassName,
+  id,
+  ...props
+}: Omit<SelectHTMLAttributes<HTMLSelectElement>, "size"> & {
+  label: string;
+  hideLabel?: boolean;
+  options: readonly SelectOption[];
+  /** Shown as a first, empty option. */
+  placeholder?: string;
+  size?: "sm" | "md";
+  className?: string;
+  selectClassName?: string;
+}) {
+  const generated = useId();
+  const selectId = id ?? generated;
+
+  return (
+    <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
+      <label htmlFor={selectId} className={cn("text-label", hideLabel && "sr-only")}>
+        {label}
+      </label>
+      <div className="relative">
+        <select
+          id={selectId}
+          className={cn(
+            "w-full min-w-0 appearance-none rounded-sm border border-line-strong bg-surface-1 pr-9 pl-3",
+            "text-sm text-ink-100 transition-colors duration-(--duration-fast)",
+            "hover:border-ink-500 focus-visible:border-gold-500 disabled:cursor-not-allowed disabled:opacity-50",
+            size === "sm" ? "h-9" : "h-11",
+            selectClassName,
+          )}
+          {...props}
+        >
+          {placeholder !== undefined ? <option value="">{placeholder}</option> : null}
+          {options.map((option) => (
+            <option key={option.value} value={option.value} disabled={option.disabled}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-ink-400"
+          aria-hidden="true"
+        />
+      </div>
+    </div>
+  );
+}

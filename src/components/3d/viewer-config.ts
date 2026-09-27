@@ -29,6 +29,7 @@ export const GROUP_LABELS: Record<ViewerGroup, string> = {
   interior: "Interior",
   electronics: "Electrical",
   battery: "Battery & Electric Drive",
+  exhaust: "Exhaust",
 };
 
 /**
@@ -48,6 +49,7 @@ export const EXPLODE_VECTORS: Record<ViewerGroup, [number, number, number]> = {
   interior: [0, 0.85, -0.7],
   electronics: [-1.9, 0.45, -0.6],
   battery: [0, -1.3, -0.5],
+  exhaust: [0, -0.45, -1.6],
 };
 
 export type Vec3 = [number, number, number];

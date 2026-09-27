@@ -51,21 +51,82 @@ export function formatSeconds(
  * would breach the data-honesty rule. Both parts must be present.
  */
 export function formatPrice(
-  amount: number | Nullish,
+  amount: number | string | Nullish,
   currency: string | Nullish,
   placeholder: string = NOT_AVAILABLE,
 ): string {
-  if (!isPresent(amount) || !currency) return placeholder;
+  const value = toAmount(amount);
+  if (value === null || !currency) return placeholder;
   try {
-    return new Intl.NumberFormat("en-IN", {
+    return new Intl.NumberFormat(localeForCurrency(currency), {
       style: "currency",
       currency,
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(value);
   } catch {
     // An unrecognised ISO code should degrade, not crash the page.
-    return `${currency} ${numberFormatter.format(amount)}`;
+    return `${currency} ${numberFormatter.format(value)}`;
   }
+}
+
+/**
+ * Digit grouping follows the currency's own convention: rupees group in lakhs
+ * ("₹2,80,00,000"), everything else in thousands ("$161,100"). Grouping a
+ * dollar figure the Indian way reads as a different number.
+ */
+function localeForCurrency(currency: string): string {
+  return currency.toUpperCase() === "INR" ? "en-IN" : "en-US";
+}
+
+/** PostgREST returns numeric columns as numbers or numeric strings. */
+function toAmount(amount: number | string | Nullish): number | null {
+  if (amount === null || amount === undefined) return null;
+  const value = typeof amount === "number" ? amount : Number(amount);
+  return Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Short form for cards and chips: "₹2.80 Cr", "₹45.60 L", "$161K". Rupee
+ * amounts use lakh and crore, the way car prices are quoted in India.
+ */
+export function formatPriceCompact(
+  amount: number | string | Nullish,
+  currency: string | Nullish,
+  placeholder: string = NOT_AVAILABLE,
+): string {
+  const value = toAmount(amount);
+  if (value === null || !currency) return placeholder;
+  if (currency.toUpperCase() === "INR") {
+    if (value >= 1e7) return `₹${(value / 1e7).toFixed(2)} Cr`;
+    if (value >= 1e5) return `₹${(value / 1e5).toFixed(2)} L`;
+    return formatPrice(value, currency, placeholder);
+  }
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      notation: value >= 1e5 ? "compact" : "standard",
+      maximumFractionDigits: value >= 1e5 ? 1 : 0,
+    }).format(value);
+  } catch {
+    return formatPrice(value, currency, placeholder);
+  }
+}
+
+/** "2026-09-12" (or an ISO timestamp) -> "12 Sep 2026". Dates are shown in UTC. */
+export function formatDate(
+  value: string | Nullish,
+  placeholder: string = NOT_AVAILABLE,
+): string {
+  if (!value) return placeholder;
+  const date = new Date(value.length === 10 ? `${value}T00:00:00Z` : value);
+  if (Number.isNaN(date.getTime())) return placeholder;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
 }
 
 /** "2019 – 2024", "2019 – present", or just "2019". */

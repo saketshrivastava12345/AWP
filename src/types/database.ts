@@ -16,6 +16,94 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      car_colors: {
+        Row: {
+          id: string;
+          model_id: string;
+          name: string;
+          hex: string;
+          finish: Database["public"]["Enums"]["paint_finish"];
+          source: string;
+          source_url: string | null;
+          display_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          model_id: string;
+          name: string;
+          hex: string;
+          finish: Database["public"]["Enums"]["paint_finish"];
+          source: string;
+          source_url?: string | null;
+          display_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          model_id?: string;
+          name?: string;
+          hex?: string;
+          finish?: Database["public"]["Enums"]["paint_finish"];
+          source?: string;
+          source_url?: string | null;
+          display_order?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "car_colors_model_id_fkey";
+            columns: ["model_id"];
+            isOneToOne: false;
+            referencedRelation: "car_models";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      car_generations: {
+        Row: {
+          id: string;
+          model_id: string;
+          name: string;
+          slug: string;
+          year_start: number | null;
+          year_end: number | null;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          model_id: string;
+          name: string;
+          slug: string;
+          year_start?: number | null;
+          year_end?: number | null;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          model_id?: string;
+          name?: string;
+          slug?: string;
+          year_start?: number | null;
+          year_end?: number | null;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "car_generations_model_id_fkey";
+            columns: ["model_id"];
+            isOneToOne: false;
+            referencedRelation: "car_models";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       car_media: {
         Row: {
           id: string;
@@ -28,6 +116,21 @@ export type Database = {
           display_order: number;
           credit: string | null;
           created_at: string;
+          shot: Database["public"]["Enums"]["media_shot"] | null;
+          source: string | null;
+          source_url: string | null;
+          license: string | null;
+          author: string | null;
+          storage_path: string | null;
+          width: number | null;
+          height: number | null;
+          file_size_bytes: number | null;
+          model_format: string | null;
+          compression: string[];
+          is_exact_model: boolean | null;
+          model_version: string | null;
+          poster_url: string | null;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -40,6 +143,21 @@ export type Database = {
           display_order?: number;
           credit?: string | null;
           created_at?: string;
+          shot?: Database["public"]["Enums"]["media_shot"] | null;
+          source?: string | null;
+          source_url?: string | null;
+          license?: string | null;
+          author?: string | null;
+          storage_path?: string | null;
+          width?: number | null;
+          height?: number | null;
+          file_size_bytes?: number | null;
+          model_format?: string | null;
+          compression?: string[];
+          is_exact_model?: boolean | null;
+          model_version?: string | null;
+          poster_url?: string | null;
+          updated_at?: string;
         };
         Update: {
           id?: string;
@@ -52,6 +170,21 @@ export type Database = {
           display_order?: number;
           credit?: string | null;
           created_at?: string;
+          shot?: Database["public"]["Enums"]["media_shot"] | null;
+          source?: string | null;
+          source_url?: string | null;
+          license?: string | null;
+          author?: string | null;
+          storage_path?: string | null;
+          width?: number | null;
+          height?: number | null;
+          file_size_bytes?: number | null;
+          model_format?: string | null;
+          compression?: string[];
+          is_exact_model?: boolean | null;
+          model_version?: string | null;
+          poster_url?: string | null;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -154,6 +287,10 @@ export type Database = {
           search_document: unknown | null;
           created_at: string;
           updated_at: string;
+          source_url: string | null;
+          last_verified_at: string | null;
+          generation_id: string | null;
+          status: Database["public"]["Enums"]["vehicle_status"] | null;
         };
         Insert: {
           id?: string;
@@ -175,6 +312,10 @@ export type Database = {
           search_document?: unknown | null;
           created_at?: string;
           updated_at?: string;
+          source_url?: string | null;
+          last_verified_at?: string | null;
+          generation_id?: string | null;
+          status?: Database["public"]["Enums"]["vehicle_status"] | null;
         };
         Update: {
           id?: string;
@@ -196,6 +337,10 @@ export type Database = {
           search_document?: unknown | null;
           created_at?: string;
           updated_at?: string;
+          source_url?: string | null;
+          last_verified_at?: string | null;
+          generation_id?: string | null;
+          status?: Database["public"]["Enums"]["vehicle_status"] | null;
         };
         Relationships: [
           {
@@ -203,6 +348,13 @@ export type Database = {
             columns: ["engine_id"];
             isOneToOne: false;
             referencedRelation: "engines";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "car_variants_generation_id_fkey";
+            columns: ["generation_id"];
+            isOneToOne: false;
+            referencedRelation: "car_generations";
             referencedColumns: ["id"];
           },
           {
@@ -256,6 +408,7 @@ export type Database = {
           automotive_history: string | null;
           created_at: string;
           updated_at: string;
+          currency_code: string | null;
         };
         Insert: {
           id?: string;
@@ -267,6 +420,7 @@ export type Database = {
           automotive_history?: string | null;
           created_at?: string;
           updated_at?: string;
+          currency_code?: string | null;
         };
         Update: {
           id?: string;
@@ -278,6 +432,7 @@ export type Database = {
           automotive_history?: string | null;
           created_at?: string;
           updated_at?: string;
+          currency_code?: string | null;
         };
         Relationships: [];
       };
@@ -294,6 +449,8 @@ export type Database = {
           seating_capacity: number | null;
           source: string | null;
           notes: string | null;
+          source_url: string | null;
+          last_verified_at: string | null;
         };
         Insert: {
           variant_id: string;
@@ -307,6 +464,8 @@ export type Database = {
           seating_capacity?: number | null;
           source?: string | null;
           notes?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Update: {
           variant_id?: string;
@@ -320,6 +479,8 @@ export type Database = {
           seating_capacity?: number | null;
           source?: string | null;
           notes?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Relationships: [
           {
@@ -347,6 +508,8 @@ export type Database = {
           notes: string | null;
           source: string | null;
           configuration: string | null;
+          source_url: string | null;
+          last_verified_at: string | null;
         };
         Insert: {
           id?: string;
@@ -362,6 +525,8 @@ export type Database = {
           valves_per_cylinder?: number | null;
           notes?: string | null;
           source?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Update: {
           id?: string;
@@ -377,6 +542,8 @@ export type Database = {
           valves_per_cylinder?: number | null;
           notes?: string | null;
           source?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Relationships: [];
       };
@@ -392,6 +559,8 @@ export type Database = {
           motor_count: number | null;
           source: string | null;
           notes: string | null;
+          source_url: string | null;
+          last_verified_at: string | null;
         };
         Insert: {
           variant_id: string;
@@ -404,6 +573,8 @@ export type Database = {
           motor_count?: number | null;
           source?: string | null;
           notes?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Update: {
           variant_id?: string;
@@ -416,6 +587,8 @@ export type Database = {
           motor_count?: number | null;
           source?: string | null;
           notes?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Relationships: [
           {
@@ -493,6 +666,8 @@ export type Database = {
           emission_standard: string | null;
           source: string | null;
           notes: string | null;
+          source_url: string | null;
+          last_verified_at: string | null;
         };
         Insert: {
           variant_id: string;
@@ -502,6 +677,8 @@ export type Database = {
           emission_standard?: string | null;
           source?: string | null;
           notes?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Update: {
           variant_id?: string;
@@ -511,6 +688,8 @@ export type Database = {
           emission_standard?: string | null;
           source?: string | null;
           notes?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Relationships: [
           {
@@ -568,6 +747,196 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "manufacturers_country_id_fkey";
+            columns: ["country_id"];
+            isOneToOne: false;
+            referencedRelation: "countries";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      market_cities: {
+        Row: {
+          id: string;
+          region_id: string;
+          name: string;
+          slug: string;
+          display_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          region_id: string;
+          name: string;
+          slug: string;
+          display_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          region_id?: string;
+          name?: string;
+          slug?: string;
+          display_order?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "market_cities_region_id_fkey";
+            columns: ["region_id"];
+            isOneToOne: false;
+            referencedRelation: "market_regions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      market_prices: {
+        Row: {
+          id: string;
+          variant_id: string;
+          country_id: string;
+          region_id: string | null;
+          city_id: string | null;
+          currency: string;
+          price_type: Database["public"]["Enums"]["price_type"];
+          ex_showroom_price: number | null;
+          rto_tax: number | null;
+          registration_fee: number | null;
+          insurance_estimate: number | null;
+          handling_charges: number | null;
+          fastag: number | null;
+          other_charges: number | null;
+          on_road_price: number | null;
+          source: string;
+          source_url: string;
+          effective_from: string;
+          effective_to: string | null;
+          last_verified_at: string;
+          is_verified: boolean;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          variant_id: string;
+          country_id: string;
+          region_id?: string | null;
+          city_id?: string | null;
+          currency: string;
+          price_type: Database["public"]["Enums"]["price_type"];
+          ex_showroom_price?: number | null;
+          rto_tax?: number | null;
+          registration_fee?: number | null;
+          insurance_estimate?: number | null;
+          handling_charges?: number | null;
+          fastag?: number | null;
+          other_charges?: number | null;
+          on_road_price?: number | null;
+          source: string;
+          source_url: string;
+          effective_from?: string;
+          effective_to?: string | null;
+          last_verified_at?: string;
+          is_verified?: boolean;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          variant_id?: string;
+          country_id?: string;
+          region_id?: string | null;
+          city_id?: string | null;
+          currency?: string;
+          price_type?: Database["public"]["Enums"]["price_type"];
+          ex_showroom_price?: number | null;
+          rto_tax?: number | null;
+          registration_fee?: number | null;
+          insurance_estimate?: number | null;
+          handling_charges?: number | null;
+          fastag?: number | null;
+          other_charges?: number | null;
+          on_road_price?: number | null;
+          source?: string;
+          source_url?: string;
+          effective_from?: string;
+          effective_to?: string | null;
+          last_verified_at?: string;
+          is_verified?: boolean;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "market_prices_city_id_fkey";
+            columns: ["city_id"];
+            isOneToOne: false;
+            referencedRelation: "market_cities";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "market_prices_country_id_fkey";
+            columns: ["country_id"];
+            isOneToOne: false;
+            referencedRelation: "countries";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "market_prices_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "market_prices_region_id_fkey";
+            columns: ["region_id"];
+            isOneToOne: false;
+            referencedRelation: "market_regions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "market_prices_variant_id_fkey";
+            columns: ["variant_id"];
+            isOneToOne: false;
+            referencedRelation: "car_variants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      market_regions: {
+        Row: {
+          id: string;
+          country_id: string;
+          name: string;
+          slug: string;
+          display_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          country_id: string;
+          name: string;
+          slug: string;
+          display_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          country_id?: string;
+          name?: string;
+          slug?: string;
+          display_order?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "market_regions_country_id_fkey";
             columns: ["country_id"];
             isOneToOne: false;
             referencedRelation: "countries";
@@ -705,6 +1074,8 @@ export type Database = {
           braking_100_0_m: number | null;
           source: string | null;
           notes: string | null;
+          source_url: string | null;
+          last_verified_at: string | null;
         };
         Insert: {
           variant_id: string;
@@ -719,6 +1090,8 @@ export type Database = {
           braking_100_0_m?: number | null;
           source?: string | null;
           notes?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Update: {
           variant_id?: string;
@@ -733,6 +1106,8 @@ export type Database = {
           braking_100_0_m?: number | null;
           source?: string | null;
           notes?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Relationships: [
           {
@@ -776,6 +1151,39 @@ export type Database = {
           },
         ];
       };
+      recently_viewed: {
+        Row: {
+          user_id: string;
+          variant_id: string;
+          viewed_at: string;
+        };
+        Insert: {
+          user_id: string;
+          variant_id: string;
+          viewed_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          variant_id?: string;
+          viewed_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "recently_viewed_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recently_viewed_variant_id_fkey";
+            columns: ["variant_id"];
+            isOneToOne: false;
+            referencedRelation: "car_variants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       transmissions: {
         Row: {
           id: string;
@@ -783,6 +1191,9 @@ export type Database = {
           type: Database["public"]["Enums"]["transmission_type"];
           gears: number | null;
           notes: string | null;
+          source: string | null;
+          source_url: string | null;
+          last_verified_at: string | null;
         };
         Insert: {
           id?: string;
@@ -790,6 +1201,9 @@ export type Database = {
           type: Database["public"]["Enums"]["transmission_type"];
           gears?: number | null;
           notes?: string | null;
+          source?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Update: {
           id?: string;
@@ -797,6 +1211,9 @@ export type Database = {
           type?: Database["public"]["Enums"]["transmission_type"];
           gears?: number | null;
           notes?: string | null;
+          source?: string | null;
+          source_url?: string | null;
+          last_verified_at?: string | null;
         };
         Relationships: [];
       };
@@ -826,6 +1243,51 @@ export type Database = {
           },
           {
             foreignKeyName: "variant_features_variant_id_fkey";
+            columns: ["variant_id"];
+            isOneToOne: false;
+            referencedRelation: "car_variants";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      variant_markets: {
+        Row: {
+          variant_id: string;
+          country_id: string;
+          status: Database["public"]["Enums"]["market_status"];
+          source: string;
+          source_url: string | null;
+          last_verified_at: string | null;
+          notes: string | null;
+        };
+        Insert: {
+          variant_id: string;
+          country_id: string;
+          status: Database["public"]["Enums"]["market_status"];
+          source: string;
+          source_url?: string | null;
+          last_verified_at?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          variant_id?: string;
+          country_id?: string;
+          status?: Database["public"]["Enums"]["market_status"];
+          source?: string;
+          source_url?: string | null;
+          last_verified_at?: string | null;
+          notes?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "variant_markets_country_id_fkey";
+            columns: ["country_id"];
+            isOneToOne: false;
+            referencedRelation: "countries";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "variant_markets_variant_id_fkey";
             columns: ["variant_id"];
             isOneToOne: false;
             referencedRelation: "car_variants";
@@ -923,6 +1385,46 @@ export type Database = {
           power_to_weight_hp_per_tonne: number | null;
           primary_image_url: string | null;
           has_glb: boolean | null;
+          status: Database["public"]["Enums"]["vehicle_status"] | null;
+          generation_id: string | null;
+          generation_name: string | null;
+          engine_position: Database["public"]["Enums"]["engine_position"] | null;
+          motor_count: number | null;
+          listed_price: number | null;
+          listed_price_currency: string | null;
+          listed_price_type: string | null;
+          listed_price_market: string | null;
+          listed_price_verified_at: string | null;
+        };
+        Relationships: [];
+      };
+      current_market_prices: {
+        Row: {
+          id: string | null;
+          variant_id: string | null;
+          country_id: string | null;
+          region_id: string | null;
+          city_id: string | null;
+          currency: string | null;
+          price_type: Database["public"]["Enums"]["price_type"] | null;
+          ex_showroom_price: number | null;
+          rto_tax: number | null;
+          registration_fee: number | null;
+          insurance_estimate: number | null;
+          handling_charges: number | null;
+          fastag: number | null;
+          other_charges: number | null;
+          on_road_price: number | null;
+          source: string | null;
+          source_url: string | null;
+          effective_from: string | null;
+          effective_to: string | null;
+          last_verified_at: string | null;
+          is_verified: boolean | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string | null;
+          updated_at: string | null;
         };
         Relationships: [];
       };
@@ -931,6 +1433,10 @@ export type Database = {
       is_admin: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
+      };
+      search_catalogue: {
+        Args: { [key: string]: unknown };
+        Returns: unknown[];
       };
     };
     Enums: {
@@ -941,11 +1447,16 @@ export type Database = {
       engine_position: "front" | "mid" | "rear";
       fuel_type: "petrol" | "diesel" | "hybrid" | "phev" | "electric" | "hydrogen";
       manufacturer_segment: "luxury" | "performance" | "mass" | "ev" | "commercial";
+      market_status: "available" | "upcoming" | "discontinued" | "not_available";
+      media_shot: "hero" | "front" | "rear" | "side" | "three_quarter" | "interior" | "dashboard" | "engine" | "wheel" | "detail" | "gallery";
       media_type: "image" | "glb";
+      paint_finish: "solid" | "metallic" | "pearl" | "matte" | "satin";
+      price_type: "manufacturer_list" | "dealer_list" | "ex_showroom" | "on_road" | "estimated_on_road";
       range_standard: "wltp" | "epa" | "arai" | "nedc" | "cltc";
       transmission_type: "manual" | "automatic" | "dct" | "amt" | "cvt" | "single_speed";
       user_role: "user" | "admin";
-      viewer_group: "body" | "engine" | "transmission" | "suspension" | "brakes" | "wheels" | "interior" | "electronics" | "battery";
+      vehicle_status: "available" | "upcoming" | "discontinued" | "concept" | "limited" | "sold_out";
+      viewer_group: "body" | "engine" | "transmission" | "suspension" | "brakes" | "wheels" | "interior" | "electronics" | "battery" | "exhaust";
     };
     CompositeTypes: Record<PropertyKey, never>;
   };

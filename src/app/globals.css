@@ -61,9 +61,42 @@
   --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-metal: cubic-bezier(0.65, 0, 0.35, 1);
 
+  /* --- Motion system: three speeds, one easing family.
+         fast   = micro (hover, press, toggles)
+         normal = panels, reveals, state changes
+         cinematic = camera moves and hero reveals --- */
+  --duration-fast: 220ms;
+  --duration-normal: 560ms;
+  --duration-cinematic: 1200ms;
+
   /* --- Letter spacing for the wide display face --- */
   --tracking-display: 0.08em;
   --tracking-label: 0.22em;
+  /* Buttons and HUD micro-labels. */
+  --tracking-button: 0.14em;
+  --tracking-hud: 0.18em;
+
+  /* --- Type scale additions for technical micro-copy. 10px is the floor for
+         anything a reader must read; 9px is for decorative marks only. --- */
+  --text-micro: 0.625rem;
+  --text-micro--line-height: 1.5;
+  --text-nano: 0.5625rem;
+  --text-nano--line-height: 1.4;
+}
+
+/* Layer scale. Tailwind v4 has no z-index theme namespace, so these are plain
+   custom properties used as z-(--z-modal). One scale means a command palette
+   can never open behind a sheet again. */
+:root {
+  --z-raised: 10;
+  --z-sticky: 40;
+  --z-nav: 50;
+  --z-overlay: 90;
+  --z-modal: 100;
+  --z-palette: 110;
+  --z-toast: 150;
+  --z-loading: 200;
+  --z-skip: 300;
 }
 
 /* Font families reference the next/font variables set on <html>, so they must
@@ -85,7 +118,10 @@
 
   html {
     scroll-behavior: smooth;
+    /* Anchor targets land below the fixed 64px navbar. */
+    scroll-padding-top: 5rem;
     -webkit-tap-highlight-color: transparent;
+    scrollbar-color: var(--color-surface-4) var(--color-void);
   }
 
   body {
@@ -112,7 +148,9 @@
   :focus-visible {
     outline: 2px solid var(--color-gold-500);
     outline-offset: 2px;
-    border-radius: var(--radius-xs);
+    /* No border-radius here: setting it changed the SHAPE of any focused
+       element (rounded cards snapped to 2px corners on keyboard focus). The
+       outline follows the element's own radius in current browsers. */
   }
 
   ::-webkit-scrollbar {
@@ -194,9 +232,111 @@
   color: transparent;
 }
 
+/* Fine engineering grid, faded toward the edges. For hero and HUD grounds. */
+@utility tech-grid {
+  background-image:
+    linear-gradient(oklch(1 0 0 / 3.5%) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(1 0 0 / 3.5%) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 78%);
+}
+
+/* Very faint horizontal scan lines. Decorative only. */
+@utility scanlines {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      180deg,
+      oklch(1 0 0 / 1.6%) 0 1px,
+      transparent 1px 4px
+    );
+  }
+}
+
+/* Four gold corner brackets, the HUD frame used around technical panels. */
+@utility hud-corners {
+  --hud-c: var(--color-gold-600);
+  --hud-l: 10px;
+  background:
+    linear-gradient(var(--hud-c), var(--hud-c)) top left / var(--hud-l) 1px no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) top left / 1px var(--hud-l) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) top right / var(--hud-l) 1px no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) top right / 1px var(--hud-l) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) bottom left / var(--hud-l) 1px no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) bottom left / 1px var(--hud-l) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) bottom right / var(--hud-l) 1px no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) bottom right / 1px var(--hud-l) no-repeat;
+}
+
+/* Technical micro-label: mono, tracked, uppercase. Coordinates, IDs, units. */
+@utility text-hud {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  line-height: 1.5;
+  letter-spacing: var(--tracking-hud);
+  text-transform: uppercase;
+  color: var(--color-ink-400);
+}
+
 /* ===========================================================================
    Keyframes and animation utilities
    =========================================================================== */
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes panel-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+}
+
+@keyframes panel-in-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes panel-in-left {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+
+@keyframes panel-in-bottom {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+/* Entrances only, with `backwards` fill so no transform lingers afterwards
+   (see the page-enter note below for why that matters). */
+@utility animate-overlay-in {
+  animation: overlay-in var(--duration-fast) ease-out backwards;
+}
+@utility animate-panel-in {
+  animation: panel-in-up var(--duration-normal) var(--ease-cinematic) backwards;
+}
+@utility animate-panel-in-right {
+  animation: panel-in-right var(--duration-normal) var(--ease-cinematic) backwards;
+}
+@utility animate-panel-in-left {
+  animation: panel-in-left var(--duration-normal) var(--ease-cinematic) backwards;
+}
+@utility animate-panel-in-bottom {
+  animation: panel-in-bottom var(--duration-normal) var(--ease-cinematic) backwards;
+}
 
 @keyframes shimmer {
   100% {

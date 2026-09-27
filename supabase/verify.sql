@@ -24,5 +24,24 @@ union all select 'variant_parts',     count(*) from public.variant_parts
 union all select 'features',          count(*) from public.features
 union all select 'variant_features',  count(*) from public.variant_features
 union all select 'car_media',         count(*) from public.car_media
+union all select 'car_generations',   count(*) from public.car_generations
+union all select 'car_colors',        count(*) from public.car_colors
+union all select 'market_regions',    count(*) from public.market_regions
+union all select 'market_cities',     count(*) from public.market_cities
+union all select 'market_prices',     count(*) from public.market_prices
+union all select 'current_market_prices (view)', count(*) from public.current_market_prices
+union all select 'variant_markets',   count(*) from public.variant_markets
+union all select 'profiles',          count(*) from public.profiles
 union all select 'car_catalog (view)',count(*) from public.car_catalog
 order by table_name;
+
+-- Models with an engine but no recorded position draw no engine in 3D (0006).
+select count(*) as models_missing_engine_position
+from public.car_models m
+where m.engine_position is null
+  and exists (select 1 from public.car_variants v
+              where v.model_id = m.id and v.fuel_type <> 'electric');
+
+-- The exhaust group (0007) and the command-palette search (0008).
+select count(*) as exhaust_parts from public.parts where viewer_group = 'exhaust';
+select kind, title from public.search_catalogue('911 gt', 3);

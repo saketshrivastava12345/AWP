@@ -41,6 +41,12 @@ if (!connectionString) {
 
 const args = process.argv.slice(2);
 const queryIndex = args.indexOf("--query");
+if (queryIndex === -1 && !args[0]) {
+  console.error(
+    'Usage: node scripts/run-sql.mjs <file.sql>\n       node scripts/run-sql.mjs --query "<sql>"',
+  );
+  process.exit(1);
+}
 const sql = queryIndex !== -1 ? args[queryIndex + 1] : readFileSync(args[0], "utf8");
 
 if (!sql) {
