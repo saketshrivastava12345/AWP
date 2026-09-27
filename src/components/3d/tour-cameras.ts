@@ -267,9 +267,9 @@ export function blueprintShots(layout: CarLayout, groups: readonly ViewerGroup[]
       .multiplyScalar(radius)
       .add(target);
 
-  const drawingTarget = v(0, H * 0.4, 0);
+  const drawingTarget = v(0, H * 0.42, 0);
   const drawing: Shot = {
-    position: orbit(drawingTarget, 7.4 * k, 58, 20),
+    position: orbit(drawingTarget, 9.4 * k, 62, 24),
     target: drawingTarget,
     ghost: 1,
     highlight: null,
@@ -284,9 +284,9 @@ export function blueprintShots(layout: CarLayout, groups: readonly ViewerGroup[]
     return {
       position: orbit(
         target,
-        (8.4 + 3.2 * progress) * k,
-        60 - 10 * progress,
-        22 + 4 * progress,
+        (10.6 + 3.4 * progress) * k,
+        62 - 10 * progress,
+        25 + 5 * progress,
       ),
       target,
       ghost: 1,
@@ -294,9 +294,16 @@ export function blueprintShots(layout: CarLayout, groups: readonly ViewerGroup[]
     };
   });
 
-  const finaleTarget = v(0, 0.95 * k, 0.1 * k);
+  // The finale is framed on the spread of parts, not the car's old centre:
+  // a mid or rear engine leaves far behind the tail, a front one ahead.
+  const spread = groups.reduce(
+    (sum, group) => sum.add(explodedCentre(layout, group)),
+    new THREE.Vector3(),
+  );
+  if (groups.length > 0) spread.divideScalar(groups.length);
+  const finaleTarget = v(spread.x * 0.5, 1.05 * k, spread.z * 0.6);
   const finale: Shot = {
-    position: orbit(finaleTarget, 12.2 * k, 50, 25),
+    position: orbit(finaleTarget, 16 * k, 52, 28),
     target: finaleTarget,
     ghost: 1,
     highlight: null,

@@ -925,6 +925,10 @@ export function ProceduralCar({
           box.max.y + 0.04,
           (box.min.z + box.max.z) / 2,
         );
+        // The engine group also carries the radiator in the nose: label the
+        // engine itself, not the middle of the two.
+        if (name === "engine" && layout.engine)
+          top.set(0, layout.engine.center.y + 0.32 * layout.engine.scale, layout.engine.center.z);
         state.labels.set(name, { object: node, local: top });
       }
       // Wheels and brakes are labelled at one corner each (the near side).

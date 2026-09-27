@@ -32,19 +32,51 @@ const noRaycast = () => null;
 // Ground: a matte sheet over the showroom floor, and a technical grid on it
 // ---------------------------------------------------------------------------
 
-const GRID_HALF = 12;
+const GRID_HALF = 16;
 
-function gridGeometry(step: number, skip: number | null): THREE.BufferGeometry {
+/**
+ * A square grid whose lines fade into the ground with distance from the car,
+ * so it reads as a sheet of drawing paper rather than a floor with an edge.
+ * Each line is cut into short segments with a vertex colour that falls from
+ * `color` to the ground colour.
+ */
+function gridGeometry(step: number, skip: number | null, color: string): THREE.BufferGeometry {
   const points: number[] = [];
+  const colors: number[] = [];
+  const ink = new THREE.Color(color);
+  const ground = new THREE.Color(VOID);
+  const scratch = new THREE.Color();
+  const fade = (x: number, z: number) => {
+    const r = Math.hypot(x, z) / GRID_HALF;
+    const t = Math.min(1, Math.max(0, (r - 0.25) / 0.75));
+    return scratch.copy(ink).lerp(ground, t * t * (3 - 2 * t));
+  };
   const count = Math.round(GRID_HALF / step);
+  const pieces = 24;
+  const segment = (x0: number, z0: number, x1: number, z1: number) => {
+    for (let i = 0; i < pieces; i += 1) {
+      const a = i / pieces;
+      const b = (i + 1) / pieces;
+      const ax = x0 + (x1 - x0) * a;
+      const az = z0 + (z1 - z0) * a;
+      const bx = x0 + (x1 - x0) * b;
+      const bz = z0 + (z1 - z0) * b;
+      points.push(ax, 0, az, bx, 0, bz);
+      const ca = fade(ax, az);
+      colors.push(ca.r, ca.g, ca.b);
+      const cb = fade(bx, bz);
+      colors.push(cb.r, cb.g, cb.b);
+    }
+  };
   for (let index = -count; index <= count; index += 1) {
     if (skip !== null && index % skip === 0) continue;
     const at = index * step;
-    points.push(-GRID_HALF, 0, at, GRID_HALF, 0, at);
-    points.push(at, 0, -GRID_HALF, at, 0, GRID_HALF);
+    segment(-GRID_HALF, at, GRID_HALF, at);
+    segment(at, -GRID_HALF, at, GRID_HALF);
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
   return geometry;
 }
 
@@ -53,8 +85,8 @@ function useGround() {
     const geometry = {
       sheet: new THREE.CircleGeometry(GRID_HALF * 2.5, 48).rotateX(-Math.PI / 2),
       // 25 cm minor squares in ink, metre lines in gold.
-      minor: gridGeometry(0.25, 4),
-      major: gridGeometry(1, null),
+      minor: gridGeometry(0.25, 4, VIEWER_COLORS.ink),
+      major: gridGeometry(1, null, GOLD),
     };
     const sheet = new THREE.MeshBasicMaterial({
       color: VOID,
@@ -63,13 +95,13 @@ function useGround() {
       depthWrite: false,
     });
     const minor = new THREE.LineBasicMaterial({
-      color: VIEWER_COLORS.ink,
+      vertexColors: true,
       transparent: true,
       opacity: 0,
       depthWrite: false,
     });
     const major = new THREE.LineBasicMaterial({
-      color: GOLD,
+      vertexColors: true,
       transparent: true,
       opacity: 0,
       depthWrite: false,
@@ -245,6 +277,51 @@ export function BlueprintRig({
 const world = new THREE.Vector3();
 const ndc = new THREE.Vector3();
 
+type Placed = { element: HTMLElement; x: number; y: number; lead?: number };
+
+/** Label boxes, measured once per element: reading layout every frame would reflow. */
+const boxSize = new WeakMap<HTMLElement, { width: number; height: number }>();
+
+function sizeOf(element: HTMLElement) {
+  let size = boxSize.get(element);
+  const box = element.firstElementChild?.firstElementChild;
+  if (!size || size.width === 0) {
+    size = {
+      width: box instanceof HTMLElement ? box.offsetWidth : 0,
+      height: box instanceof HTMLElement ? box.offsetHeight : 0,
+    };
+    boxSize.set(element, size);
+  }
+  return size;
+}
+
+/**
+ * Keep group labels from covering each other. Each label's box sits on a
+ * leader line above its point; where two boxes would overlap, the lower one's
+ * leader grows until it clears — the point stays on the part.
+ */
+function liftClear(labels: Placed[], base: number): void {
+  labels.sort((a, b) => a.y - b.y);
+  const boxes: { left: number; right: number; top: number; bottom: number }[] = [];
+  for (const label of labels) {
+    const { width, height } = sizeOf(label.element);
+    let lead = base;
+    const left = label.x - width / 2 - 4;
+    const right = label.x + width / 2 + 4;
+    for (let guard = 0; guard < 12; guard += 1) {
+      const bottom = label.y - lead;
+      const top = bottom - height;
+      const hit = boxes.find(
+        (box) => left < box.right && right > box.left && top < box.bottom && bottom > box.top,
+      );
+      if (!hit) break;
+      lead = label.y - hit.top + 3;
+    }
+    label.lead = lead;
+    boxes.push({ left, right, top: label.y - lead - height, bottom: label.y - lead });
+  }
+}
+
 /**
  * Pins the overlay's labels to the scene every frame. Rendered after
  * everything that moves (the Director and the car), so it projects the
@@ -280,17 +357,23 @@ export function BlueprintLabels({
     const values = blueprintFrame(beat, groups.length);
     camera.updateMatrixWorld();
 
-    const place = (element: HTMLElement, point: THREE.Vector3, opacity: number) => {
+    const project = (point: THREE.Vector3): { x: number; y: number } | null => {
       ndc.copy(point).project(camera);
       const onScreen =
         ndc.z > -1 && ndc.z < 1 && Math.abs(ndc.x) < 1.05 && Math.abs(ndc.y) < 1.05;
-      const shown = onScreen && opacity > 0.01;
+      if (!onScreen) return null;
+      return {
+        x: (ndc.x * 0.5 + 0.5) * size.width,
+        y: (-ndc.y * 0.5 + 0.5) * size.height,
+      };
+    };
+    const place = (element: HTMLElement, point: THREE.Vector3, opacity: number) => {
+      const at = project(point);
+      const shown = at !== null && opacity > 0.01;
       const value = shown ? opacity.toFixed(3) : "0";
       if (element.style.opacity !== value) element.style.opacity = value;
-      if (!shown) return;
-      const x = (ndc.x * 0.5 + 0.5) * size.width;
-      const y = (-ndc.y * 0.5 + 0.5) * size.height;
-      element.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+      if (!at || !shown) return;
+      element.style.transform = `translate3d(${at.x.toFixed(1)}px, ${at.y.toFixed(1)}px, 0)`;
     };
 
     if (overlay.grid) {
@@ -304,6 +387,7 @@ export function BlueprintLabels({
     }
 
     const focus = focusCardAt(beat, groups.length);
+    const placed: Placed[] = [];
     groups.forEach((group, index) => {
       const element = overlay.groups.get(group);
       if (!element) return;
@@ -316,8 +400,18 @@ export function BlueprintLabels({
       world.copy(anchor.local).applyMatrix4(anchor.object.matrixWorld);
       // The finale labels every group; before it, only the part in motion.
       const own = focus === groupCard(index) ? (values.explode[index] ?? 0) : 0;
-      place(element, world, Math.max(values.labels, own));
+      const opacity = Math.max(values.labels, own);
+      const at = project(world);
+      const value = at && opacity > 0.01 ? opacity.toFixed(3) : "0";
+      if (element.style.opacity !== value) element.style.opacity = value;
+      if (value === "0" || !at) return;
+      placed.push({ element, x: at.x, y: at.y });
     });
+    liftClear(placed, size.width < 768 ? 12 : 20);
+    for (const { element, x, y, lead } of placed) {
+      element.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+      element.style.setProperty("--lead", `${lead ?? 0}px`);
+    }
   });
 
   return null;

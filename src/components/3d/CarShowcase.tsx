@@ -148,7 +148,8 @@ function StepCard({
                 <p
                   className={cn(
                     "mt-1 text-xs leading-relaxed text-ink-400",
-                    position >= 2 && "max-sm:hidden",
+                    // The first two explain themselves; the rest are links.
+                    position >= 2 && "hidden",
                   )}
                 >
                   {component.summary}
@@ -387,6 +388,8 @@ export function CarShowcase({
 
         {/* Legibility: darken behind the text column (wide screens). */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-void/85 via-void/15 to-transparent max-md:hidden" />
+        {/* …and behind the step rail. */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-56 bg-gradient-to-l from-void/80 to-transparent lg:block" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-void to-transparent max-md:h-10" />
 
         {/* Labels, positioned by the scene every frame. */}
@@ -420,13 +423,17 @@ export function CarShowcase({
                 }}
                 className="absolute top-0 left-0 opacity-0 will-change-transform"
               >
+                {/* The point sits on the part; the scene sets the leader's
+                    length (--lead) so neighbouring labels never overlap. */}
                 <div className="flex -translate-x-1/2 -translate-y-full flex-col items-center">
                   <span className="border border-gold-700/60 bg-void/85 px-1.5 py-0.5 font-mono text-nano tracking-hud whitespace-nowrap text-gold-200 uppercase md:text-micro">
-                    <span className="text-gold-500">{String(index + 1).padStart(2, "0")}</span>{" "}
+                    <span className="text-gold-500">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>{" "}
                     {BLUEPRINT_LABELS[group]}
                   </span>
-                  <span className="h-4 w-px bg-gold-500/60 md:h-6" />
-                  <span className="size-1.5 rounded-full border border-gold-300 bg-gold-500/50" />
+                  <span className="h-(--lead) w-px bg-gold-500/60" />
+                  <span className="-mb-[3px] size-1.5 rounded-full border border-gold-300 bg-gold-500/50" />
                 </div>
               </div>
             ))}
