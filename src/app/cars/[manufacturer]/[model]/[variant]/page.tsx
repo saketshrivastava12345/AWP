@@ -20,7 +20,7 @@ import { BlueprintDiagram } from "@/components/cars/detail/BlueprintDiagram";
 import { Gallery } from "@/components/cars/detail/Gallery";
 import { PerformancePanel } from "@/components/cars/detail/PerformancePanel";
 import { EvPanel } from "@/components/cars/detail/EvPanel";
-import { DimensionDrawing } from "@/components/cars/detail/DimensionDrawing";
+import { BlueprintSheet } from "@/components/cars/detail/BlueprintSheet";
 import { FeatureGroup, groupFeatures } from "@/components/cars/detail/FeatureSections";
 import { PartsShowcase } from "@/components/cars/detail/PartsShowcase";
 import { DataConfidence } from "@/components/cars/detail/DataConfidence";
@@ -418,7 +418,7 @@ export default async function VariantPage({
           className={cn(SECTION, RULE)}
         >
           <div className="space-y-20 lg:space-y-24">
-            <DimensionDrawing detail={detail} />
+            <BlueprintSheet detail={detail} />
             <FeatureGroup features={detail.features} group="aerodynamics" />
             <FeatureGroup features={detail.features} group="interior" />
           </div>
