@@ -13,9 +13,9 @@ import { cn } from "@/lib/utils";
  */
 
 const CONTROL =
-  "w-full min-w-0 rounded-control border bg-surface-1 px-3.5 text-[15px] text-ink-50 " +
+  "w-full min-w-0 rounded-control border bg-surface-1/80 px-3.5 text-[15px] text-ink-50 " +
   "placeholder:text-ink-500 transition-colors duration-(--duration-fast) " +
-  "hover:border-ink-500 focus-visible:border-gold-500 " +
+  "hover:border-cyan-700 focus-visible:border-cyan-300 focus-visible:shadow-[0_0_0_3px_oklch(0.83_0.13_210/18%),0_0_18px_-4px_oklch(0.8_0.14_210/45%)] " +
   "disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-signal-negative";
 
 export function Input({

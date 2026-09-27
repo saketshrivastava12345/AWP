@@ -5,6 +5,8 @@ import { Container } from "@/components/ui/Container";
 import { ButtonLink } from "@/components/ui/Button";
 import { SearchTrigger } from "@/components/layout/SearchTrigger";
 import { PRIMARY_NAV } from "@/lib/navigation";
+import { GridBackground, Scanlines, GlowOrbs } from "@/components/fx/Backgrounds";
+import { Reveal } from "@/components/fx/Reveal";
 
 export const metadata: Metadata = {
   title: "Page not found",
@@ -18,10 +20,24 @@ export const metadata: Metadata = {
  */
 export default function NotFound() {
   return (
-    <section aria-labelledby="not-found-title" className="flex flex-1 flex-col">
-      <Container className="py-20 sm:py-28 lg:py-32">
+    <section
+      aria-labelledby="not-found-title"
+      className="relative isolate flex flex-1 flex-col overflow-hidden"
+    >
+      <GlowOrbs tone="cyan-violet" />
+      <GridBackground variant="floor" />
+      <Scanlines beam />
+      <Container className="relative py-20 sm:py-28 lg:py-32">
         <div className="max-w-2xl">
-          <p className="text-eyebrow">Error 404</p>
+          {/* Decorative glitching code; the h1 below is the real title. */}
+          <p
+            aria-hidden="true"
+            data-text="404"
+            className="fx-glitch mb-6 w-fit font-hud text-[clamp(4.5rem,16vw,10rem)] leading-none text-transparent [-webkit-text-stroke:1px_var(--color-cyan-300)] [filter:drop-shadow(0_0_18px_oklch(0.8_0.14_210/45%))]"
+          >
+            404
+          </p>
+          <p className="text-eyebrow">Error 404 · Signal lost</p>
 
           <h1 id="not-found-title" className="mt-4 text-h1">
             This page isn’t in the catalogue.
@@ -48,7 +64,7 @@ export default function NotFound() {
           <h2 id="not-found-continue" className="text-eyebrow">
             Continue to
           </h2>
-          <ul className="mt-4 border-t border-line-subtle">
+          <Reveal as="ul" stagger className="mt-4 border-t border-line-subtle">
             {PRIMARY_NAV.map((link) => (
               <li key={link.href} className="border-b border-line-subtle">
                 <Link
@@ -66,13 +82,13 @@ export default function NotFound() {
                     ) : null}
                   </span>
                   <ArrowRight
-                    className="size-[18px] shrink-0 text-ink-400 transition-[color,translate] duration-(--duration-base) group-hover:translate-x-1 group-hover:text-ink-50"
+                    className="size-[18px] shrink-0 text-ink-400 transition-[color,translate] duration-(--duration-base) group-hover:translate-x-1 group-hover:text-cyan-300"
                     aria-hidden="true"
                   />
                 </Link>
               </li>
             ))}
-          </ul>
+          </Reveal>
         </nav>
       </Container>
     </section>

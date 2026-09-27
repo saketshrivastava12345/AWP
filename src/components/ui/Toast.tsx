@@ -114,7 +114,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 "bg-surface-2/95 px-4 py-3 shadow-overlay backdrop-blur-md",
                 toast.tone === "error"
                   ? "border-signal-negative/50"
-                  : "border-line-strong",
+                  : "border-cyan-400/30",
               )}
             >
               <Icon

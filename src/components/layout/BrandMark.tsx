@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { ScrambleText } from "@/components/fx/ScrambleText";
 import { MARK_PATHS, MARK_STROKES, MARK_VIEWBOX } from "./brand-mark";
 
 /**
@@ -46,12 +47,14 @@ export function Wordmark({
         className,
       )}
     >
-      <BrandMark className="size-[18px] transition-colors duration-(--duration-fast) group-hover:text-gold-400" />
-      {/* The only Michroma on the page besides an optional nameplate. The
-          trailing tracking is trimmed so the word centres optically. */}
-      <span className="-mr-[0.24em] font-brand text-base leading-none tracking-[0.24em] text-ink-50 md:text-[18px]">
-        AURIX
-      </span>
+      <BrandMark className="size-[18px] drop-shadow-[0_0_6px_oklch(0.8_0.11_85/70%)] transition-colors duration-(--duration-fast) group-hover:text-gold-300" />
+      {/* The trailing tracking is trimmed so the word centres optically. It
+          decodes itself on hover (the link's aria-label is its name). */}
+      <ScrambleText
+        text="AURIX"
+        trigger="hover"
+        className="-mr-[0.24em] font-brand text-base leading-none tracking-[0.24em] text-ink-50 [--fx-scramble-color:var(--color-gold-300)] md:text-[18px]"
+      />
     </Link>
   );
 }

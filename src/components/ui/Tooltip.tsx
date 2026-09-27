@@ -80,7 +80,7 @@ export function Tooltip({
         role="tooltip"
         className={cn(
           "pointer-events-none absolute z-(--z-raised) hidden w-max max-w-[min(16rem,calc(100vw-2rem))]",
-          "rounded-control border border-line-strong bg-surface-2/95 px-3 py-2 text-left text-[13px] leading-snug",
+          "rounded-control border border-cyan-400/30 bg-surface-2/95 px-3 py-2 text-left text-[13px] leading-snug",
           "font-sans font-normal tracking-normal text-ink-200 normal-case shadow-overlay backdrop-blur-sm",
           "transition-[opacity,display] transition-discrete duration-(--duration-fast) starting:opacity-0",
           "group-hover/tip:block",

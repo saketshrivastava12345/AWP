@@ -63,7 +63,7 @@ export function Select({
           className={cn(
             "w-full min-w-0 appearance-none rounded-control border border-line-strong bg-surface-1 pr-10 pl-3.5",
             "text-[15px] text-ink-50 transition-colors duration-(--duration-fast)",
-            "hover:border-ink-500 focus-visible:border-gold-500 disabled:cursor-not-allowed disabled:opacity-50",
+            "hover:border-cyan-700 focus-visible:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-50",
             size === "sm" ? "h-10" : "h-12",
             selectClassName,
           )}

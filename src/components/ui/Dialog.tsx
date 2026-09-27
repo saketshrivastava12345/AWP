@@ -182,7 +182,7 @@ export function Dialog({
         tabIndex={-1}
         aria-label="Close"
         onClick={onClose}
-        className="absolute inset-0 animate-overlay-in cursor-default bg-void/80 backdrop-blur-sm"
+        className="absolute inset-0 animate-overlay-in cursor-default bg-void/75 backdrop-blur-sm"
       />
 
       <div
@@ -194,7 +194,7 @@ export function Dialog({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cn(
-          "absolute flex flex-col border-line bg-surface-1 shadow-overlay",
+          "absolute flex flex-col border-cyan-400/25 bg-surface-1/95 shadow-overlay backdrop-blur-xl",
           "focus-visible:outline-none",
           placementClasses[placement],
           className,
@@ -222,7 +222,7 @@ export function Dialog({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="grid size-11 place-items-center rounded-pill text-ink-300 transition-colors duration-(--duration-fast) hover:bg-white/6 hover:text-ink-50"
+                className="grid size-11 place-items-center rounded-pill text-ink-300 transition-colors duration-(--duration-fast) hover:bg-cyan-400/8 hover:text-cyan-100"
               >
                 <X className="size-4" aria-hidden="true" />
               </button>

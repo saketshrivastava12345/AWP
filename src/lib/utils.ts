@@ -9,12 +9,14 @@ import { extendTailwindMerge } from "tailwind-merge";
  * `tracking-button`. Registering the tokens makes merging behave the way the
  * classes read.
  */
-const twMerge = extendTailwindMerge<"type-preset">({
+const twMerge = extendTailwindMerge<"type-preset" | "text-glow" | "text-fill">({
   extend: {
     theme: {
       text: ["micro", "nano"],
-      tracking: ["display", "label", "button", "hud"],
-      ease: ["cinematic", "metal", "standard", "exit"],
+      tracking: ["display", "label", "button", "hud", "wide-hud"],
+      shadow: ["glow-cyan", "glow-gold", "glow-violet"],
+      font: ["brand", "hud", "display", "sans", "mono"],
+      ease: ["cinematic", "metal", "standard", "exit", "spring"],
       radius: ["control", "card", "pill"],
     },
     classGroups: {
@@ -39,6 +41,13 @@ const twMerge = extendTailwindMerge<"type-preset">({
         "text-figure",
         "text-data",
       ],
+      // FX utilities that set text-shadow / a gradient fill. Their own
+      // groups (and deliberately not prefixed text-*), so a text colour
+      // class never deletes them and vice versa.
+      "text-glow": ["glow-text", "glow-text-cyan", "glow-text-gold"],
+      "text-fill": ["gradient-text", "gradient-text-aurora", "gold-gradient-text"],
+      // Box glows are shadows: a later shadow-* replaces them.
+      shadow: ["glow-cyan", "glow-gold", "glow-violet", "shadow-overlay"],
     },
     conflictingClassGroups: {
       // A preset sets family, size, leading, weight and tracking, so one

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { RotateCcw } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Button, ButtonLink } from "@/components/ui/Button";
+import { GridBackground, Scanlines } from "@/components/fx/Backgrounds";
 
 /**
  * Route-level error boundary.
@@ -28,13 +29,23 @@ export default function ErrorPage({
   }, [error]);
 
   return (
-    <section className="flex flex-1 flex-col">
-      <Container className="flex flex-1 flex-col justify-center py-20 sm:py-28 lg:py-32">
+    <section className="relative isolate flex flex-1 flex-col overflow-hidden">
+      <GridBackground />
+      <Scanlines beam />
+      <Container className="relative flex flex-1 flex-col justify-center py-20 sm:py-28 lg:py-32">
         <div className="max-w-2xl">
+          {/* Decorative glitching code; the h1 below is the real title. */}
+          <p
+            aria-hidden="true"
+            data-text="ERR"
+            className="fx-glitch mb-6 w-fit font-hud text-[clamp(4rem,14vw,8rem)] leading-none text-transparent [-webkit-text-stroke:1px_var(--color-signal-negative)] [filter:drop-shadow(0_0_16px_oklch(0.7_0.18_15/40%))]"
+          >
+            ERR
+          </p>
           <p className="flex items-center gap-2 text-eyebrow">
             <span
               aria-hidden="true"
-              className="size-1.5 rounded-full bg-signal-negative"
+              className="size-1.5 animate-pulse-glow rounded-full bg-signal-negative shadow-[0_0_8px_var(--color-signal-negative)]"
             />
             Something went wrong
           </p>

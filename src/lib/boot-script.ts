@@ -17,6 +17,12 @@ export const BOOT_SESSION_KEY = "aurix-booted";
  * Deliberately in its own module with no "use client": importing it from the
  * client component would drag that component into the server layout's graph.
  */
-export const BOOT_FLAG_SCRIPT = `try{if(sessionStorage.getItem(${JSON.stringify(
+/*
+ * It also adds the `js` class to <html>. Every "hidden until revealed" state
+ * in the FX motion kit (Reveal, stagger) is gated on `html.js`, so a visitor
+ * without JavaScript — or whose scripts are blocked — sees all content; the
+ * class is set before first paint, so nothing flashes for everyone else.
+ */
+export const BOOT_FLAG_SCRIPT = `document.documentElement.classList.add("js");try{if(sessionStorage.getItem(${JSON.stringify(
   BOOT_SESSION_KEY,
 )}))document.documentElement.setAttribute("data-booted","1")}catch(e){}`;

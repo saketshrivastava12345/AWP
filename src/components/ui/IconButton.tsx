@@ -41,14 +41,15 @@ export function IconButton({
         size === "sm"
           ? "size-9 after:absolute after:-inset-1 after:rounded-pill after:content-['']"
           : "size-11",
-        variant === "ghost" && "text-ink-200 hover:bg-white/6 hover:text-ink-50",
+        variant === "ghost" && "text-ink-200 hover:bg-cyan-400/8 hover:text-cyan-100",
         variant === "outline" &&
-          "border border-line-strong text-ink-200 hover:border-ink-400 hover:text-ink-50",
+          "border border-line-strong text-ink-200 hover:border-cyan-300 hover:text-cyan-100 hover:shadow-[0_0_14px_-4px_var(--color-cyan-400)]",
         variant === "solid" && "bg-surface-2 text-ink-100 hover:bg-surface-3",
         variant === "overlay" &&
           "bg-void/60 text-ink-50 backdrop-blur-md hover:bg-void/80",
-        // Active state: the gold rule allows gold for "on", nothing else.
-        pressed && "border border-gold-500 bg-surface-3 text-ink-50",
+        // Active ("on") state: lit cyan.
+        pressed &&
+          "border border-cyan-300 bg-cyan-400/12 text-cyan-100 shadow-[0_0_14px_-3px_var(--color-cyan-400)]",
         className,
       )}
       {...props}

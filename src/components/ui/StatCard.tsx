@@ -2,6 +2,7 @@ import { type ComponentPropsWithoutRef } from "react";
 import { cn } from "@/lib/utils";
 import { EM_DASH } from "@/lib/format";
 import { InfoHint } from "@/components/ui/Tooltip";
+import { CountUp } from "@/components/fx/CountUp";
 
 export type StatCardProps = {
   /** Sentence-case label shown under the figure, e.g. "0–100 km/h". */
@@ -17,13 +18,20 @@ export type StatCardProps = {
    * row of a hero. `sm` sets it in text-figure for dense contexts.
    */
   size?: "sm" | "md" | "lg";
+  /**
+   * Count up from zero to `value` when first scrolled into view. The server
+   * HTML and the resting state always show the real `value` (see fx/CountUp).
+   */
+  countUp?: boolean;
+  /** Accent of the tick and glow: cyan (default), gold for a "best" figure. */
+  tone?: "cyan" | "gold";
   className?: string;
 };
 
 /**
- * A key figure: a large number with a small label beneath it. No box and no
- * background — figures sit on the page ground, separated by the hairlines
- * that StatRow draws.
+ * A key figure, telemetry style: a lit tick, a large glowing Michroma
+ * number and a small mono label beneath it. No box — figures sit on the
+ * page ground, separated by the hairlines that StatRow draws.
  *
  * It is one term–description pair, so it must sit inside a <StatRow> (a <dl>):
  * the label is the <dt> and the figure the <dd>, which is what lets a screen
@@ -40,15 +48,30 @@ export function StatCard({
   unit,
   hint,
   size = "md",
+  countUp = false,
+  tone = "cyan",
   className,
 }: StatCardProps) {
   const dense = size === "sm";
   return (
-    <div className={cn("flex min-w-0 flex-col-reverse gap-2", className)}>
+    <div
+      className={cn(
+        "flex min-w-0 flex-col-reverse gap-2",
+        // The lit tick above the figure (a pseudo-element: a <dl> group may
+        // only hold <dt>/<dd>).
+        "before:order-last before:mb-1 before:block before:h-0.5 before:w-6 before:content-['']",
+        value === null
+          ? "before:bg-ink-600"
+          : tone === "gold"
+            ? "before:bg-gold-400 before:shadow-[0_0_8px_var(--color-gold-400)]"
+            : "before:bg-cyan-400 before:shadow-[0_0_8px_var(--color-cyan-400)]",
+        className,
+      )}
+    >
       <dt
         className={cn(
-          "flex min-w-0 items-start gap-1 text-ink-400",
-          dense ? "text-caption" : "text-body-s",
+          "flex min-w-0 items-start gap-1 font-mono tracking-[0.12em] text-ink-400 uppercase",
+          dense ? "text-[11px] leading-snug" : "text-xs leading-snug",
         )}
       >
         <span className="min-w-0">
@@ -66,15 +89,17 @@ export function StatCard({
         <dd
           className={cn(
             "flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-ink-50",
+            tone === "gold" ? "glow-text-gold" : "glow-text",
             dense ? "text-figure" : "text-figure-xl",
           )}
         >
-          <span className="min-w-0">{value}</span>
+          <span className="min-w-0">{countUp ? <CountUp value={value} /> : value}</span>
           {unit ? (
             <span
               className={cn(
-                "font-sans tracking-normal text-ink-300",
-                dense ? "text-body-s" : "text-lead",
+                "font-mono tracking-normal [text-shadow:none]",
+                tone === "gold" ? "text-gold-300" : "text-cyan-200",
+                dense ? "text-xs" : "text-sm",
               )}
             >
               {unit}

@@ -34,13 +34,15 @@ export function Switch({
         aria-hidden="true"
         className={cn(
           "relative h-5 w-9 shrink-0 rounded-full border transition-colors duration-(--duration-fast)",
-          checked ? "border-gold-500 bg-gold-500/25" : "border-line-strong bg-surface-2",
+          checked
+            ? "border-cyan-400 bg-cyan-400/20 shadow-[0_0_12px_-2px_var(--color-cyan-400)]"
+            : "border-line-strong bg-surface-2",
         )}
       >
         <span
           className={cn(
             "absolute top-1/2 size-3.5 -translate-y-1/2 rounded-full transition-[left,background-color] duration-(--duration-fast)",
-            checked ? "left-[calc(100%-1.05rem)] bg-gold-400" : "left-0.5 bg-ink-400",
+            checked ? "left-[calc(100%-1.05rem)] bg-cyan-300" : "left-0.5 bg-ink-400",
           )}
         />
       </span>

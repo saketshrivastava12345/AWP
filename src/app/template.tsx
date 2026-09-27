@@ -1,24 +1,26 @@
 import type { ReactNode } from "react";
 
 /**
- * Route transition: a short fade-and-lift on the incoming page.
+ * Route transition: a cyan scan line sweeps down the viewport while the
+ * incoming page fades in.
  *
  * A template, not a client component keyed on usePathname(): Next gives a
  * template a fresh key whenever its segment changes, which remounts it and
- * restarts the CSS animation, with no hook involved. That matters under Cache
- * Components — usePathname() in the root layout suspends on any route whose
- * params are only known at request time, and outside a Suspense boundary that
- * fails the build. The root template remounts when the first path segment
- * changes (/cars → /about); moving between pages inside a section keeps the
- * wrapper, which also spares re-creating the whole subtree on every step.
+ * restarts the CSS animations, with no hook involved (usePathname() in the
+ * root layout would fail the build under Cache Components).
  *
- * Enter-only by design: animating the outgoing page would mean holding the old
- * route mounted while the new one streams in, which fights React streaming.
- * The fill mode is `backwards` (see animate-page-enter in globals.css) so no
- * transform lingers on this wrapper — a leftover transform would become the
- * containing block for every position: fixed descendant. Reduced motion is
- * handled by the CSS backstop.
+ * Trap (CLAUDE.md, bug 1): the wrapper animates OPACITY ONLY — no transform,
+ * no filter, not even mid-animation — so it never becomes the containing
+ * block of a fixed or sticky descendant (Sheets, SubNav, the home story pin,
+ * the car page's sticky stage). The scan line is its own fixed, childless
+ * overlay; whatever it animates affects nothing else. Reduced motion: no
+ * scan, and the CSS backstop reduces the fade to nothing.
  */
 export default function Template({ children }: { children: ReactNode }) {
-  return <div className="flex flex-1 animate-page-enter flex-col">{children}</div>;
+  return (
+    <div className="flex flex-1 animate-route-in flex-col">
+      <div aria-hidden="true" className="fx-route-scan" />
+      {children}
+    </div>
+  );
 }

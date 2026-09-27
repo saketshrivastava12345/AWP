@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import styles from "./chrome.module.css";
 
 /**
- * A one-pixel rule that fills as the page scrolls. Neutral, not gold: it is
- * reading progress, not an active state. Used by SubNav's `progress` option.
+ * A glowing cyan→violet rule that fills as the page scrolls. Used along the
+ * navbar's bottom edge and by SubNav's `progress` option.
  *
  * It never re-renders React. Browsers with scroll-driven animations run it
  * entirely in CSS (see chrome.module.css); elsewhere a passive, rAF-coalesced
@@ -52,7 +52,9 @@ export function ScrollProgress({ className }: { className?: string }) {
       ref={barRef}
       aria-hidden="true"
       className={cn(
-        "pointer-events-none absolute inset-x-0 top-0 h-px bg-ink-300",
+        "pointer-events-none absolute inset-x-0 top-0 h-0.5",
+        "bg-[linear-gradient(90deg,var(--color-cyan-500),var(--color-cyan-300)_70%,var(--color-violet-400))]",
+        "shadow-[0_0_8px_oklch(0.8_0.14_210/70%)]",
         styles.progress,
         className,
       )}

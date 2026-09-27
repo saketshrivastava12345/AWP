@@ -81,9 +81,12 @@
   --color-signal-hybrid: #b197fc;
 
   /* --- Glows (box-shadow). shadow-glow-cyan / -gold / -violet. --- */
-  --shadow-glow-cyan: 0 0 0 1px oklch(0.83 0.13 210 / 35%), 0 0 24px -4px oklch(0.8 0.14 210 / 55%);
-  --shadow-glow-gold: 0 0 0 1px oklch(0.8 0.11 85 / 35%), 0 0 24px -4px oklch(0.78 0.12 80 / 50%);
-  --shadow-glow-violet: 0 0 0 1px oklch(0.72 0.17 290 / 35%), 0 0 26px -4px oklch(0.65 0.2 290 / 50%);
+  --shadow-glow-cyan:
+    0 0 0 1px oklch(0.83 0.13 210 / 35%), 0 0 24px -4px oklch(0.8 0.14 210 / 55%);
+  --shadow-glow-gold:
+    0 0 0 1px oklch(0.8 0.11 85 / 35%), 0 0 24px -4px oklch(0.78 0.12 80 / 50%);
+  --shadow-glow-violet:
+    0 0 0 1px oklch(0.72 0.17 290 / 35%), 0 0 26px -4px oklch(0.65 0.2 290 / 50%);
 
   /* --- Radii: tight and technical --- */
   --radius-xs: 2px;
@@ -173,9 +176,12 @@ html:has([data-subnav]) {
 /* Font families reference the next/font variables set on <html>, so they must
    live in an `inline` theme block to be resolved at use-site. */
 @theme inline {
-  /* Michroma is a logo treatment now: the wordmark and, optionally, a model
-     nameplate. Every heading, number, nav item and button is Inter Tight. */
+  /* Michroma — wide and technical — is the display voice of the HUD: display
+     headlines, h1/h2, key figures and button labels. `font-hud` is an alias.
+     Inter Tight stays for h3/h4 and long card titles, where a wide face
+     would hurt readability. */
   --font-brand: var(--font-michroma), "Arial Black", sans-serif;
+  --font-hud: var(--font-michroma), "Arial Black", sans-serif;
   --font-display:
     var(--font-inter-tight), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -202,6 +208,13 @@ html:has([data-subnav]) {
 
   body {
     background-color: var(--color-void);
+    /* A cold glow from above and a faint cyan/violet wash at the foot, so the
+       void reads as a lit cockpit rather than flat black. Fixed to the
+       viewport via background-attachment: no element, no containing block. */
+    background-image:
+      radial-gradient(120% 60% at 50% -10%, oklch(0.45 0.1 230 / 16%), transparent 60%),
+      radial-gradient(80% 50% at 100% 110%, oklch(0.45 0.15 290 / 8%), transparent 60%);
+    background-attachment: fixed;
     color: var(--color-ink-100);
     font-family: var(--font-sans);
     font-feature-settings: "cv02", "cv03", "cv04";
@@ -215,18 +228,14 @@ html:has([data-subnav]) {
   }
 
   ::selection {
-    background-color: var(--color-gold-500);
+    background-color: var(--color-cyan-400);
     color: var(--color-void);
   }
 
-  /* Visible, on-brand focus ring for keyboard users (3D preset buttons,
-     exploded-view hotspots and nav all rely on this). */
+  /* Visible cyan focus ring for keyboard users. */
   :focus-visible {
-    outline: 2px solid var(--color-gold-500);
+    outline: 2px solid var(--color-cyan-300);
     outline-offset: 2px;
-    /* No border-radius here: setting it changed the SHAPE of any focused
-       element (rounded cards snapped to 2px corners on keyboard focus). The
-       outline follows the element's own radius in current browsers. */
   }
 
   ::-webkit-scrollbar {
@@ -242,86 +251,68 @@ html:has([data-subnav]) {
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-ink-600);
+    background: var(--color-cyan-800);
   }
 }
 
 /* ===========================================================================
-   Utilities
+   Type scale
+   Display, h1, h2 and key figures are Michroma (wide, techy) at sizes tuned
+   so the longest single word in the catalogue ("Manufacturers") fits a 350px
+   column. Sentence case; uppercase is for labels. h3/h4 are Inter Tight.
+   Headings never break inside a word — no break-words on headings.
    =========================================================================== */
 
-/* Legacy small-caps label (pre-redesign). Kept so untouched files still
-   render sensibly: Inter 12px, a light 0.06em tracking, still uppercase.
-   New code uses text-eyebrow (at most one per section) or sentence case. */
-@utility text-label {
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 500;
-  /* Not 1: a tracked uppercase label that wraps onto a second line collapses
-     into itself at line-height 1. Seen on the loading-screen tagline. */
-  line-height: 1.5;
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  color: var(--color-ink-400);
-}
-
-/* ---------------------------------------------------------------------------
-   Type scale. Headings are sentence case, balanced, and never break inside a
-   word (no break-words on headings — "TURBOCHARG / ER"). Each utility sets
-   family, size, line height, weight and tracking; headings and the reading
-   styles also set their default colour, which a text-ink-* class overrides.
-   --------------------------------------------------------------------------- */
-
 @utility text-display-xl {
-  font-family: var(--font-display);
-  font-size: clamp(3rem, 8vw, 7rem);
-  line-height: 0.95;
-  font-weight: 300;
-  letter-spacing: -0.03em;
-  text-wrap: balance;
-  color: var(--color-ink-50);
-}
-
-@utility text-display-l {
-  font-family: var(--font-display);
-  font-size: clamp(2.5rem, 5.5vw, 4.5rem);
-  line-height: 1.02;
-  font-weight: 300;
-  letter-spacing: -0.025em;
-  text-wrap: balance;
-  color: var(--color-ink-50);
-}
-
-@utility text-h1 {
-  font-family: var(--font-display);
-  font-size: clamp(2.25rem, 4vw, 3.5rem);
+  font-family: var(--font-hud);
+  font-size: clamp(1.75rem, 5.2vw, 5rem);
   line-height: 1.08;
-  font-weight: 400;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-  color: var(--color-ink-50);
-}
-
-@utility text-h2 {
-  font-family: var(--font-display);
-  font-size: clamp(1.75rem, 3vw, 2.5rem);
-  line-height: 1.12;
   font-weight: 400;
   letter-spacing: -0.015em;
   text-wrap: balance;
   color: var(--color-ink-50);
 }
 
+@utility text-display-l {
+  font-family: var(--font-hud);
+  font-size: clamp(1.625rem, 4vw, 3.5rem);
+  line-height: 1.12;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  color: var(--color-ink-50);
+}
+
+@utility text-h1 {
+  font-family: var(--font-hud);
+  font-size: clamp(1.5rem, 3vw, 2.625rem);
+  line-height: 1.16;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  color: var(--color-ink-50);
+}
+
+@utility text-h2 {
+  font-family: var(--font-hud);
+  font-size: clamp(1.25rem, 2.2vw, 1.875rem);
+  line-height: 1.22;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+  color: var(--color-ink-50);
+}
+
 @utility text-h3 {
   font-family: var(--font-display);
-  font-size: 1.375rem;
+  font-size: 1.3125rem;
   line-height: 1.25;
   font-weight: 500;
   letter-spacing: -0.01em;
   text-wrap: balance;
   color: var(--color-ink-50);
   @media (min-width: 1024px) {
-    font-size: 1.5rem;
+    font-size: 1.4375rem;
   }
 }
 
@@ -338,13 +329,13 @@ html:has([data-subnav]) {
 @utility text-lead {
   font-family: var(--font-sans);
   font-size: 1.0625rem;
-  line-height: 1.55;
+  line-height: 1.6;
   font-weight: 400;
   letter-spacing: 0;
   text-wrap: pretty;
   color: var(--color-ink-200);
   @media (min-width: 1024px) {
-    font-size: 1.25rem;
+    font-size: 1.1875rem;
   }
 }
 
@@ -375,31 +366,31 @@ html:has([data-subnav]) {
   color: var(--color-ink-400);
 }
 
-/* At most one per section, never gold. */
+/* Section eyebrow: mono, uppercase, tracked, cyan. One per section. */
 @utility text-eyebrow {
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   line-height: 1.4;
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--color-ink-400);
+  color: var(--color-cyan-300);
 }
 
-/* Key figures. Tabular so a row of numbers aligns. */
+/* Key figures: telemetry numbers. Tabular so a row of numbers aligns. */
 @utility text-figure-xl {
-  font-family: var(--font-display);
-  font-size: clamp(2.5rem, 5vw, 4rem);
-  line-height: 1;
-  font-weight: 300;
+  font-family: var(--font-hud);
+  font-size: clamp(1.875rem, 3.6vw, 3rem);
+  line-height: 1.05;
+  font-weight: 400;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 @utility text-figure {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  line-height: 1.1;
+  font-family: var(--font-hud);
+  font-size: 1.25rem;
+  line-height: 1.15;
   font-weight: 400;
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
@@ -415,20 +406,37 @@ html:has([data-subnav]) {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------------------------------------------------------------------------
-   Layout helpers
-   --------------------------------------------------------------------------- */
+/* Small uppercase mono label (legacy name, HUD voice). */
+@utility text-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  /* Not 1: a tracked uppercase label that wraps collapses into itself. */
+  line-height: 1.5;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-ink-400);
+}
 
-/* A full-bleed hero that starts under the (transparent-at-top) navbar:
-   pulls the section up by the nav height and pads it back down, so the
-   image runs to the top edge while the content still clears the bar. */
+/* Technical micro-label: mono 11px, uppercase, tracked. IDs, codes, credits. */
+@utility text-hud {
+  font-family: var(--font-mono);
+  font-size: var(--text-nano);
+  line-height: 1.5;
+  letter-spacing: var(--tracking-hud);
+  text-transform: uppercase;
+  color: var(--color-ink-400);
+}
+
+/* ===========================================================================
+   Layout helpers (unchanged API)
+   =========================================================================== */
+
 @utility bleed-under-nav {
   margin-top: calc(var(--nav-h) * -1);
   padding-top: var(--nav-h);
 }
 
-/* Soft fade at both ends of a horizontal scroller (chips, sub-nav tabs), so
-   a cut-off item reads as "scroll for more" rather than as clipped. */
 @utility edge-fade-x {
   mask-image: linear-gradient(
     to right,
@@ -439,7 +447,6 @@ html:has([data-subnav]) {
   );
 }
 
-/* Hides a scroller's scrollbar while keeping it scrollable. */
 @utility no-scrollbar {
   scrollbar-width: none;
   &::-webkit-scrollbar {
@@ -447,12 +454,11 @@ html:has([data-subnav]) {
   }
 }
 
-/* Top-down darkening for text or chrome laid over an image. */
 @utility scrim-top {
   background-image: linear-gradient(
     to bottom,
     var(--color-scrim),
-    oklch(0 0 0 / 20%) 60%,
+    oklch(0.08 0.02 250 / 20%) 60%,
     transparent
   );
 }
@@ -461,15 +467,13 @@ html:has([data-subnav]) {
   background-image: linear-gradient(
     to top,
     var(--color-scrim),
-    oklch(0 0 0 / 20%) 60%,
+    oklch(0.08 0.02 250 / 20%) 60%,
     transparent
   );
 }
 
-/* The key-figure row (StatRow). Two columns with hairlines between columns
-   and rows below lg; one row with vertical hairlines from lg. A caller's
-   lg:grid-cols-N still fixes the column count (variants come later). The lg
-   rules use the same specificity as the phone rules so they replace them. */
+/* The key-figure row (StatRow): telemetry cells separated by luminous
+   hairlines. 2 columns below lg, one row from lg. */
 @utility stat-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -506,13 +510,20 @@ html:has([data-subnav]) {
   }
 }
 
-/* Overlay surfaces (menus, palette, dialogs, sheets): the one shadow. */
+/* Overlay surfaces (menus, palette, dialogs, sheets): deep shadow plus a
+   faint cyan halo. */
 @utility shadow-overlay {
-  box-shadow: 0 24px 64px -24px rgb(0 0 0 / 0.7);
+  box-shadow:
+    0 24px 64px -24px rgb(0 0 0 / 0.8),
+    0 0 0 1px oklch(0.83 0.13 210 / 14%),
+    0 0 48px -16px oklch(0.8 0.14 210 / 22%);
 }
 
-/* Faint film grain. Applied to full-bleed cinematic sections, never to text
-   blocks. Uses an inline SVG turbulence so there is no image request. */
+/* ===========================================================================
+   Surfaces and HUD decoration
+   =========================================================================== */
+
+/* Faint film grain (inline SVG turbulence; no request). */
 @utility grain {
   position: relative;
   &::after {
@@ -520,20 +531,39 @@ html:has([data-subnav]) {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.035;
+    opacity: 0.04;
     z-index: 1;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 }
 
-/* Restrained glassmorphism: a lifted surface, not a frosted toy. */
+/* Glass: a tinted, blurred surface with a luminous hairline. */
 @utility glass {
-  background-color: oklch(1 0 0 / 3%);
+  background-color: oklch(0.2 0.03 240 / 35%);
   border: 1px solid var(--color-line);
-  backdrop-filter: blur(12px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(140%);
 }
 
-/* Hairline top-edge highlight that reads as brushed metal. */
+/* HUD panel: glass ground + a gradient luminous border (cyan → hairline →
+   violet), drawn with the padding-box/border-box background trick so it
+   follows the radius. Customise with --panel-bg and --panel-edge. Do not
+   combine with bg-* utilities (they would replace the layered background). */
+@utility hud-panel {
+  --panel-bg: oklch(0.16 0.025 245 / 72%);
+  --panel-edge: linear-gradient(
+    135deg,
+    oklch(0.83 0.13 210 / 55%),
+    oklch(0.9 0.03 230 / 10%) 38%,
+    oklch(0.9 0.03 230 / 8%) 62%,
+    oklch(0.7 0.17 290 / 40%)
+  );
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--panel-bg), var(--panel-bg)) padding-box,
+    var(--panel-edge) border-box;
+}
+
+/* Hairline top-edge highlight. */
 @utility edge-light {
   position: relative;
   &::before {
@@ -542,53 +572,40 @@ html:has([data-subnav]) {
     inset-inline: 0;
     top: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, oklch(1 0 0 / 22%) 45%, transparent);
-  }
-}
-
-/* DEPRECATED outside the 3D viewer (gold rules, redesign spec §3.4). Kept so
-   the viewer and untouched files still compile. */
-@utility gold-gradient-text {
-  background: linear-gradient(
-    180deg,
-    var(--color-gold-200) 0%,
-    var(--color-gold-500) 55%,
-    var(--color-gold-700) 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* Fine engineering grid, faded toward the edges. For hero and HUD grounds. */
-@utility tech-grid {
-  background-image:
-    linear-gradient(oklch(1 0 0 / 3.5%) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(1 0 0 / 3.5%) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 78%);
-}
-
-/* Very faint horizontal scan lines. Decorative only. */
-@utility scanlines {
-  position: relative;
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      180deg,
-      oklch(1 0 0 / 1.6%) 0 1px,
-      transparent 1px 4px
+    background: linear-gradient(
+      90deg,
+      transparent,
+      oklch(0.85 0.12 210 / 55%) 45%,
+      transparent
     );
   }
 }
 
-/* Four gold corner brackets, the HUD frame used around technical panels.
-   DEPRECATED outside the 3D viewer; kept for the viewer's own use. */
+/* Four corner brackets. Absolutely positioned layer — put it inside a
+   `relative` parent (HudFrame and GlassCard `brackets` do this for you).
+   Colour via --hud-c, arm length via --hud-l. */
+@utility hud-brackets {
+  --hud-c: var(--color-cyan-300);
+  --hud-l: 12px;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(var(--hud-c), var(--hud-c)) top left / var(--hud-l) 1px no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) top left / 1px var(--hud-l) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) top right / var(--hud-l) 1px no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) top right / 1px var(--hud-l) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) bottom left / var(--hud-l) 1px no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) bottom left / 1px var(--hud-l) no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) bottom right / var(--hud-l) 1px no-repeat,
+    linear-gradient(var(--hud-c), var(--hud-c)) bottom right / 1px var(--hud-l) no-repeat;
+}
+
+/* Legacy name: the same brackets as a background (the 3D viewer uses it).
+   Note it sets `background`, so it replaces any bg-* on the element. */
 @utility hud-corners {
-  --hud-c: var(--color-gold-600);
+  --hud-c: var(--color-cyan-400);
   --hud-l: 10px;
   background:
     linear-gradient(var(--hud-c), var(--hud-c)) top left / var(--hud-l) 1px no-repeat,
@@ -601,15 +618,652 @@ html:has([data-subnav]) {
     linear-gradient(var(--hud-c), var(--hud-c)) bottom right / 1px var(--hud-l) no-repeat;
 }
 
-/* Technical micro-label: mono, 11px, lightly tracked. IDs, codes, credits.
-   No longer uppercase — nothing here is meant to shout. */
-@utility text-hud {
+/* Tiny decorative mono label ("SYS.01 // SPEC"). Always aria-hidden. */
+@utility hud-label {
   font-family: var(--font-mono);
-  font-size: var(--text-nano);
-  line-height: 1.5;
-  letter-spacing: var(--tracking-hud);
-  text-transform: none;
-  color: var(--color-ink-400);
+  font-size: 0.625rem;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide-hud);
+  text-transform: uppercase;
+  color: oklch(0.83 0.1 210 / 70%);
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* A 1px luminous rule: cyan at the left fading out. */
+@utility hud-rule {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    90deg,
+    var(--color-cyan-400),
+    oklch(0.83 0.13 210 / 25%) 30%,
+    transparent
+  );
+}
+
+/* Tick marks along the bottom edge (a ruler), e.g. under a gauge label. */
+@utility hud-ticks {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      oklch(0.9 0.03 230 / 22%) 0 1px,
+      transparent 1px 8px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      oklch(0.83 0.13 210 / 60%) 0 1px,
+      transparent 1px 40px
+    );
+  background-size:
+    100% 5px,
+    100% 9px;
+  background-position:
+    0 100%,
+    0 100%;
+  background-repeat: no-repeat;
+}
+
+/* Segmented telemetry bar fill: put it on the filled part of a bar. */
+@utility hud-segments {
+  mask-image: repeating-linear-gradient(90deg, black 0 6px, transparent 6px 8px);
+}
+
+/* Chamfered corners (top-left and bottom-right cut). Size via --chamfer.
+   clip-path also clips outline and box-shadow: never chamfer a focusable
+   element directly — Button draws its chamfer on pseudo-elements instead. */
+@utility chamfer {
+  --chamfer: 12px;
+  clip-path: polygon(
+    var(--chamfer) 0,
+    100% 0,
+    100% calc(100% - var(--chamfer)),
+    calc(100% - var(--chamfer)) 100%,
+    0 100%,
+    0 var(--chamfer)
+  );
+}
+@utility chamfer-sm {
+  --chamfer: 7px;
+  clip-path: polygon(
+    var(--chamfer) 0,
+    100% 0,
+    100% calc(100% - var(--chamfer)),
+    calc(100% - var(--chamfer)) 100%,
+    0 100%,
+    0 var(--chamfer)
+  );
+}
+@utility chamfer-lg {
+  --chamfer: 22px;
+  clip-path: polygon(
+    var(--chamfer) 0,
+    100% 0,
+    100% calc(100% - var(--chamfer)),
+    calc(100% - var(--chamfer)) 100%,
+    0 100%,
+    0 var(--chamfer)
+  );
+}
+
+/* Glows. Emphasis only — never on body text. */
+@utility glow-cyan {
+  box-shadow: var(--shadow-glow-cyan);
+}
+@utility glow-gold {
+  box-shadow: var(--shadow-glow-gold);
+}
+@utility glow-violet {
+  box-shadow: var(--shadow-glow-violet);
+}
+@utility glow-text {
+  text-shadow: 0 0 18px oklch(0.85 0.1 210 / 45%);
+}
+@utility glow-text-cyan {
+  text-shadow:
+    0 0 10px oklch(0.83 0.13 210 / 55%),
+    0 0 28px oklch(0.8 0.14 210 / 35%);
+}
+@utility glow-text-gold {
+  text-shadow:
+    0 0 10px oklch(0.8 0.11 85 / 50%),
+    0 0 28px oklch(0.78 0.12 80 / 30%);
+}
+
+/* Headline gradients. White → cyan (the default), cyan → violet (aurora),
+   gold (brand). Contrast is judged on the darkest stop, all AA+. */
+@utility gradient-text {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-ink-50) 20%,
+    var(--color-cyan-200) 60%,
+    var(--color-cyan-400)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@utility gradient-text-aurora {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-cyan-300),
+    var(--color-cyan-200) 40%,
+    var(--color-violet-300) 80%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@utility gold-gradient-text {
+  background: linear-gradient(
+    180deg,
+    var(--color-gold-200) 0%,
+    var(--color-gold-400) 55%,
+    var(--color-gold-600) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Flat engineering grid (48px), faded toward the edges. */
+@utility tech-grid {
+  background-image:
+    linear-gradient(oklch(0.85 0.1 210 / 6%) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.85 0.1 210 / 6%) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 78%);
+}
+
+/* Horizontal scan lines. Decorative only. */
+@utility scanlines {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      180deg,
+      oklch(0.9 0.05 220 / 3%) 0 1px,
+      transparent 1px 4px
+    );
+  }
+}
+
+/* Animated underline for text links: grows from the left on hover/focus. */
+@utility fx-link {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1px;
+  transition:
+    background-size var(--duration-base) var(--ease-standard),
+    color var(--duration-fast);
+  &:hover,
+  &:focus-visible {
+    background-size: 100% 1px;
+  }
+}
+
+/* ===========================================================================
+   Components: buttons and cards (plain classes, used by ui/Button and
+   ui/GlassCard; also usable directly through buttonClasses()).
+   =========================================================================== */
+
+@layer components {
+  /* Chamfered button. The chamfer, border and fill are drawn by ::before
+     (the edge colour) and ::after (the fill, inset 1px, with the hover light
+     sweep as a moving background layer), so the button element itself is
+     never clipped and its focus outline stays visible. */
+  .fx-btn {
+    --btn-ch: 9px;
+    --btn-inset: 0px;
+    --btn-edge: var(--color-line-strong);
+    --btn-fill: transparent;
+    --btn-fill-img: none;
+    --btn-sweep: oklch(1 0 0 / 14%);
+    position: relative;
+    isolation: isolate;
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      filter var(--duration-base) var(--ease-standard),
+      translate var(--duration-base) var(--ease-spring);
+  }
+  .fx-btn::before,
+  .fx-btn::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .fx-btn::before {
+    inset: var(--btn-inset) 0;
+    background: var(--btn-edge);
+    clip-path: polygon(
+      var(--btn-ch) 0,
+      100% 0,
+      100% calc(100% - var(--btn-ch)),
+      calc(100% - var(--btn-ch)) 100%,
+      0 100%,
+      0 var(--btn-ch)
+    );
+    transition: background-color var(--duration-base) var(--ease-standard);
+  }
+  .fx-btn::after {
+    inset: calc(var(--btn-inset) + 1px) 1px;
+    clip-path: polygon(
+      calc(var(--btn-ch) - 0.4px) 0,
+      100% 0,
+      100% calc(100% - var(--btn-ch) + 0.4px),
+      calc(100% - var(--btn-ch) + 0.4px) 100%,
+      0 100%,
+      0 calc(var(--btn-ch) - 0.4px)
+    );
+    background-color: var(--btn-fill);
+    background-image:
+      linear-gradient(105deg, transparent 38%, var(--btn-sweep) 50%, transparent 62%),
+      var(--btn-fill-img);
+    background-repeat: no-repeat;
+    background-size:
+      260% 100%,
+      100% 100%;
+    background-position:
+      160% 0,
+      0 0;
+    transition:
+      background-color var(--duration-base) var(--ease-standard),
+      background-position 0s;
+  }
+  .fx-btn:hover::after {
+    background-position:
+      -60% 0,
+      0 0;
+    transition:
+      background-color var(--duration-base) var(--ease-standard),
+      background-position 750ms var(--ease-standard);
+  }
+
+  .fx-btn--primary {
+    --btn-edge: var(--color-cyan-200);
+    --btn-fill: var(--color-cyan-400);
+    --btn-fill-img: linear-gradient(
+      180deg,
+      var(--color-cyan-300),
+      var(--color-cyan-400) 55%,
+      var(--color-cyan-500)
+    );
+    --btn-sweep: oklch(1 0 0 / 55%);
+    color: var(--color-void);
+    filter: drop-shadow(0 0 10px oklch(0.8 0.14 210 / 35%));
+  }
+  .fx-btn--primary:hover {
+    filter: drop-shadow(0 0 18px oklch(0.8 0.14 210 / 60%));
+  }
+  .fx-btn--primary:active {
+    --btn-fill-img: linear-gradient(180deg, var(--color-cyan-400), var(--color-cyan-600));
+  }
+
+  .fx-btn--secondary {
+    --btn-edge: oklch(0.83 0.13 210 / 45%);
+    --btn-fill: oklch(0.14 0.025 240 / 70%);
+    --btn-sweep: oklch(0.9 0.1 210 / 18%);
+    color: var(--color-ink-50);
+  }
+  .fx-btn--secondary:hover {
+    --btn-edge: var(--color-cyan-300);
+    --btn-fill: oklch(0.25 0.06 220 / 60%);
+    filter: drop-shadow(0 0 12px oklch(0.8 0.14 210 / 35%));
+  }
+
+  .fx-btn--ghost {
+    --btn-edge: transparent;
+    --btn-fill: transparent;
+    color: var(--color-ink-200);
+  }
+  .fx-btn--ghost:hover {
+    --btn-edge: var(--color-line);
+    --btn-fill: oklch(1 0 0 / 5%);
+    color: var(--color-ink-50);
+  }
+
+  .fx-btn--danger {
+    --btn-edge: oklch(0.72 0.17 15 / 55%);
+    --btn-fill: oklch(0.14 0.025 240 / 70%);
+    --btn-sweep: oklch(0.8 0.15 15 / 18%);
+    color: var(--color-signal-negative);
+  }
+  .fx-btn--danger:hover {
+    --btn-fill: oklch(0.3 0.1 15 / 35%);
+    filter: drop-shadow(0 0 12px oklch(0.7 0.18 15 / 35%));
+  }
+
+  /* Interactive card: lifts, its border lights cyan and a spotlight follows
+     the pointer (--mx/--my, set by the FX runtime on [data-spotlight]). The
+     lift is a transition back to `none`, so no transform lingers. */
+  .fx-card {
+    transition:
+      translate var(--duration-base) var(--ease-standard),
+      border-color var(--duration-base) var(--ease-standard),
+      box-shadow var(--duration-base) var(--ease-standard),
+      background-color var(--duration-base) var(--ease-standard);
+  }
+  .fx-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0;
+    background: radial-gradient(
+      320px circle at var(--mx, 50%) var(--my, 0%),
+      oklch(0.83 0.13 210 / 11%),
+      transparent 65%
+    );
+    transition: opacity var(--duration-base) var(--ease-standard);
+  }
+  .fx-card:hover,
+  .fx-card:focus-visible,
+  .fx-card:has(:focus-visible) {
+    translate: 0 -3px;
+    border-color: oklch(0.83 0.13 210 / 45%);
+    box-shadow:
+      0 18px 40px -22px rgb(0 0 0 / 0.9),
+      0 0 32px -12px oklch(0.8 0.14 210 / 40%);
+  }
+  .fx-card:hover::after {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fx-card:hover,
+    .fx-card:focus-visible,
+    .fx-card:has(:focus-visible) {
+      translate: none;
+    }
+  }
+}
+
+/* ===========================================================================
+   Motion kit (src/components/fx). Every hidden initial state is gated on
+   `html.js` (set by the boot script) AND no-preference for motion, so
+   without JavaScript, or with reduced motion, all content is simply there.
+   If JS runs but the FX runtime never mounts (a crash), `fx-failsafe`
+   reveals everything after 3s.
+   =========================================================================== */
+
+@keyframes fx-failsafe {
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    clip-path: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* --- Reveal ------------------------------------------------------------ */
+  html.js [data-reveal]:not([data-settled]),
+  html.js [data-reveal-stagger]:not([data-settled]) > * {
+    transition:
+      opacity 700ms var(--ease-cinematic),
+      transform 850ms var(--ease-cinematic),
+      filter 850ms var(--ease-cinematic),
+      clip-path 950ms var(--ease-cinematic);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  html.js [data-reveal-stagger]:not([data-settled]) > * {
+    transition-delay: calc(
+      var(--reveal-delay, 0ms) + var(--reveal-i, 0) * var(--reveal-step, 80ms)
+    );
+  }
+  html.js [data-reveal]:not([data-shown]),
+  html.js [data-reveal-stagger]:not([data-shown]) > * {
+    opacity: 0;
+  }
+  html.js [data-reveal="rise"]:not([data-shown]),
+  html.js [data-reveal-stagger="rise"]:not([data-shown]) > * {
+    transform: translateY(28px);
+  }
+  html.js [data-reveal="scale"]:not([data-shown]),
+  html.js [data-reveal-stagger="scale"]:not([data-shown]) > * {
+    transform: scale(0.94);
+  }
+  html.js [data-reveal="blur"]:not([data-shown]),
+  html.js [data-reveal-stagger="blur"]:not([data-shown]) > * {
+    transform: translateY(12px);
+    filter: blur(10px);
+  }
+  html.js [data-reveal="clip"]:not([data-shown]),
+  html.js [data-reveal-stagger="clip"]:not([data-shown]) > * {
+    opacity: 1;
+    clip-path: inset(0 100% 0 0);
+  }
+  html.js:not([data-fx]) [data-reveal]:not([data-shown]),
+  html.js:not([data-fx]) [data-reveal-stagger]:not([data-shown]) > * {
+    animation: fx-failsafe 1ms 3s forwards;
+  }
+
+  /* --- TiltCard ---------------------------------------------------------- */
+  [data-tilt] {
+    transition: transform 600ms var(--ease-cinematic);
+  }
+  [data-tilt][data-tilting] {
+    transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))
+      translateZ(0);
+    transition-duration: 120ms;
+  }
+
+  /* --- Magnetic ---------------------------------------------------------- */
+  [data-magnetic] {
+    transition: translate 550ms var(--ease-spring);
+  }
+  [data-magnetic][data-magnet-active] {
+    transition-duration: 120ms;
+  }
+}
+
+html.js [data-reveal-stagger] > :nth-child(1) {
+  --reveal-i: 0;
+}
+html.js [data-reveal-stagger] > :nth-child(2) {
+  --reveal-i: 1;
+}
+html.js [data-reveal-stagger] > :nth-child(3) {
+  --reveal-i: 2;
+}
+html.js [data-reveal-stagger] > :nth-child(4) {
+  --reveal-i: 3;
+}
+html.js [data-reveal-stagger] > :nth-child(5) {
+  --reveal-i: 4;
+}
+html.js [data-reveal-stagger] > :nth-child(6) {
+  --reveal-i: 5;
+}
+html.js [data-reveal-stagger] > :nth-child(7) {
+  --reveal-i: 6;
+}
+html.js [data-reveal-stagger] > :nth-child(8) {
+  --reveal-i: 7;
+}
+html.js [data-reveal-stagger] > :nth-child(9) {
+  --reveal-i: 8;
+}
+html.js [data-reveal-stagger] > :nth-child(10) {
+  --reveal-i: 9;
+}
+html.js [data-reveal-stagger] > :nth-child(11) {
+  --reveal-i: 10;
+}
+html.js [data-reveal-stagger] > :nth-child(12) {
+  --reveal-i: 11;
+}
+html.js [data-reveal-stagger] > :nth-child(n + 13) {
+  --reveal-i: 12;
+}
+
+/* Glare that follows the pointer inside a TiltCard. */
+.fx-tilt-glare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 50%),
+    oklch(0.95 0.06 210 / 14%),
+    transparent 55%
+  );
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+[data-tilting] > .fx-tilt-glare {
+  opacity: 1;
+}
+
+/* --- ScrambleText: real text stays in flow (and is the accessible text);
+       the glyph layer is laid over it while decoding. --------------------- */
+.fx-scramble {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+.fx-scramble-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: var(--fx-scramble-color, var(--color-cyan-200));
+  -webkit-text-fill-color: currentColor;
+  background: none;
+  visibility: hidden;
+}
+.fx-scramble[data-scrambling] > .fx-scramble-text {
+  opacity: 0;
+}
+.fx-scramble[data-scrambling] > .fx-scramble-layer {
+  visibility: visible;
+}
+
+/* --- CountUp: final value in flow; live digits laid over it. ----------- */
+.fx-count {
+  position: relative;
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+.fx-count-live {
+  position: absolute;
+  inset: 0;
+  white-space: nowrap;
+  visibility: hidden;
+}
+.fx-count[data-counting] > .fx-count-final {
+  opacity: 0;
+}
+.fx-count[data-counting] > .fx-count-live {
+  visibility: visible;
+}
+
+/* --- Marquee ----------------------------------------------------------- */
+.fx-marquee {
+  position: relative;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+.fx-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: fx-marquee var(--marquee-duration, 40s) linear infinite;
+}
+.fx-marquee[data-reverse] .fx-marquee-track {
+  animation-direction: reverse;
+}
+.fx-marquee-group {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--marquee-gap, 3rem);
+  padding-right: var(--marquee-gap, 3rem);
+}
+.fx-marquee:hover .fx-marquee-track,
+.fx-marquee:focus-within .fx-marquee-track,
+.fx-marquee-root:has(.fx-marquee-toggle:checked) .fx-marquee-track {
+  animation-play-state: paused;
+}
+@keyframes fx-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-marquee {
+    overflow-x: auto;
+    mask-image: none;
+  }
+  .fx-marquee-track {
+    animation: none;
+  }
+  .fx-marquee-group[aria-hidden="true"],
+  .fx-marquee-toggle-label {
+    display: none;
+  }
+}
+
+/* --- Cursor glow (desktop, pointer-fine). ------------------------------ */
+.fx-cursor-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: 560px;
+  height: 560px;
+  margin: -280px 0 0 -280px;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    oklch(0.8 0.14 210 / 7%),
+    oklch(0.7 0.17 290 / 3%) 40%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 400ms var(--ease-standard);
+  will-change: transform;
+}
+html[data-cursor] .fx-cursor-glow {
+  opacity: 1;
+}
+
+/* --- Page transition scan line (template.tsx). A fixed, childless overlay:
+       its own leftover transform affects nothing. ------------------------ */
+.fx-route-scan {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: var(--z-overlay);
+  height: 100vh;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent calc(100% - 140px),
+    oklch(0.83 0.13 210 / 9%) calc(100% - 2px),
+    oklch(0.9 0.12 205 / 90%) calc(100% - 1px),
+    transparent
+  );
+  animation: fx-route-scan 700ms var(--ease-standard);
+}
+@keyframes fx-route-scan {
+  0% {
+    opacity: 1;
+    transform: translateY(-100%);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(8%);
+  }
 }
 
 /* ===========================================================================
@@ -650,8 +1304,7 @@ html:has([data-subnav]) {
   }
 }
 
-/* Entrances only, with `backwards` fill so no transform lingers afterwards
-   (see the page-enter note below for why that matters). */
+/* Entrances only, with `backwards` fill so no transform lingers afterwards. */
 @utility animate-overlay-in {
   animation: overlay-in var(--duration-fast) ease-out backwards;
 }
@@ -682,6 +1335,14 @@ html:has([data-subnav]) {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* Opacity only: the route wrapper must never carry a transform or filter,
+   even mid-animation, or fixed/sticky descendants lose the viewport. */
+@keyframes route-in {
+  from {
+    opacity: 0;
   }
 }
 
@@ -718,24 +1379,181 @@ html:has([data-subnav]) {
   }
 }
 
-/* Route transition. ~450ms, inside the 800ms budget.
-
-   Fill mode is `backwards`, never `both`/`forwards`. A forwards fill keeps the
-   final keyframe applied for good, and `transform: none` interpolated against
-   translateY() ends as an identity matrix — which is still a transform. Any
-   transform makes this wrapper the containing block for every `position:
-   fixed` descendant, so the ScrollTrigger pin on the home page and every
-   Sheet or drawer opened on a scrolled page were placed relative to the top of
-   the page instead of the viewport. */
+/* Fill mode `backwards`, never `both`/`forwards` (see CLAUDE.md, bug 1). */
 @utility animate-page-enter {
   animation: page-enter var(--duration-normal) var(--ease-standard) backwards;
 }
-
-/* Staggered reveal for grids and stat rows. Pair with an inline
-   `animation-delay` so a list can cascade; `backwards` holds each item at its
-   first keyframe through the delay, and leaves no transform behind after. */
+@utility animate-route-in {
+  animation: route-in 500ms var(--ease-standard) backwards;
+}
 @utility animate-rise-in {
   animation: rise-in var(--duration-normal) var(--ease-standard) backwards;
+}
+
+/* Mobile menu rows: slide in from the left out of a blur. */
+@keyframes menu-row-in {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+    filter: blur(6px);
+  }
+}
+
+/* Grid drifting toward the viewer (background-position only). */
+@keyframes grid-drift {
+  to {
+    background-position:
+      0 var(--grid-size, 48px),
+      0 var(--grid-size, 48px);
+  }
+}
+@utility animate-grid-drift {
+  animation: grid-drift var(--grid-speed, 3s) linear infinite;
+}
+
+/* A bright beam sweeping down its (overflow-hidden) parent. */
+@keyframes scan-beam {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+@utility animate-scan-beam {
+  animation: scan-beam var(--scan-speed, 6s) var(--ease-metal) infinite;
+}
+
+/* Soft breathing glow for status dots and live indicators (opacity only,
+   slow — well under the 3 flashes per second limit). */
+@keyframes pulse-glow {
+  50% {
+    opacity: 0.45;
+  }
+}
+@utility animate-pulse-glow {
+  animation: pulse-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+/* Terminal caret. 1Hz. */
+@utility animate-blink {
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes spin-slow {
+  to {
+    rotate: 360deg;
+  }
+}
+@utility animate-spin-slow {
+  animation: spin-slow 18s linear infinite;
+}
+
+@keyframes float {
+  50% {
+    translate: 0 -8px;
+  }
+}
+@utility animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes orb-drift {
+  33% {
+    translate: 6% -4%;
+  }
+  66% {
+    translate: -5% 5%;
+  }
+}
+@utility animate-orb-drift {
+  animation: orb-drift var(--orb-speed, 22s) ease-in-out infinite;
+}
+
+/* HUD dash along an SVG stroke (rings, gauges). */
+@keyframes hud-dash {
+  to {
+    stroke-dashoffset: -200;
+  }
+}
+@utility animate-hud-dash {
+  animation: hud-dash 8s linear infinite;
+}
+
+/* Glitch headline (404 / error). A short burst every 4s: chromatic split
+   and a sliced offset. No luminance flash — colour offsets only. Use with
+   data-text="…" on the element (the pseudo-elements copy it). */
+@keyframes glitch-a {
+  0%,
+  86%,
+  100% {
+    clip-path: inset(0 0 100% 0);
+    translate: 0;
+  }
+  88% {
+    clip-path: inset(12% 0 58% 0);
+    translate: -4px 0;
+  }
+  91% {
+    clip-path: inset(62% 0 8% 0);
+    translate: 4px 0;
+  }
+  94% {
+    clip-path: inset(34% 0 40% 0);
+    translate: -2px 0;
+  }
+}
+@keyframes glitch-b {
+  0%,
+  87%,
+  100% {
+    clip-path: inset(0 0 100% 0);
+    translate: 0;
+  }
+  89% {
+    clip-path: inset(48% 0 20% 0);
+    translate: 5px 0;
+  }
+  92% {
+    clip-path: inset(8% 0 70% 0);
+    translate: -3px 0;
+  }
+  95% {
+    clip-path: inset(70% 0 4% 0);
+    translate: 2px 0;
+  }
+}
+@utility fx-glitch {
+  position: relative;
+  &::before,
+  &::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    clip-path: inset(0 0 100% 0);
+  }
+  &::before {
+    color: var(--color-cyan-300);
+    -webkit-text-fill-color: var(--color-cyan-300);
+    animation: glitch-a 4s steps(1) infinite;
+  }
+  &::after {
+    color: var(--color-magenta-400);
+    -webkit-text-fill-color: var(--color-magenta-400);
+    animation: glitch-b 4s steps(1) infinite 0.05s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &::before,
+    &::after {
+      display: none;
+    }
+  }
 }
 
 /* ===========================================================================
@@ -755,7 +1573,8 @@ html[data-booted="1"] #aurix-loading-screen {
 
 /* ===========================================================================
    Reduced motion — every GSAP/ScrollTrigger sequence also checks this in JS
-   via the useReducedMotion hook; this is the CSS backstop.
+   via the useReducedMotion hook; this is the CSS backstop. The FX runtime
+   also switches itself off (no count-up, scramble, tilt, magnet, parallax).
    =========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
@@ -769,5 +1588,8 @@ html[data-booted="1"] #aurix-loading-screen {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  .fx-route-scan {
+    display: none;
   }
 }

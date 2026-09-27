@@ -6,32 +6,33 @@ import { cn } from "@/lib/utils";
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "link";
 export type ButtonSize = "sm" | "md" | "lg";
 
-/* Sentence case, no tracking: a product-site button, not a HUD key. */
+/* HUD keys: Michroma, uppercase, tracked, on a chamfered plate. The plate,
+   its edge and the hover light-sweep are drawn by the `fx-btn` classes in
+   globals.css (on pseudo-elements, so the focus ring is never clipped). */
 const BASE =
-  "group/button inline-flex items-center justify-center gap-2 font-display font-medium " +
-  "whitespace-nowrap rounded-control transition-[color,background-color,border-color] " +
-  "duration-(--duration-fast) ease-standard disabled:pointer-events-none disabled:opacity-40";
+  "group/button inline-flex items-center justify-center gap-2.5 font-hud uppercase " +
+  "tracking-button whitespace-nowrap rounded-control " +
+  "disabled:pointer-events-none disabled:opacity-40";
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  // The single filled element in the system. One per view.
-  primary: "bg-gold-500 text-void hover:bg-gold-400 active:bg-gold-600",
-  secondary:
-    "border border-line-strong bg-transparent text-ink-50 hover:border-ink-400 hover:bg-white/6",
-  ghost: "text-ink-200 hover:bg-white/5 hover:text-ink-50",
-  danger:
-    "border border-signal-negative/40 text-signal-negative hover:bg-signal-negative/10",
-  // Text plus an arrow that nudges forward on hover. Replaces every
-  // "PROFILE →" / "VIEW ALL" micro-link. No box, but a 44px-tall hit area.
-  link: "min-h-11 rounded-xs px-0 text-ink-100 hover:text-ink-50",
+  // Cyan plate with a glow. One per view.
+  primary: "fx-btn fx-btn--primary",
+  secondary: "fx-btn fx-btn--secondary",
+  ghost: "fx-btn fx-btn--ghost",
+  danger: "fx-btn fx-btn--danger",
+  // Text plus an arrow that nudges forward on hover, with an underline that
+  // grows from the left. No plate, but a 44px-tall hit area.
+  link:
+    "min-h-11 rounded-xs px-0 font-sans normal-case tracking-normal font-medium " +
+    "text-ink-100 transition-colors duration-(--duration-fast) hover:text-cyan-200",
 };
 
 const SIZES: Record<ButtonSize, string> = {
-  // 40px drawn; the pseudo-element extends the hit area to 44px.
-  sm:
-    "relative h-10 px-4 text-sm [&_svg]:size-4 " +
-    "after:absolute after:inset-x-0 after:-inset-y-0.5 after:content-['']",
-  md: "h-12 px-6 text-[15px] [&_svg]:size-[18px]",
-  lg: "h-14 px-8 text-base [&_svg]:size-[18px]",
+  // A 44px box with the plate drawn 40px tall (--btn-inset), so the hit
+  // area stays 44px.
+  sm: "h-11 px-4 text-[10.5px] [--btn-inset:2px] [--btn-ch:7px] [&_svg]:size-4",
+  md: "h-12 px-6 text-[11.5px] [&_svg]:size-[18px]",
+  lg: "h-14 px-8 text-[12.5px] [--btn-ch:11px] [&_svg]:size-[18px]",
 };
 
 /* The link variant keeps the type size but drops the box geometry. */
@@ -65,11 +66,27 @@ function LinkArrow() {
     <ArrowRight
       aria-hidden="true"
       className={cn(
-        "shrink-0 text-ink-400 transition-[translate,color] duration-(--duration-base) ease-standard",
-        "group-hover/button:translate-x-1 group-hover/button:text-ink-50",
+        "shrink-0 text-cyan-300 transition-[translate,color] duration-(--duration-base) ease-standard",
+        "group-hover/button:translate-x-1 group-hover/button:text-cyan-200",
         "group-focus-visible/button:translate-x-1 motion-reduce:translate-x-0",
       )}
     />
+  );
+}
+
+/** Link-variant label: an underline grows under it on hover/focus. */
+function LinkLabel({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-[inherit] bg-linear-to-r from-cyan-300 to-cyan-300 pb-0.5",
+        "bg-size-[0%_1px] bg-bottom-left bg-no-repeat",
+        "transition-[background-size] duration-(--duration-base) ease-standard",
+        "group-hover/button:bg-size-[100%_1px] group-focus-visible/button:bg-size-[100%_1px]",
+      )}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -83,6 +100,11 @@ type SharedProps = {
    * pass false for a plain text action ("Clear all").
    */
   arrow?: boolean;
+  /**
+   * Drifts toward the cursor while hovered (desktop, not under reduced
+   * motion). Use on the one hero CTA, not on every button.
+   */
+  magnetic?: boolean;
 };
 
 type ButtonProps = SharedProps &
@@ -101,6 +123,7 @@ export function Button({
   disabled,
   onClick,
   arrow,
+  magnetic = false,
   ...props
 }: ButtonProps) {
   // While loading the button stays focusable (aria-disabled, not disabled):
@@ -117,10 +140,11 @@ export function Button({
       aria-disabled={loading || undefined}
       aria-busy={loading || undefined}
       onClick={loading ? (event) => event.preventDefault() : onClick}
+      data-magnetic={magnetic ? "0.25" : undefined}
       {...props}
     >
       {loading ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
-      {children}
+      {variant === "link" ? <LinkLabel>{children}</LinkLabel> : children}
       {variant === "link" && arrow !== false ? <LinkArrow /> : null}
     </button>
   );
@@ -141,11 +165,16 @@ export function ButtonLink({
   className,
   children,
   arrow,
+  magnetic = false,
   ...props
 }: ButtonLinkProps) {
   return (
-    <Link className={buttonClasses(variant, size, className)} {...props}>
-      {children}
+    <Link
+      className={buttonClasses(variant, size, className)}
+      data-magnetic={magnetic ? "0.25" : undefined}
+      {...props}
+    >
+      {variant === "link" ? <LinkLabel>{children}</LinkLabel> : children}
       {variant === "link" && arrow !== false ? <LinkArrow /> : null}
     </Link>
   );

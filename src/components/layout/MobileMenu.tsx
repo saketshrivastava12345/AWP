@@ -10,6 +10,7 @@ import { ShortcutHint } from "@/components/ui/Kbd";
 import { CONTAINER_GUTTERS } from "@/components/ui/Container";
 import { PRIMARY_NAV, SECONDARY_NAV, isActivePath } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
+import { GridBackground, Scanlines } from "@/components/fx/Backgrounds";
 import { Wordmark } from "./BrandMark";
 
 /** Delay between successive rows of the entrance cascade. */
@@ -19,11 +20,13 @@ function stagger(step: number): CSSProperties {
   return { "--stagger": `${90 + step * STAGGER_MS}ms` } as CSSProperties;
 }
 
-/* Entrance: rise-in with a per-row delay held in --stagger. Under reduced
-   motion the global backstop removes the movement, and the delay is dropped
-   too so nothing pops in late. */
+/* Entrance: each row slides in from the left out of a blur, one after the
+   other (delay held in --stagger; `backwards` fill, so nothing lingers).
+   Under reduced motion the backstop removes the movement and the delay is
+   dropped too, so nothing pops in late. */
 const REVEAL =
-  "animate-rise-in [animation-delay:var(--stagger)] motion-reduce:[animation-delay:0ms]";
+  "animate-[menu-row-in_var(--duration-slow)_var(--ease-cinematic)_backwards] " +
+  "[animation-delay:var(--stagger)] motion-reduce:[animation-delay:0ms]";
 
 /**
  * The phone and tablet navigation: a full-screen panel rather than a
@@ -54,7 +57,7 @@ export function MobileMenu({
       title="Menu"
       hideTitle
       placement="full"
-      className="bottom-auto h-dvh border-0 bg-void shadow-none"
+      className="bottom-auto h-dvh border-0 bg-void/95 shadow-none"
       bodyClassName="flex flex-col overflow-hidden p-0 sm:p-0"
     >
       <MenuContent
@@ -106,7 +109,9 @@ function MenuContent({
         </IconButton>
       </div>
 
-      <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div className="relative isolate min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <GridBackground />
+        <Scanlines beam />
         <div
           className={cn(
             "relative mx-auto flex min-h-full w-full max-w-2xl flex-col pt-5 pb-[max(1.75rem,env(safe-area-inset-bottom))] sm:pt-8",
@@ -119,12 +124,12 @@ function MenuContent({
             style={stagger(0)}
             className={cn(
               REVEAL,
-              "flex h-12 w-full items-center gap-3 rounded-control border border-line-strong bg-surface-1 px-4",
-              "text-left text-[15px] text-ink-400 transition-colors duration-(--duration-fast)",
-              "hover:border-ink-500 hover:text-ink-200",
+              "flex h-12 w-full items-center gap-3 rounded-control border border-cyan-400/30 bg-surface-1/80 px-4",
+              "text-left text-[15px] text-ink-300 transition-[color,border-color,box-shadow] duration-(--duration-fast)",
+              "hover:border-cyan-300 hover:text-ink-100 hover:shadow-[0_0_18px_-6px_var(--color-cyan-400)]",
             )}
           >
-            <Search className="size-[18px] shrink-0 text-ink-300" aria-hidden="true" />
+            <Search className="size-[18px] shrink-0 text-cyan-300" aria-hidden="true" />
             <span className="flex-1 truncate">Search cars, brands, countries, parts</span>
             <ShortcutHint keyName="K" className="hidden sm:inline-flex" />
           </button>
@@ -147,19 +152,25 @@ function MenuContent({
                       }
                       className="group relative flex min-h-20 items-center gap-4 py-4"
                     >
-                      {/* Active state: the one place gold appears here. */}
+                      {/* Active state: a lit cyan bar. */}
                       {active ? (
                         <span
                           aria-hidden="true"
-                          className="absolute top-1/2 -left-3 h-8 w-0.5 -translate-y-1/2 bg-gold-500 sm:-left-4"
+                          className="absolute top-1/2 -left-3 h-8 w-0.5 -translate-y-1/2 bg-cyan-300 shadow-[0_0_10px_var(--color-cyan-400)] sm:-left-4"
                         />
                       ) : null}
+                      <span
+                        aria-hidden="true"
+                        className="self-start pt-2 font-mono text-[11px] tracking-[0.2em] text-cyan-300/70"
+                      >
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
                       <span className="min-w-0 flex-1">
                         <span
                           className={cn(
-                            "block text-h2 transition-colors duration-(--duration-fast)",
+                            "block text-h2 transition-[color,text-shadow] duration-(--duration-fast)",
                             active
-                              ? "text-ink-50"
+                              ? "text-cyan-100 [text-shadow:0_0_18px_oklch(0.83_0.13_210/45%)]"
                               : "text-ink-100 group-hover:text-ink-50",
                           )}
                         >
@@ -175,7 +186,7 @@ function MenuContent({
                         aria-hidden="true"
                         className={cn(
                           "size-5 shrink-0 text-ink-400 transition-[color,translate] duration-(--duration-fast)",
-                          "group-hover:translate-x-1 group-hover:text-ink-50",
+                          "group-hover:translate-x-1 group-hover:text-cyan-300",
                         )}
                       />
                     </Link>
@@ -225,8 +236,8 @@ function MenuContent({
               onClick={onClose}
               aria-current={pathname === "/favorites" ? "page" : undefined}
               className={cn(
-                "group flex h-14 items-center gap-3 rounded-card bg-surface-1 px-4",
-                "transition-colors duration-(--duration-fast) hover:bg-surface-2",
+                "group flex h-14 items-center gap-3 rounded-card border border-line bg-surface-1/80 px-4",
+                "transition-colors duration-(--duration-fast) hover:border-cyan-400/40 hover:bg-surface-2",
                 // The count badge is shared with the desktop bar, where it is
                 // pinned to the icon's corner; here it sits inline.
                 "[&_[data-count-badge]]:static [&_[data-count-badge]]:h-5 [&_[data-count-badge]]:min-w-5",

@@ -138,8 +138,11 @@ export function SubNav({
       data-subnav=""
       aria-label={label}
       className={cn(
-        "sticky top-(--nav-offset) z-(--z-sticky) h-(--subnav-h) border-b border-line-subtle",
-        "bg-void/85 backdrop-blur-md backdrop-saturate-150",
+        "sticky top-(--nav-offset) z-(--z-sticky) h-(--subnav-h) border-b border-line",
+        "bg-void/80 backdrop-blur-md backdrop-saturate-150",
+        // A cyan hairline glinting along the bottom edge.
+        "after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-px after:h-px after:content-['']",
+        "after:bg-[linear-gradient(90deg,transparent,var(--color-line-glow)_30%,var(--color-line-glow)_70%,transparent)]",
         "transition-[top] duration-(--duration-base) ease-standard",
         className,
       )}
@@ -165,16 +168,16 @@ export function SubNav({
             const id = sectionId(item.href);
             const isActive = id ? id === active : Boolean(item.current);
             const linkClass = cn(
-              "group/sub relative flex items-center text-body-s whitespace-nowrap",
+              "group/sub relative flex items-center font-mono text-xs tracking-[0.14em] whitespace-nowrap uppercase",
               "transition-colors duration-(--duration-fast) focus-visible:outline-none",
-              isActive ? "text-ink-50" : "text-ink-300 hover:text-ink-50",
+              isActive ? "text-cyan-200" : "text-ink-300 hover:text-ink-50",
             );
             const content = (
               <>
                 <span
                   className={cn(
                     "rounded-xs group-focus-visible/sub:outline-2 group-focus-visible/sub:outline-offset-4",
-                    "group-focus-visible/sub:outline-gold-500 group-focus-visible/sub:outline-solid",
+                    "group-focus-visible/sub:outline-cyan-300 group-focus-visible/sub:outline-solid",
                   )}
                 >
                   {item.label}
@@ -182,8 +185,9 @@ export function SubNav({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "absolute inset-x-0 bottom-0 h-0.5 bg-gold-500 transition-opacity duration-(--duration-fast)",
-                    isActive ? "opacity-100" : "opacity-0",
+                    "absolute inset-x-0 bottom-0 h-0.5 origin-left bg-cyan-400 shadow-[0_0_10px_var(--color-cyan-400)]",
+                    "transition-[opacity,scale] duration-(--duration-base) ease-standard",
+                    isActive ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0",
                   )}
                 />
               </>

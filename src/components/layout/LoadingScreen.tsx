@@ -167,13 +167,23 @@ export function LoadingScreen() {
 
   if (skip || finished) return null;
 
+  // The boot log reports the real readiness signals above, nothing more:
+  // typefaces are "ready" once the counter passes the fonts milestone, the
+  // page once it is full.
+  const log = [
+    { label: "Display link", done: true },
+    { label: "Typefaces", done: rounded >= FONTS_READY_PROGRESS },
+    { label: "Page assets", done: rounded >= 100 },
+  ];
+  const ring = 2 * Math.PI * 54;
+
   return (
     <div
       ref={screenRef}
       id={LOADING_SCREEN_ID}
       data-leaving={leaving ? "1" : undefined}
       className={cn(
-        "grain fixed inset-0 z-(--z-loading) flex flex-col items-center justify-center bg-void",
+        "grain fixed inset-0 z-(--z-loading) flex flex-col items-center justify-center overflow-hidden bg-void",
         styles.loadingFailsafe,
       )}
     >
@@ -182,24 +192,72 @@ export function LoadingScreen() {
         {leaving ? `${siteConfig.name} is ready.` : `Loading ${siteConfig.name}…`}
       </p>
 
-      <div aria-hidden="true" className="relative z-10 w-full max-w-md px-8 text-center">
-        <BrandMark className="mx-auto size-7" />
-        <p className="mt-6 -mr-[0.36em] font-brand text-2xl tracking-[0.36em] text-ink-50 sm:text-3xl">
+      {/* Decoration: grid, glow, a slow scan beam. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 tech-grid opacity-80" />
+        <div className="absolute inset-0 bg-[radial-gradient(50%_40%_at_50%_45%,oklch(0.6_0.13_215/18%),transparent_70%)]" />
+        <div className="absolute inset-0 animate-scan-beam [--scan-speed:2.6s] [background:linear-gradient(to_bottom,transparent_calc(100%-120px),oklch(0.83_0.13_210/8%)_calc(100%-2px),oklch(0.9_0.12_205/45%)_calc(100%-1px),transparent)]" />
+      </div>
+
+      <div aria-hidden="true" className="relative z-10 w-full max-w-sm px-8">
+        <div className="relative mx-auto size-40">
+          <svg viewBox="0 0 120 120" className="absolute inset-0 size-full -rotate-90">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="var(--color-surface-4)" strokeWidth="1" />
+            <circle
+              cx="60"
+              cy="60"
+              r="54"
+              fill="none"
+              stroke="var(--color-cyan-300)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray={ring}
+              strokeDashoffset={ring * (1 - rounded / 100)}
+              className="drop-shadow-[0_0_6px_var(--color-cyan-400)]"
+            />
+          </svg>
+          <svg viewBox="0 0 120 120" className="absolute inset-0 size-full animate-spin-slow">
+            <circle
+              cx="60"
+              cy="60"
+              r="46"
+              fill="none"
+              stroke="oklch(0.83 0.13 210 / 35%)"
+              strokeWidth="1"
+              strokeDasharray="2 6"
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <BrandMark className="size-6 drop-shadow-[0_0_8px_oklch(0.8_0.11_85/70%)]" />
+            <span className="mt-2 font-hud text-2xl text-ink-50 tabular-nums [text-shadow:0_0_16px_oklch(0.83_0.13_210/55%)]">
+              {rounded}
+              <span className="text-sm text-cyan-300">%</span>
+            </span>
+          </div>
+        </div>
+
+        <p className="mt-8 -mr-[0.36em] text-center font-brand text-2xl tracking-[0.36em] text-ink-50 sm:text-3xl">
           AURIX
         </p>
-        <p className="mt-4 text-body-s text-ink-400">{siteConfig.tagline}</p>
+        <p className="mt-3 text-center text-body-s text-ink-400">{siteConfig.tagline}</p>
 
-        <div className="relative mt-12 h-px w-full overflow-hidden bg-surface-3">
+        <div className="relative mt-8 h-1 w-full overflow-hidden bg-surface-3">
           <div
-            className="absolute inset-y-0 left-0 bg-gold-500"
+            className="hud-segments absolute inset-y-0 left-0 bg-cyan-400 shadow-[0_0_10px_var(--color-cyan-400)]"
             style={{ width: `${rounded}%` }}
           />
         </div>
 
-        <div className="mt-4 flex items-baseline justify-between text-caption">
-          <span>Loading</span>
-          <span className="tabular text-ink-200">{rounded}%</span>
-        </div>
+        <ul className="mt-5 space-y-1.5 font-mono text-xs tracking-[0.12em] uppercase">
+          {log.map((line) => (
+            <li key={line.label} className="flex items-center justify-between gap-4">
+              <span className={line.done ? "text-ink-200" : "text-ink-400"}>{line.label}</span>
+              <span className={line.done ? "text-cyan-300" : "text-ink-400"}>
+                {line.done ? "[ OK ]" : "[ .. ]"}
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

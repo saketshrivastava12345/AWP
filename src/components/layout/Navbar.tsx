@@ -22,6 +22,7 @@ import { useScrolledPast } from "@/hooks/useScrollPosition";
 import { Wordmark } from "./BrandMark";
 import { FavoritesLink } from "./FavoritesLink";
 import { MobileMenu } from "./MobileMenu";
+import { ScrollProgress } from "./ScrollProgress";
 import { useSearchOverlay } from "./SearchProvider";
 
 /** Tailwind's `lg`: the desktop bar takes over from the mobile menu here. */
@@ -135,10 +136,22 @@ export function Navbar({
           "transition-[background-color,border-color,backdrop-filter,-webkit-backdrop-filter,translate]",
           "duration-(--duration-base) ease-standard",
           scrolled
-            ? "border-line-subtle bg-void/85 backdrop-blur-md backdrop-saturate-150"
+            ? "border-line-subtle bg-void/75 backdrop-blur-xl backdrop-saturate-150"
             : "border-transparent bg-void/0 backdrop-blur-[0px] backdrop-saturate-100",
         )}
       >
+        {/* Solid state: a cyan glint runs along the bottom edge. */}
+        <div
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute inset-x-0 -bottom-px h-px",
+            "bg-[linear-gradient(90deg,transparent,var(--color-line-glow)_25%,oklch(0.9_0.12_205/70%)_50%,var(--color-line-glow)_75%,transparent)]",
+            "transition-opacity duration-(--duration-normal)",
+            scrolled ? "opacity-100" : "opacity-0",
+          )}
+        />
+        {/* Reading progress for the whole page, along the bottom edge. */}
+        <ScrollProgress className="top-auto -bottom-px" />
         {/* Over a full-bleed hero the transparent bar keeps its legibility
             from a soft top scrim, which fades out once the bar is solid. */}
         <div
@@ -175,14 +188,18 @@ export function Navbar({
               onClick={openSearch}
               aria-keyshortcuts="Control+K Meta+K /"
               className={cn(
-                "group flex h-11 min-w-11 items-center justify-center gap-2 rounded-pill text-ink-200",
-                "transition-colors duration-(--duration-fast) hover:bg-white/6 hover:text-ink-50",
-                "xl:pr-3 xl:pl-3.5",
+                "group flex h-11 min-w-11 items-center justify-center gap-2 rounded-control text-ink-200",
+                "transition-[color,background-color,border-color,box-shadow] duration-(--duration-fast)",
+                "hover:bg-cyan-400/8 hover:text-cyan-100",
+                "xl:h-10 xl:border xl:border-line xl:bg-surface-1/50 xl:pr-2 xl:pl-3",
+                "xl:hover:border-cyan-400/50 xl:hover:shadow-[0_0_16px_-6px_var(--color-cyan-400)]",
               )}
             >
-              <Search className="size-[18px] shrink-0" aria-hidden="true" />
+              <Search className="size-[18px] shrink-0 group-hover:text-cyan-300" aria-hidden="true" />
               {/* Always the accessible name; visible from xl. */}
-              <span className="font-display text-[15px] max-xl:sr-only">Search</span>
+              <span className="font-mono text-xs tracking-[0.14em] uppercase max-xl:sr-only xl:mr-3">
+                Search
+              </span>
               <ShortcutHint
                 keyName="K"
                 className="ml-1 hidden min-[1440px]:inline-flex"
@@ -200,7 +217,7 @@ export function Navbar({
               aria-haspopup="dialog"
               aria-expanded={menuOpen}
               aria-label="Open menu"
-              className="-mr-2.5 grid size-11 place-items-center rounded-pill text-ink-100 transition-colors duration-(--duration-fast) hover:bg-white/6 hover:text-ink-50 lg:hidden"
+              className="-mr-2.5 grid size-11 place-items-center rounded-control text-ink-100 transition-colors duration-(--duration-fast) hover:bg-cyan-400/8 hover:text-cyan-100 lg:hidden"
             >
               <Menu className="size-5" aria-hidden="true" />
             </button>
@@ -224,7 +241,8 @@ function CurrentDesktopLinks() {
 }
 
 /**
- * The desktop links, with a 2px gold rule that slides to the active section.
+ * The desktop links, with a glowing cyan rule (and a soft beam of light
+ * above it) that slides to the active section.
  *
  * Positions are measured from the rendered links (the webfont's metrics only
  * settle once it loads, so nothing is hard-coded). The
@@ -254,7 +272,9 @@ function DesktopLinks({ pathname }: { pathname: string | null }) {
         return;
       }
       const x = link.offsetLeft + label.offsetLeft;
-      rule.style.transform = `translateX(${x}px) scaleX(${label.offsetWidth})`;
+      // Width, not scaleX: a scaled rule would smear its glow sideways.
+      rule.style.transform = `translateX(${x}px)`;
+      rule.style.width = `${label.offsetWidth}px`;
       rule.style.opacity = target === activeHref ? "1" : "0.45";
     };
 
@@ -295,9 +315,11 @@ function DesktopLinks({ pathname }: { pathname: string | null }) {
               onPointerEnter={() => setPreview(link.href)}
               onFocus={() => setPreview(link.href)}
               className={cn(
-                "group/nav relative flex items-center px-3 font-display text-[15px] font-normal xl:px-4",
-                "transition-colors duration-(--duration-fast) focus-visible:outline-none",
-                active ? "text-ink-50" : "text-ink-200 hover:text-ink-50",
+                "group/nav relative flex items-center px-3 font-mono text-[12.5px] font-medium tracking-[0.16em] uppercase xl:px-4",
+                "transition-[color,text-shadow] duration-(--duration-fast) focus-visible:outline-none",
+                active
+                  ? "text-cyan-100 [text-shadow:0_0_14px_oklch(0.83_0.13_210/55%)]"
+                  : "text-ink-200 hover:text-ink-50",
               )}
             >
               {/* The keyboard ring hugs the label: around the full-height
@@ -307,7 +329,7 @@ function DesktopLinks({ pathname }: { pathname: string | null }) {
                 className={cn(
                   "relative rounded-xs",
                   "group-focus-visible/nav:outline-2 group-focus-visible/nav:outline-offset-[6px]",
-                  "group-focus-visible/nav:outline-gold-500 group-focus-visible/nav:outline-solid",
+                  "group-focus-visible/nav:outline-cyan-300 group-focus-visible/nav:outline-solid",
                 )}
               >
                 {link.label}
@@ -320,10 +342,14 @@ function DesktopLinks({ pathname }: { pathname: string | null }) {
         ref={ruleRef}
         aria-hidden="true"
         className={cn(
-          // 2px, sitting about 16px under the label's baseline.
-          "pointer-events-none absolute bottom-2.5 left-0 h-0.5 w-px origin-left bg-gold-500 opacity-0",
-          "data-ready:transition-[transform,opacity] data-ready:duration-(--duration-base)",
-          "data-ready:ease-standard motion-reduce:transition-none",
+          // 2px, sitting about 16px under the label's baseline, with a
+          // faint beam of light rising from it.
+          "pointer-events-none absolute bottom-2.5 left-0 h-0.5 w-0 bg-cyan-300 opacity-0",
+          "shadow-[0_0_10px_1px_var(--color-cyan-400)]",
+          "before:absolute before:inset-x-0 before:bottom-0 before:h-7 before:content-['']",
+          "before:bg-[radial-gradient(60%_100%_at_50%_100%,oklch(0.83_0.13_210/22%),transparent)]",
+          "data-ready:transition-[transform,width,opacity] data-ready:duration-(--duration-normal)",
+          "data-ready:ease-cinematic motion-reduce:transition-none",
         )}
       />
     </ul>

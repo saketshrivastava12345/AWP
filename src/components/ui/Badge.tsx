@@ -5,23 +5,32 @@ export type BadgeTone =
   "neutral" | "gold" | "electric" | "hybrid" | "positive" | "negative";
 
 /**
- * Tones are carried by a 6px leading dot, never by the text colour: the label
- * stays ink-200 so a row of badges reads as information, not status lights.
- * `neutral` has no dot. `gold` is reserved for "Exact 3D model".
+ * Tones are carried by a small glowing dot and a tinted edge; the label
+ * stays ink-200 (gold-200 for gold) so every tone passes AA as text.
+ * `neutral` has no dot. `gold` marks premium/brand facts ("Exact 3D model").
  */
 const DOTS: Record<BadgeTone, string | null> = {
   neutral: null,
-  gold: "bg-gold-500",
-  electric: "bg-signal-electric",
-  hybrid: "bg-signal-hybrid",
-  positive: "bg-signal-positive",
-  negative: "bg-signal-negative",
+  gold: "bg-gold-400 shadow-[0_0_6px_var(--color-gold-400)]",
+  electric: "bg-signal-electric shadow-[0_0_6px_var(--color-signal-electric)]",
+  hybrid: "bg-signal-hybrid shadow-[0_0_6px_var(--color-signal-hybrid)]",
+  positive: "bg-signal-positive shadow-[0_0_6px_var(--color-signal-positive)]",
+  negative: "bg-signal-negative shadow-[0_0_6px_var(--color-signal-negative)]",
+};
+
+const EDGES: Record<BadgeTone, string> = {
+  neutral: "border-line-strong",
+  gold: "border-gold-600/60 bg-gold-500/8 text-gold-200",
+  electric: "border-signal-electric/35 bg-signal-electric/6",
+  hybrid: "border-signal-hybrid/35 bg-signal-hybrid/6",
+  positive: "border-signal-positive/35 bg-signal-positive/6",
+  negative: "border-signal-negative/35 bg-signal-negative/6",
 };
 
 /**
- * A small sentence-case tag: powertrain, status, segment. Inter 12px on a
- * hairline pill. Pass the label in sentence case ("Plug-in hybrid"); the
- * badge no longer uppercases it.
+ * A small HUD tag: powertrain, status, segment. Mono 11px, uppercase via CSS
+ * (pass the label in sentence case — "Plug-in hybrid" — screen readers get
+ * that), on a tight hairline chip.
  */
 export function Badge({
   children,
@@ -36,9 +45,10 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center gap-1.5 rounded-pill border border-line px-2.5",
-        "font-sans text-xs leading-none font-medium whitespace-nowrap text-ink-200",
-        tone === "gold" && "border-gold-700",
+        "inline-flex h-6 items-center gap-1.5 rounded-xs border px-2",
+        "font-mono text-[11px] leading-none font-medium tracking-[0.08em] whitespace-nowrap uppercase",
+        "text-ink-200",
+        EDGES[tone],
         className,
       )}
     >

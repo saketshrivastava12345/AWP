@@ -19,6 +19,8 @@ type GlassCardOwnProps = {
    * imagery, a canvas or moving content.
    */
   blur?: boolean;
+  /** HUD corner brackets (always shown; interactive cards light them on hover). */
+  brackets?: boolean;
 };
 
 /**
@@ -31,9 +33,11 @@ type GlassCardProps<T extends ElementType> = GlassCardOwnProps & {
 } & Omit<ComponentPropsWithoutRef<T>, keyof GlassCardOwnProps | "as">;
 
 /**
- * The standard raised surface: a borderless card on surface-1 that moves to
- * surface-2 on hover when it is interactive. (Cards lost their hairline
- * border in the redesign; a caller can still add `border border-line`.)
+ * The standard raised surface, HUD style: a tinted panel with a cool
+ * hairline border. Interactive cards (links/buttons) lift, light their
+ * border cyan and carry a pointer-following spotlight (`fx-card` +
+ * `data-spotlight`, driven by the FX runtime). Callers can still add their
+ * own border/background classes.
  */
 export function GlassCard<T extends ElementType = "div">({
   children,
@@ -42,6 +46,7 @@ export function GlassCard<T extends ElementType = "div">({
   interactive = false,
   edgeLight = false,
   blur = false,
+  brackets = false,
   ...rest
 }: GlassCardProps<T>) {
   // See the note in Container.tsx: R3F v9 poisons a bare ElementType render.
@@ -52,15 +57,25 @@ export function GlassCard<T extends ElementType = "div">({
   return (
     <Component
       className={cn(
-        "relative rounded-card",
-        blur ? "bg-surface-1/70 backdrop-blur-md" : "bg-surface-1",
+        "group/card relative rounded-card border border-line",
+        blur ? "bg-surface-1/70 backdrop-blur-md" : "bg-surface-1/85",
         edgeLight && "edge-light",
-        interactive &&
-          "transition-colors duration-(--duration-base) ease-standard hover:bg-surface-2",
+        interactive && "fx-card",
         className,
       )}
+      data-spotlight={interactive ? "" : undefined}
       {...rest}
     >
+      {brackets ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "hud-brackets -m-px [--hud-l:10px]",
+            interactive &&
+              "opacity-50 transition-opacity duration-(--duration-base) group-hover/card:opacity-100",
+          )}
+        />
+      ) : null}
       {children}
     </Component>
   );

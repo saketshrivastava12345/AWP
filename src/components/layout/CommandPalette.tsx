@@ -181,7 +181,7 @@ export function CommandPalette() {
       initialFocusRef={inputRef}
       className={cn(
         "top-2 max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-hidden rounded-card",
-        "border-line bg-surface-1/95 backdrop-blur-xl",
+        "border-cyan-400/30 bg-surface-1/92 backdrop-blur-xl",
         "sm:top-[12vh] sm:max-h-[min(40rem,calc(100dvh-16vh))] sm:w-[calc(100%-2rem)]",
       )}
       bodyClassName="flex flex-col overflow-hidden p-0 sm:p-0"
@@ -409,8 +409,13 @@ function PalettePanel({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* ---- query row ---- */}
-      <div className="relative flex h-14 shrink-0 items-center gap-3 border-b border-line px-4 transition-colors duration-(--duration-fast) focus-within:border-line-strong sm:h-16 sm:px-5">
-        <Search className="size-[18px] shrink-0 text-ink-300" aria-hidden="true" />
+      <div className="relative flex h-14 shrink-0 items-center gap-3 border-b border-line px-4 transition-colors duration-(--duration-fast) focus-within:border-cyan-400/40 sm:h-16 sm:px-5">
+        {/* HUD corner brackets and a label on the panel edge. */}
+        <span aria-hidden="true" className="hud-brackets [--hud-l:14px]" />
+        <Search
+          className="size-[18px] shrink-0 text-cyan-300 drop-shadow-[0_0_6px_var(--color-cyan-400)]"
+          aria-hidden="true"
+        />
         <input
           ref={inputRef}
           value={query}
@@ -432,7 +437,7 @@ function PalettePanel({
           maxLength={MAX_QUERY_LENGTH}
           placeholder="Cars, brands, countries, parts…"
           className={cn(
-            "h-full min-w-0 flex-1 bg-transparent text-base text-ink-50 caret-gold-400",
+            "h-full min-w-0 flex-1 bg-transparent text-base text-ink-50 caret-cyan-300",
             "placeholder:text-ink-500 focus:outline-none sm:text-[17px]",
           )}
         />
@@ -471,7 +476,12 @@ function PalettePanel({
             pending ? "opacity-100" : "opacity-0",
           )}
         >
-          <span className={cn("block h-full bg-ink-300", styles.sweep)} />
+          <span
+            className={cn(
+              "block h-full bg-cyan-300 shadow-[0_0_8px_var(--color-cyan-400)]",
+              styles.sweep,
+            )}
+          />
         </span>
       </div>
 
@@ -528,7 +538,7 @@ function PalettePanel({
                 <div
                   role="presentation"
                   id={labelId}
-                  className="flex items-center gap-2 px-3 pt-1 pb-2 text-caption"
+                  className="flex items-center gap-2 px-3 pt-1 pb-2 font-mono text-[11px] tracking-[0.18em] text-cyan-300/80 uppercase"
                 >
                   <SectionIcon id={section.id} />
                   {section.label}
@@ -654,7 +664,12 @@ function OptionRow({
   onActivate: () => void;
   onLinkClick: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
-  const rowClass = cn(ROW, active ? "bg-surface-3" : "bg-transparent");
+  const rowClass = cn(
+    ROW,
+    active
+      ? "bg-cyan-400/8 shadow-[inset_2px_0_0_var(--color-cyan-300),inset_0_0_0_1px_oklch(0.83_0.13_210/18%)]"
+      : "bg-transparent",
+  );
   const common = {
     id,
     role: "option" as const,
@@ -751,7 +766,7 @@ function OptionRow({
           <ArrowUpLeft
             className={cn(
               "size-4 shrink-0 transition-opacity",
-              active ? "text-ink-300 opacity-100" : "opacity-0",
+              active ? "text-cyan-300 opacity-100" : "opacity-0",
             )}
             aria-hidden="true"
           />
@@ -786,7 +801,7 @@ function EnterHint({ active }: { active: boolean }) {
     <CornerDownLeft
       className={cn(
         "hidden size-4 shrink-0 transition-opacity duration-(--duration-fast) sm:block",
-        active ? "text-ink-300 opacity-100" : "opacity-0",
+        active ? "text-cyan-300 opacity-100" : "opacity-0",
       )}
       aria-hidden="true"
     />
@@ -811,7 +826,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 }
 
 const TILE =
-  "relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-control bg-surface-2";
+  "relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-control border border-line bg-surface-2";
 
 function ResultTile({ result, flag }: { result: SearchResult; flag: string | null }) {
   switch (result.kind) {

@@ -18,6 +18,8 @@ import { LOADING_SCREEN_NOSCRIPT } from "@/components/layout/loading-screen-shar
 import { SearchProvider } from "@/components/layout/SearchProvider";
 import { SetupNotice } from "@/components/layout/SetupNotice";
 import { ToastProvider } from "@/components/ui/Toast";
+import { FxRuntime } from "@/components/fx/FxRuntime";
+import { CursorGlow } from "@/components/fx/Backgrounds";
 import "./globals.css";
 
 const defaultTitle = `${siteConfig.name} — ${siteConfig.tagline}`;
@@ -75,7 +77,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a
           href="#main"
           className={
-            "sr-only rounded-control bg-gold-500 px-4 py-2.5 font-display text-sm font-medium text-void " +
+            "sr-only rounded-control bg-cyan-400 px-4 py-2.5 font-display text-sm font-medium text-void " +
             "focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-(--z-skip)"
           }
         >
@@ -85,6 +87,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ToastProvider>
           <SearchProvider>
             <LoadingScreen />
+            {/* The motion kit's single runtime, and the desktop cursor glow
+                it moves (both inert under reduced motion). */}
+            <FxRuntime />
+            <CursorGlow />
 
             {/* The session-dependent slots read cookies. Each sits in its own
                 Suspense boundary, so under Partial Prerendering it streams in

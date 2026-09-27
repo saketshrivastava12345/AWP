@@ -28,7 +28,7 @@ export function Progress({
       >
         <div
           className={cn(
-            "absolute inset-y-0 left-0 bg-gold-500 transition-[width] duration-(--duration-normal)",
+            "absolute inset-y-0 left-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)] transition-[width] duration-(--duration-normal)",
             clamped === null && "w-1/4 animate-pulse",
           )}
           style={clamped === null ? undefined : { width: `${clamped}%` }}

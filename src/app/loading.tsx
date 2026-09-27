@@ -13,6 +13,14 @@ export default function Loading() {
       <p role="status" className="sr-only">
         Loading…
       </p>
+      <p
+        aria-hidden="true"
+        className="mb-6 flex items-center gap-2 font-mono text-xs tracking-[0.18em] text-cyan-300 uppercase"
+      >
+        <span className="size-1.5 animate-pulse-glow rounded-full bg-cyan-300 shadow-[0_0_8px_var(--color-cyan-400)]" />
+        Receiving data
+        <span className="animate-blink">_</span>
+      </p>
 
       <div aria-hidden="true">
         <Skeleton className="h-3 w-24" />
@@ -31,7 +39,7 @@ export default function Loading() {
 
         <div className="mt-16 grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {Array.from({ length: 3 }, (_, index) => (
-            <div key={index} className="overflow-hidden rounded-card bg-surface-1">
+            <div key={index} className="overflow-hidden rounded-card border border-line bg-surface-1">
               <Skeleton className="aspect-[16/10] w-full rounded-none" />
               <div className="p-5">
                 <Skeleton className="h-3 w-1/4" />

@@ -87,7 +87,7 @@ export function SegmentedControl<T extends string>({
               "disabled:cursor-not-allowed disabled:opacity-35",
               size === "sm" ? "h-8 px-3 text-xs" : "h-10 px-4 text-sm",
               checked
-                ? "bg-surface-3 text-ink-50 shadow-[inset_0_0_0_1px_var(--color-line-strong)]"
+                ? "bg-cyan-400/12 text-cyan-100 shadow-[inset_0_0_0_1px_oklch(0.83_0.13_210/50%),0_0_14px_-4px_oklch(0.8_0.14_210/60%)]"
                 : "text-ink-300 hover:bg-surface-2 hover:text-ink-50",
             )}
           >
