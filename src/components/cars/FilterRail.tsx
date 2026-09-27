@@ -311,8 +311,9 @@ function ListGroup({
 }
 
 const NUMBER_INPUT =
-  "tabular h-11 w-full min-w-0 rounded-control border border-line-strong bg-surface-1 px-3 text-body-s text-ink-50 " +
-  "placeholder:text-ink-500 hover:border-ink-500 focus-visible:border-gold-500";
+  "tabular h-11 w-full min-w-0 rounded-control border border-line-strong bg-surface-1 px-3 font-mono text-sm text-ink-50 " +
+  "placeholder:text-ink-500 transition-[border-color,box-shadow] duration-(--duration-fast) hover:border-cyan-700 " +
+  "focus-visible:border-cyan-300 focus-visible:shadow-[0_0_0_3px_oklch(0.83_0.13_210/18%),0_0_18px_-4px_oklch(0.8_0.14_210/45%)]";
 
 const APPLY = buttonClasses("secondary", "sm", "mt-3 w-full");
 
@@ -457,7 +458,7 @@ function PriceGroup({
             name="priceCurrency"
             value={currency}
             onChange={(event) => onCurrency(event.target.value)}
-            className="h-11 w-full appearance-none rounded-control border border-line-strong bg-surface-1 pr-9 pl-3 text-body-s text-ink-50 hover:border-ink-500 focus-visible:border-gold-500"
+            className="h-11 w-full appearance-none rounded-control border border-line-strong bg-surface-1 pr-9 pl-3 font-mono text-sm text-ink-50 transition-colors duration-(--duration-fast) hover:border-cyan-700 focus-visible:border-cyan-300"
           >
             <option value="">Any — choose to filter</option>
             {options.currencies.map((option) => (
@@ -467,7 +468,7 @@ function PriceGroup({
             ))}
           </select>
           <ChevronDown
-            className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-ink-400"
+            className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-cyan-300"
             aria-hidden="true"
           />
         </div>
@@ -690,7 +691,7 @@ export function FilterPanel({
         <div
           aria-hidden={!pending}
           className={cn(
-            "pointer-events-none absolute -top-10 right-0 flex items-center gap-1.5 text-caption text-ink-300 transition-opacity",
+            "pointer-events-none absolute -top-10 right-0 flex items-center gap-1.5 font-mono text-[11px] tracking-hud text-cyan-200 uppercase transition-opacity",
             pending ? "opacity-100" : "opacity-0",
           )}
         >

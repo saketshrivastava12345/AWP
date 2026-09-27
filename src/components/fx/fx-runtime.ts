@@ -7,8 +7,11 @@
  *   `data-shown` (CSS does the animation), then `data-settled` once the
  *   transition is over so the element's own transitions take over again.
  * - `[data-countup]`, `[data-scramble]`: animated when first in view, by
- *   writing into an aria-hidden overlay span React renders empty — React's
- *   own text nodes are never touched.
+ *   writing a `data-text` ATTRIBUTE on an aria-hidden overlay span, shown
+ *   with `content: attr(data-text)`. Never child nodes: the runtime can run
+ *   before a Suspense boundary hydrates, and an extra text node there would
+ *   fail hydration, while an extra attribute is covered by
+ *   suppressHydrationWarning.
  * - `[data-parallax]`: scroll-linked `translate`, only while near the view.
  * - `[data-tilt]`, `[data-spotlight]`, `[data-magnetic]`, `[data-cursor-glow]`:
  *   one delegated pointermove, coalesced to one rAF per frame.
@@ -94,14 +97,14 @@ export function startFxRuntime(): () => void {
     el.setAttribute("data-counting", "");
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
-      live.textContent =
+      live.dataset.text =
         prefix + formatCount(target * easeOutExpo(t), decimals, grouping) + suffix;
       if (t < 1) {
         const id = window.requestAnimationFrame(tick);
         frames.add(id);
       } else {
         el.removeAttribute("data-counting");
-        live.textContent = "";
+        delete live.dataset.text;
       }
     };
     frames.add(window.requestAnimationFrame(tick));
@@ -127,14 +130,14 @@ export function startFxRuntime(): () => void {
     const tick = (now: number) => {
       const t = now - start;
       if (t >= duration) {
-        layer.textContent = "";
+        delete layer.dataset.text;
         el.removeAttribute("data-scrambling");
         scrambling.delete(el);
         return;
       }
       if (now - last > 40) {
         last = now;
-        layer.textContent = chars
+        layer.dataset.text = chars
           .map((ch, i) =>
             ch.trim() === "" || t >= (resolveAt[i] ?? 0)
               ? ch

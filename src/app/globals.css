@@ -1137,6 +1137,13 @@ html.js [data-reveal-stagger] > :nth-child(n + 13) {
   background: none;
   visibility: hidden;
 }
+.fx-scramble-layer::before,
+.fx-count-live::before {
+  content: attr(data-text);
+}
+.fx-scramble-layer::before {
+  white-space: pre-wrap;
+}
 .fx-scramble[data-scrambling] > .fx-scramble-text {
   opacity: 0;
 }
