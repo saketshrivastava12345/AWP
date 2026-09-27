@@ -143,34 +143,46 @@ public/
 
 ### Design language
 
-Dark luxury automotive technology. Near-black grounds, **one** metallic gold
-accent, white typography, hairline borders, restrained glassmorphism, faint
-grain. It should read as a premium configurator, not a gaming dashboard —
-so no neon, no heavy glow, no saturated secondary hues.
+**Futuristic automotive HUD** (Phase 14, the owner's choice): a supercar's
+digital cockpit — cold blue-black grounds with animated grids and scanlines,
+**cyan** as the tech glow (active states, focus, lines, primary buttons),
+**gold** for the brand and "best" markers, violet sparingly in gradients.
+HUD glass panels with corner brackets, chamfered corners, mono labels, and a
+lot of motion. Premium and legible, never a cheap gaming site: body text stays
+crisp without glow, and every text colour passes AA on its own (glow does not
+count toward contrast).
 
-Tokens live in `src/app/globals.css` (Tailwind v4 `@theme`):
+Tokens and utilities live in `src/app/globals.css` (Tailwind v4 `@theme`); the
+full list with examples is `docs/design-system.md`.
 
-- grounds `--color-void`, `--color-surface-1..4`
-- accent `--color-gold-200..800` (`gold-500` is the primary)
-- text `--color-ink-50..600`
-- hairlines `--color-line-subtle` / `line` / `line-strong`
-- muted signals `--color-signal-positive|negative|electric|hybrid`
-- utilities `bleed-under-nav`, `scrim-top/bottom`, `edge-fade-x`, `stat-row`,
-  `shadow-overlay`; radii `rounded-control` / `rounded-card` / `rounded-pill`
-- layout vars `--nav-h`, `--subnav-h`, and `--nav-offset` + `--subnav-offset`
-  for anything sticky
+- grounds `--color-void`, `--color-surface-1..4`; accents `cyan-*`, `gold-*`,
+  `violet-*`; text `ink-50..600`; saturated `signal-*`
+- HUD: `hud-panel`, brackets, `hud-rule`, tick marks, segmented bars,
+  chamfer clip-paths, glow shadows, `gradient-text`
+- layout vars `--nav-h`, `--subnav-h`, `--nav-offset` + `--subnav-offset`
+
+Motion kit (`src/components/fx/`): `Reveal`, `ScrambleText`, `CountUp`,
+`TiltCard`, `Magnetic`, `Parallax`, `Marquee`, `HudFrame`, and the background
+layers (`GridBackground`, `Scanlines`, `GlowOrbs`, `Spotlight`, `CursorGlow`).
+They are **server components that only render data attributes**; one client
+`FxRuntime` (mounted in the root layout) drives them all with shared observers
+and pointer listeners, so they work inside server pages and can render as a
+`Link`. Hidden initial states apply only under `html.js` (set by the boot
+script) with a 3 s failsafe, so content is never lost without JavaScript; under
+reduced motion everything is shown at once and nothing moves.
+
+Inputs (`src/components/inputs/`): `AutoScaleNumberInput` (Uniswap/Wise-style
+big-number entry whose font shrinks to fit, locale grouping, stable caret —
+used for the admin price amounts) and `AnimatedCaretInput` (a real input with a
+spring-driven glowing caret measured on a canvas — used by the palette-style
+search fields, sign-in and compare). `/lab` demonstrates both.
 
 Fonts (`src/lib/fonts.ts`, via `next/font/google`):
 
-- **Michroma** → `font-brand` — the wordmark (and at most an optional nameplate)
-- **Inter Tight** → `font-display` — every heading and key figure
+- **Michroma** → `font-display` / `font-brand` / `font-hud` — headings, big
+  numbers, the wordmark (it has no € glyph: set currency symbols in Inter)
 - **Inter** → `font-sans` — body
-- **JetBrains Mono** → `font-mono` — spec values, compare columns, the 3D HUD
-
-Type comes from preset utilities, not ad-hoc sizes: `text-display-xl/l`,
-`text-h1..h4`, `text-lead`, `text-body`, `text-body-s`, `text-caption`,
-`text-eyebrow`, `text-figure-xl`, `text-figure`, `text-data`. Sentence case
-everywhere outside the 3D viewer; `text-label`/`text-hud` are legacy.
+- **JetBrains Mono** → `font-mono` — labels, eyebrows, data, the 3D HUD
 
 ---
 
@@ -791,6 +803,39 @@ headings, prices or statistics.
   on the role check by design, and dev-mode instant-navigation validation
   otherwise logged an error for every admin page.
 - Ported Creative Commons licences ("CC BY-SA 3.0 de") now link to their deed.
+
+**Phase 14 — futuristic HUD redesign, motion kit, new inputs**
+
+The owner found the calm car-brand pass "not cool" and chose "futuristic tech"
+with "a lot of animation", which replaced the earlier one-gold-accent rule.
+Built as a design system + motion kit first, then five parallel workstreams
+(home, catalogue and places, car page and compare, account and admin, inputs).
+
+- **One runtime for all effects.** Every fx component renders plain markup
+  with `data-*` attributes; `FxRuntime` owns one IntersectionObserver per
+  effect type, one rAF loop and delegated pointer listeners. Cheaper than a
+  client component per card, and server pages can use effects directly.
+- **CountUp never lies.** The server renders the final formatted value in
+  flow; the counting digits are an aria-hidden overlay written through a
+  `data-text` attribute and CSS `content`, so React never sees an extra text
+  node and the resting value is always the real one. Counting stays off on
+  the streamed `/cars` grid, where the runtime can reach content before its
+  Suspense boundary hydrates.
+- **Reveals and late mounts.** An element that is already above the viewport
+  when the runtime starts is shown at once — otherwise a visitor who scrolled
+  during hydration would leave invisible sections behind.
+- **Page transition** fades the template wrapper with opacity only; the scan
+  line is a separate fixed overlay. A transform or filter on that wrapper
+  would again break every sticky and fixed child (see Phase 10, bug 1).
+- **Feature showcase** (`CarFeatureShowcase`): a carousel of the variant's
+  catalogued features plus cards for published subsystems only; expand in
+  place; swipe, keys and dots; a colour picker of **sourced** `car_colors`
+  only that repaints the 3D viewer through its own stored configuration.
+- **AutoScaleNumberInput** keeps the raw value canonical ("1250000.5"),
+  formats with BigInt so no digit is lost, snaps (not animates) when
+  shrinking — an animated shrink briefly overflowed and scrolled the leading
+  digits out of view — and submits through a hidden input, with a
+  `<noscript>` field for the no-JavaScript path.
 
 **Open items**
 
