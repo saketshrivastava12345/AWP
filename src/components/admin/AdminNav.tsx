@@ -63,9 +63,7 @@ export function AdminNav() {
       <nav aria-label="Admin" className="hidden lg:block">
         {SECTIONS.map((section) => (
           <div key={section.title} className="mb-6">
-            <p className="mb-2 px-3 font-display text-nano tracking-hud text-ink-500 uppercase">
-              {section.title}
-            </p>
+            <p className="mb-1.5 px-3 text-caption">{section.title}</p>
             <ul className="flex flex-col gap-px">
               {section.links.map((link) => {
                 const active = isActive(pathname, link.href, link.exact);
@@ -76,9 +74,9 @@ export function AdminNav() {
                       href={link.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex min-h-10 items-center gap-3 rounded-sm px-3 text-sm transition-colors duration-(--duration-fast)",
+                        "flex min-h-11 items-center gap-3 rounded-control px-3 text-body-s transition-colors duration-(--duration-fast)",
                         active
-                          ? "bg-surface-2 text-gold-300 shadow-[inset_2px_0_0_0_var(--color-gold-500)]"
+                          ? "bg-surface-2 text-ink-50 shadow-[inset_2px_0_0_0_var(--color-gold-500)]"
                           : "text-ink-300 hover:bg-surface-2/60 hover:text-ink-50",
                       )}
                     >
@@ -97,8 +95,11 @@ export function AdminNav() {
         ))}
       </nav>
 
-      <nav aria-label="Admin" className="-mx-5 border-b border-line sm:-mx-8 lg:hidden">
-        <ul className="flex [scrollbar-width:none] gap-1 overflow-x-auto px-5 sm:px-8">
+      <nav
+        aria-label="Admin"
+        className="-mx-5 border-b border-line-subtle sm:-mx-8 lg:hidden"
+      >
+        <ul className="no-scrollbar flex gap-6 overflow-x-auto px-5 sm:px-8">
           {links.map((link) => {
             const active = isActive(pathname, link.href, link.exact);
             return (
@@ -107,10 +108,10 @@ export function AdminNav() {
                   href={link.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "-mb-px flex min-h-11 items-center border-b px-3 font-display text-micro tracking-hud whitespace-nowrap uppercase",
+                    "-mb-px flex min-h-12 items-center border-b-2 text-body-s whitespace-nowrap transition-colors duration-(--duration-fast)",
                     active
-                      ? "border-gold-500 text-gold-300"
-                      : "border-transparent text-ink-400 hover:text-ink-100",
+                      ? "border-gold-500 text-ink-50"
+                      : "border-transparent text-ink-300 hover:text-ink-50",
                   )}
                 >
                   {link.label}

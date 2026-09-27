@@ -13,10 +13,7 @@ import { SortBar, type SortChoice } from "@/components/cars/SortBar";
 import { ActiveFilters } from "@/components/cars/catalogue/ActiveFilters";
 import { MobileFilters } from "@/components/cars/catalogue/MobileFilters";
 import { NoResults, type Suggestion } from "@/components/cars/catalogue/NoResults";
-import {
-  CatalogueBodySkeleton,
-  CatalogueIntro,
-} from "@/components/cars/catalogue/CatalogueSkeleton";
+import { CatalogueBodySkeleton } from "@/components/cars/catalogue/CatalogueSkeleton";
 import { listCars } from "@/lib/queries/cars";
 import { getFacetRows } from "@/lib/queries/filters";
 import { isConfigured } from "@/lib/supabase/server";
@@ -38,11 +35,13 @@ import {
 import {
   CATALOGUE_PATH,
   buildChips,
+  catalogueTitle,
   clearFiltersHref,
   countFilterChips,
   filtersToParams,
   hasActiveFilters,
   hasAnySearchParam,
+  matchingSpread,
   resolveCatalogueState,
   stateHref,
   textQuery,
@@ -68,15 +67,18 @@ export async function generateMetadata({
   const params = (await searchParams) as RawSearchParams;
   const permutation = hasAnySearchParam(params);
   const url = `${siteConfig.url}${CATALOGUE_PATH}`;
+  // Labels come from the URL alone here (slugs, title-cased); the page
+  // itself names them from the data.
+  const heading = catalogueTitle(resolveCatalogueState(params), EMPTY_FILTER_OPTIONS);
 
   return {
-    title: "Car Collection",
+    title: heading,
     description: DESCRIPTION,
     ...(permutation
       ? { robots: { index: false, follow: true } }
       : { alternates: { canonical: url } }),
     openGraph: {
-      title: "Car Collection",
+      title: heading,
       description: DESCRIPTION,
       url,
       type: "website",
@@ -86,10 +88,9 @@ export async function generateMetadata({
 
 export default function CarsPage({ searchParams }: PageProps<"/cars">) {
   return (
-    <Container className="pt-10 pb-20 sm:pt-14 2xl:max-w-[1600px]">
-      <CatalogueIntro />
-      {/* The title is part of the static shell; everything that depends on
-          the URL streams in behind a skeleton of the same shape. */}
+    <Container className="pt-10 pb-24 sm:pt-14 lg:pt-16">
+      {/* The heading names the filtered view ("Electric SUVs"), so it
+          streams in with the results behind a skeleton of the same shape. */}
       <Suspense fallback={<CatalogueBodySkeleton />}>
         <Catalogue searchParams={searchParams} />
       </Suspense>
@@ -118,9 +119,29 @@ function sortHidden(state: CatalogueState): [string, string][] {
   return hidden;
 }
 
-function distinct(values: readonly (string | null)[]): number {
-  return new Set(values.filter(Boolean)).size;
+/** Params the per-page form carries through (everything but page size and page). */
+function pageSizeHidden(state: CatalogueState): [string, string][] {
+  const hidden: [string, string][] = [];
+  if (state.query) hidden.push(["q", state.query]);
+  hidden.push(...filtersToParams(state.explicit));
+  if (state.sort !== DEFAULT_SORT) hidden.push(["sort", state.sort]);
+  return hidden;
 }
+
+function plural(count: number, one: string, many: string): string {
+  return `${formatNumber(count)} ${count === 1 ? one : many}`;
+}
+
+function Header({ title, lead }: { title: string; lead?: string }) {
+  return (
+    <header className="max-w-3xl">
+      <h1 className="text-h1">{title}</h1>
+      {lead ? <p className="mt-4 text-lead">{lead}</p> : null}
+    </header>
+  );
+}
+
+const NOTE = "mt-5 flex max-w-3xl items-start gap-2.5 text-caption text-ink-400";
 
 async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   const params = (await searchParams) as RawSearchParams;
@@ -135,17 +156,20 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
 
   if (!isConfigured()) {
     return (
-      <EmptyState
-        className="mt-10"
-        icon={<Unplug className="size-7" strokeWidth={1.25} aria-hidden="true" />}
-        title="Catalogue unavailable"
-        description="The database is not configured. Copy .env.example to .env.local and add your Supabase project URL and publishable key."
-        action={
-          <ButtonLink href="/about" variant="secondary" size="sm">
-            About this project
-          </ButtonLink>
-        }
-      />
+      <>
+        <Header title="All cars" />
+        <EmptyState
+          className="mt-12"
+          icon={<Unplug className="size-7" strokeWidth={1.25} aria-hidden="true" />}
+          title="Catalogue unavailable"
+          description="The database is not configured. Copy .env.example to .env.local and add your Supabase project URL and publishable key."
+          action={
+            <ButtonLink href="/about" variant="secondary" size="md">
+              About this project
+            </ButtonLink>
+          }
+        />
+      </>
     );
   }
 
@@ -174,7 +198,26 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
   const chips = buildChips(state, options);
   const activeCount = countFilterChips(chips);
   const clearHref = clearFiltersHref(state);
-  const filtered = hasActiveFilters(state.effective) || Boolean(state.effective.text);
+  const filtered = hasActiveFilters(state.effective);
+  const title = catalogueTitle(state, options);
+
+  // "54 cars from 22 brands in 10 countries." — or, filtered, how many of
+  // the catalogue this view holds and where they come from.
+  let lead: string | undefined;
+  if (facetData.ok && !result.failed) {
+    const spread = matchingSpread(facetData.rows, state.effective);
+    const where = `from ${plural(spread.brands, "brand", "brands")} in ${plural(spread.countries, "country", "countries")}`;
+    const words = state.effective.text ? ` matching “${state.effective.text}”` : "";
+    if (result.total === 0) {
+      lead = undefined;
+    } else if (filtered) {
+      lead = `${formatNumber(result.total)} of ${plural(options.universe, "car", "cars")}${words}, ${where}.`;
+    } else if (words) {
+      lead = `${plural(result.total, "car", "cars")}${words}, ${where}.`;
+    } else {
+      lead = `${plural(result.total, "car", "cars")} ${where}.`;
+    }
+  }
 
   const panel: FilterPanelModel = {
     options,
@@ -190,6 +233,12 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
     description: SORT_OPTIONS[key].description,
     href: stateHref(state, { sort: key }),
   }));
+  const sizeChoices: SortChoice[] = PAGE_SIZES.map((size) => ({
+    key: String(size),
+    label: String(size),
+    description: `${size} cars`,
+    href: stateHref(state, { pageSize: size }),
+  }));
 
   const first = result.total === 0 ? 0 : (result.page - 1) * result.pageSize + 1;
   const last = Math.min(result.total, result.page * result.pageSize);
@@ -199,6 +248,18 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
     .filter((option) => option.count > 0)
     .map((option) => option.value)
     .sort();
+
+  // "Show more" grows the first page through the offered page sizes, so the
+  // next cards land below the ones already on screen. Past the largest size
+  // the pager takes over.
+  const nextSize = PAGE_SIZES.find((size) => size > state.pageSize);
+  const showMore =
+    result.page === 1 && result.pageCount > 1 && nextSize !== undefined
+      ? {
+          href: stateHref(state, { pageSize: nextSize }),
+          count: Math.min(nextSize, result.total) - state.pageSize,
+        }
+      : null;
 
   // Zero results: offer the removals that bring the most cars back. Counts
   // are exact for everything except the free text, which needs a new search.
@@ -217,81 +278,32 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
 
   return (
     <>
-      <div
-        className="mt-6 flex flex-wrap items-baseline gap-x-5 gap-y-2"
-        aria-live="polite"
-      >
-        <p className="flex items-baseline gap-3">
-          <span className="tabular gold-gradient-text font-display text-3xl sm:text-4xl">
-            {formatNumber(result.total)}
-          </span>
-          <span className="text-label">
-            {filtered
-              ? result.total === 1
-                ? "car matches"
-                : "cars match"
-              : result.total === 1
-                ? "car catalogued"
-                : "cars catalogued"}
-          </span>
-        </p>
-        <p className="text-sm text-ink-400">
-          {filtered ? (
-            <>
-              of{" "}
-              <span className="tabular text-ink-200">
-                {formatNumber(options.universe)}
-              </span>
-              {state.effective.text ? " matching the search" : " in the catalogue"}
-            </>
-          ) : (
-            <>
-              from{" "}
-              <span className="tabular text-ink-200">
-                {formatNumber(
-                  distinct(facetData.rows.map((row) => row.manufacturer_slug)),
-                )}
-              </span>{" "}
-              manufacturers in{" "}
-              <span className="tabular text-ink-200">
-                {formatNumber(distinct(facetData.rows.map((row) => row.country_slug)))}
-              </span>{" "}
-              countries
-            </>
-          )}
-        </p>
-        {state.query ? (
-          <p className="w-full text-sm text-ink-300 sm:w-auto">
-            Results for <span className="text-gold-300">“{state.query}”</span>
-          </p>
-        ) : null}
-      </div>
+      <Header title={title} lead={lead} />
 
-      <div className="mt-8 lg:mt-10 lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:gap-10 xl:gap-12">
+      <div className="mt-10 lg:mt-14 lg:grid lg:grid-cols-[17.5rem_minmax(0,1fr)] lg:gap-12">
         {/* Desktop rail. On smaller screens the sheet is the way in; without
             JavaScript the "Filters" link targets this section, which :target
             reveals in place. */}
         <aside
           id="catalogue-filters"
           aria-labelledby="catalogue-filters-heading"
-          className="mb-8 hidden target:block lg:mb-0 lg:block"
+          className="mb-10 hidden target:block lg:mb-0 lg:block"
         >
-          <div className="lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:[scrollbar-width:thin] lg:overflow-y-auto lg:overscroll-contain lg:pr-2">
-            <div className="flex items-center justify-between border-b border-line pb-3">
-              <h2
-                id="catalogue-filters-heading"
-                className="font-display text-micro tracking-hud text-ink-100 uppercase"
-              >
+          <div className="lg:sticky lg:top-[calc(var(--nav-offset)+1.5rem)] lg:max-h-[calc(100dvh-var(--nav-offset)-3rem)] lg:[scrollbar-width:thin] lg:overflow-y-auto lg:overscroll-contain lg:pr-3">
+            <div className="flex min-h-11 items-center justify-between gap-3 border-b border-line pb-3">
+              <h2 id="catalogue-filters-heading" className="text-h4">
                 Filters
                 {activeCount > 0 ? (
-                  <span className="ml-2 text-gold-300">({activeCount})</span>
+                  <span className="ml-1.5 text-body-s font-sans font-normal text-ink-400">
+                    ({activeCount})<span className="sr-only"> active</span>
+                  </span>
                 ) : null}
               </h2>
               {activeCount > 0 ? (
                 <Link
                   href={clearHref}
                   scroll={false}
-                  className="text-xs text-ink-400 transition-colors hover:text-gold-300"
+                  className="inline-flex min-h-11 items-center text-body-s text-ink-200 underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink-50 hover:decoration-ink-400"
                 >
                   Clear all
                 </Link>
@@ -306,11 +318,12 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
             Results
           </h2>
 
-          {/* Toolbar: sticky under the navbar on phones and tablets. */}
+          {/* Toolbar: the count on the left, sort on the right; sticky under
+              the navbar at every width. */}
           <div
             className={cn(
-              "sticky top-16 z-(--z-sticky) -mx-5 flex items-center gap-3 border-b border-line bg-void/85 px-5 py-3 backdrop-blur-md sm:-mx-8 sm:px-8",
-              "lg:static lg:mx-0 lg:border-t lg:bg-transparent lg:px-0 lg:backdrop-blur-none",
+              "sticky top-(--nav-offset) z-(--z-sticky) -mx-5 flex min-h-16 items-center gap-3 border-b border-line-subtle bg-void/85 px-5 py-2.5 backdrop-blur-md sm:-mx-8 sm:px-8",
+              "transition-[top] duration-(--duration-base) ease-standard lg:mx-0 lg:px-0",
             )}
           >
             <MobileFilters
@@ -318,26 +331,34 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
               count={activeCount}
               className="shrink-0 lg:hidden"
             />
-            <p className="hidden text-xs text-ink-400 md:block">
-              {result.total > 0 ? (
+            <p
+              className="hidden text-body-s text-ink-200 sm:block"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {result.failed ? null : result.total > 0 ? (
                 <>
-                  Showing{" "}
-                  <span className="tabular text-ink-100">
-                    {first === last
-                      ? formatNumber(first)
-                      : `${formatNumber(first)}–${formatNumber(last)}`}
-                  </span>{" "}
-                  of{" "}
-                  <span className="tabular text-ink-100">
-                    {formatNumber(result.total)}
+                  <span className="tabular text-ink-50">
+                    {plural(result.total, "car", "cars")}
                   </span>
+                  {result.pageCount > 1 ? (
+                    <span className="text-ink-400">
+                      {" "}
+                      · showing{" "}
+                      <span className="tabular">
+                        {first === last
+                          ? formatNumber(first)
+                          : `${formatNumber(first)}–${formatNumber(last)}`}
+                      </span>
+                    </span>
+                  ) : null}
                 </>
               ) : (
                 "No matches"
               )}
             </p>
             <SortBar
-              className="ml-auto min-w-0 flex-1 justify-end xl:flex-none"
+              className="ml-auto"
               choices={sortChoices}
               active={state.sort}
               hidden={sortHidden(state)}
@@ -345,14 +366,11 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
             />
           </div>
 
-          <ActiveFilters chips={chips} clearHref={clearHref} className="mt-4" />
+          <ActiveFilters chips={chips} clearHref={clearHref} className="mt-5" />
 
           {groupedPrice && result.total > 0 ? (
-            <p className="mt-4 flex max-w-3xl items-start gap-2 text-xs leading-relaxed text-ink-400">
-              <Info
-                className="mt-0.5 size-3.5 shrink-0 text-gold-500"
-                aria-hidden="true"
-              />
+            <p className={NOTE}>
+              <Info className="mt-0.5 size-4 shrink-0 text-ink-400" aria-hidden="true" />
               <span>
                 Sorted by listed price within each currency
                 {pricedCurrencies.length > 1
@@ -366,11 +384,8 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
           ) : null}
 
           {groupedRange && result.total > 0 ? (
-            <p className="mt-4 flex max-w-3xl items-start gap-2 text-xs leading-relaxed text-ink-400">
-              <Info
-                className="mt-0.5 size-3.5 shrink-0 text-gold-500"
-                aria-hidden="true"
-              />
+            <p className={NOTE}>
+              <Info className="mt-0.5 size-4 shrink-0 text-ink-400" aria-hidden="true" />
               <span>
                 Sorted by range within each test cycle (WLTP, EPA, ARAI…). Figures from
                 different cycles are grouped, not ranked against each other. Cars without
@@ -381,7 +396,7 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
 
           {result.failed ? (
             <EmptyState
-              className="mt-6"
+              className="mt-8"
               icon={<Unplug className="size-7" strokeWidth={1.25} aria-hidden="true" />}
               title="Catalogue unavailable"
               description="The catalogue could not be read just now. Reloading usually resolves it."
@@ -389,7 +404,7 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
                 <ButtonLink
                   href={stateHref(state, { page: state.page })}
                   variant="secondary"
-                  size="sm"
+                  size="md"
                 >
                   Try again
                 </ButtonLink>
@@ -403,43 +418,46 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
               query={state.query}
             />
           ) : (
-            <CarGrid cars={result.rows} columns="catalogue" aboveFold className="mt-6" />
+            <CarGrid
+              cars={result.rows}
+              columns="catalogue"
+              aboveFold
+              label={title}
+              className="mt-6"
+            />
           )}
 
           {result.total > 0 ? (
-            <div className="mt-12 flex flex-col-reverse items-center justify-between gap-6 border-t border-line pt-6 sm:flex-row">
-              <nav aria-label="Cars per page" className="flex items-center gap-2">
-                <span className="text-label">Per page</span>
-                <ul className="flex gap-1">
-                  {PAGE_SIZES.map((size) => (
-                    <li key={size}>
-                      <Link
-                        href={stateHref(state, { pageSize: size })}
-                        scroll={false}
-                        aria-current={size === state.pageSize ? "true" : undefined}
-                        aria-label={`${size} cars per page`}
-                        className={cn(
-                          "tabular flex h-11 min-w-11 items-center justify-center rounded-xs border px-2 font-mono text-xs transition-colors sm:h-9 sm:min-w-9",
-                          size === state.pageSize
-                            ? "border-gold-600 text-gold-300"
-                            : "border-line text-ink-400 hover:border-line-strong hover:text-ink-100",
-                        )}
-                      >
-                        {size}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-              <Pagination
-                page={result.page}
-                pageCount={result.pageCount}
-                href={(page) => stateHref(state, { page })}
-              />
+            <div className="mt-14 flex flex-col items-center gap-10">
+              {showMore ? (
+                <ButtonLink
+                  href={showMore.href}
+                  variant="secondary"
+                  size="md"
+                  scroll={false}
+                >
+                  Show {plural(showMore.count, "more car", "more cars")}
+                </ButtonLink>
+              ) : null}
+              <div className="flex w-full flex-col-reverse items-center justify-between gap-6 border-t border-line-subtle pt-6 sm:flex-row">
+                <SortBar
+                  name="pageSize"
+                  label="Per page"
+                  choices={sizeChoices}
+                  active={String(state.pageSize)}
+                  hidden={pageSizeHidden(state)}
+                  action={CATALOGUE_PATH}
+                />
+                <Pagination
+                  page={result.page}
+                  pageCount={result.pageCount}
+                  href={(page) => stateHref(state, { page })}
+                />
+              </div>
             </div>
           ) : null}
 
-          <p className="mt-12 text-xs leading-relaxed text-ink-500">
+          <p className="mt-14 max-w-3xl text-caption text-ink-400">
             Prices are listed prices as recorded — each shown with its type and market,
             never converted between currencies. {siteConfig.disclaimer}
           </p>

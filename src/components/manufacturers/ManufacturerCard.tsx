@@ -72,7 +72,9 @@ export function ManufacturerCard({
         <p className="mt-2 text-body-s text-ink-400">{meta.join(" · ")}</p>
       ) : null}
 
-      {summary ? <p className="mt-5 line-clamp-3 text-body-s text-ink-300">{summary}</p> : null}
+      {summary ? (
+        <p className="mt-5 line-clamp-3 text-body-s text-ink-300">{summary}</p>
+      ) : null}
 
       {maker.modelNames && maker.modelNames.length > 0 ? (
         <p className="mt-4 text-body-s text-ink-200">

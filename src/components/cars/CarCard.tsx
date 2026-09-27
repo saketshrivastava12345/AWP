@@ -259,7 +259,10 @@ export function CarCard({
           </p>
         ) : null}
 
-        <dl className="mt-5 grid grid-cols-3 gap-3 border-t border-line-subtle pt-4">
+        {/* Pushes the figures down so a row of cards lines them up. */}
+        <div aria-hidden="true" className="min-h-5 flex-1" />
+
+        <dl className="grid grid-cols-3 gap-3 border-t border-line-subtle pt-4">
           <Figure
             label="Power"
             value={car.power_hp !== null ? formatNumber(car.power_hp) : null}
@@ -277,8 +280,6 @@ export function CarCard({
           />
         </dl>
 
-        {/* Pushes a price to the bottom so a row of cards lines up. */}
-        <div aria-hidden="true" className="flex-1" />
         <ListedPrice price={car} placeholder={null} className="mt-5" />
       </div>
     </article>

@@ -476,9 +476,7 @@ export function DimensionDrawing({
               </div>
             ))}
           </dl>
-          {dims?.notes?.trim() ? (
-            <p className="mt-4 text-caption">{dims.notes}</p>
-          ) : null}
+          {dims?.notes?.trim() ? <p className="mt-4 text-caption">{dims.notes}</p> : null}
           {labels.length > 0 ? (
             // Key to the abbreviations — only those the drawing actually uses.
             <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-caption">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usageLabel } from "./parts-helpers";
 
@@ -16,9 +16,11 @@ export type PartCardData = {
 };
 
 /**
- * A component in the encyclopedia: its name, category, what it does in one
- * line, the 3D system it belongs to and, when any catalogued car records it,
- * how many do. Server-safe; also rendered by the client-side explorer.
+ * A component in the encyclopedia as a compact row: its name, what it does in
+ * one line, a quiet meta line (category or 3D system, when the surrounding
+ * list does not already say it) and, when any catalogued car records it, how
+ * many do. The whole row is one link. Lists draw the hairlines between rows
+ * (see PartList). Server-safe; also rendered by the client-side explorer.
  */
 export function PartCard({
   part,
@@ -28,53 +30,79 @@ export function PartCard({
   className?: string;
 }) {
   const usage = usageLabel(part.usageCount ?? 0);
+  const meta = [part.categoryName, part.systemLabel ? `${part.systemLabel} system` : null]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <Link
       href={`/parts/${part.slug}`}
       className={cn(
-        "group edge-light relative flex h-full flex-col border border-line bg-surface-1/70 p-5",
-        "transition-colors duration-(--duration-fast) ease-cinematic",
-        "hover:border-gold-800 hover:bg-surface-2/70",
+        "group flex h-full min-h-20 items-center gap-4 py-5",
+        "transition-colors duration-(--duration-fast)",
         className,
       )}
     >
-      <div className="flex min-h-5 flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-        {part.categoryName ? (
-          <span className="text-hud">{part.categoryName}</span>
-        ) : (
-          <span />
-        )}
-        {part.systemLabel ? (
-          <span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.08em] text-gold-400/90 uppercase">
-            <span className="size-1.5 rounded-full bg-gold-500/80" aria-hidden="true" />
-            <span className="sr-only">3D system: </span>
-            {part.systemLabel}
-          </span>
+      <div className="min-w-0 flex-1">
+        <h3 className="text-h4 hyphens-auto transition-colors duration-(--duration-fast) group-hover:text-ink-200">
+          {part.name}
+        </h3>
+        {part.summary ? (
+          <p className="mt-1 line-clamp-2 text-body-s text-ink-300 lg:line-clamp-1">
+            {part.summary}
+          </p>
+        ) : null}
+        {meta || usage ? (
+          <p className={cn("mt-1.5 text-caption", !meta && "sm:hidden")}>
+            {meta ? (
+              <span>
+                {part.systemLabel ? <span className="sr-only">3D system: </span> : null}
+                {meta}
+              </span>
+            ) : null}
+            {meta && usage ? (
+              <span aria-hidden="true" className="sm:hidden">
+                {" · "}
+              </span>
+            ) : null}
+            {usage ? <span className="sm:hidden">{usage}</span> : null}
+          </p>
         ) : null}
       </div>
-
-      <h3 className="mt-4 font-display text-xs leading-snug tracking-button break-words text-ink-50 uppercase transition-colors duration-(--duration-fast) group-hover:text-gold-200">
-        {part.name}
-      </h3>
-
-      {part.summary ? (
-        <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-ink-400">
-          {part.summary}
-        </p>
+      {usage ? (
+        <span className="hidden shrink-0 text-caption sm:block">{usage}</span>
       ) : null}
-
-      <div className="mt-auto pt-5">
-        <div className="flex items-center justify-between gap-3 border-t border-line-subtle pt-3.5">
-          <span className="tabular font-mono text-[11px] text-ink-400">
-            {usage ?? ""}
-          </span>
-          <ArrowUpRight
-            className="size-4 shrink-0 text-ink-500 transition-[color,transform] duration-(--duration-fast) group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-gold-300"
-            aria-hidden="true"
-          />
-        </div>
-      </div>
+      <ChevronRight
+        className="size-4 shrink-0 text-ink-500 transition-[translate,color] duration-(--duration-base) group-hover:translate-x-0.5 group-hover:text-ink-50"
+        aria-hidden="true"
+      />
     </Link>
+  );
+}
+
+/**
+ * Rows of PartCards with hairlines between them: one column on phones, two
+ * from `lg`. Each item keeps its own bottom rule so the columns line up.
+ */
+export function PartList({
+  parts,
+  className,
+}: {
+  parts: readonly (PartCardData & { key?: string })[];
+  className?: string;
+}) {
+  return (
+    <ul
+      className={cn(
+        "grid border-t border-line-subtle lg:grid-cols-2 lg:gap-x-12",
+        className,
+      )}
+    >
+      {parts.map((part) => (
+        <li key={part.key ?? part.slug} className="border-b border-line-subtle">
+          <PartCard part={part} />
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -29,10 +29,10 @@ export function SourceLink({
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "inline-flex items-center gap-1 rounded-xs font-display tracking-button text-gold-300 uppercase",
-        "transition-colors duration-(--duration-fast) hover:text-gold-200",
+        "inline-flex items-center gap-1 rounded-xs text-ink-200 underline decoration-line-strong underline-offset-4",
+        "transition-colors duration-(--duration-fast) hover:text-ink-50 hover:decoration-ink-400",
         // 44px touch target on phones; the compact link tightens from md up.
-        compact ? "min-h-11 text-[9px] md:min-h-6" : "min-h-11 text-[10px]",
+        compact ? "min-h-11 text-xs md:min-h-6" : "min-h-11 text-body-s",
         className,
       )}
     >
@@ -64,9 +64,7 @@ export function PriceProvenance({
 
   return (
     <div>
-      <h3 className="font-display text-xs tracking-[0.18em] text-ink-50 uppercase">
-        Source
-      </h3>
+      <h3 className="text-h4">Source</h3>
       <dl className="mt-3 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-x-4 border-b border-line-subtle py-2">
           <dt className="sr-only">Published by</dt>
@@ -89,16 +87,14 @@ export function PriceProvenance({
         </ProvenanceRow>
       </dl>
       {price.notes ? (
-        <p className="mt-3 text-xs leading-relaxed text-ink-400">
+        <p className="mt-3 text-caption">
           <span className="text-ink-300">Source note:</span> {price.notes}
         </p>
       ) : null}
 
       {others.length > 0 ? (
         <div className="mt-8">
-          <h3 className="font-display text-xs tracking-[0.18em] text-ink-50 uppercase">
-            Also in force here
-          </h3>
+          <h3 className="text-h4">Also in force here</h3>
           <ul className="mt-2">
             {others.map((entry) => (
               <OtherFigure

@@ -9,6 +9,7 @@ import {
   formatPriceCompact,
   formatNumberRange,
   formatYearRange,
+  firstSentence,
   formatYearSpan,
   modelVariantName,
 } from "./format";
@@ -120,5 +121,23 @@ describe("formatYearSpan and formatNumberRange", () => {
     expect(formatNumberRange(2.7, 3.7, 1)).toBe("2.7–3.7");
     expect(formatNumberRange(510, 510)).toBe("510");
     expect(formatNumberRange(null, 5, 0, EM_DASH)).toBe(EM_DASH);
+  });
+});
+
+describe("firstSentence", () => {
+  it("cuts at the first sentence boundary", () => {
+    expect(firstSentence("Built in Stuttgart. Known for the 911.")).toBe(
+      "Built in Stuttgart.",
+    );
+  });
+  it("does not cut at abbreviations", () => {
+    expect(firstSentence("Dr. Ing. h.c. F. Porsche AG makes cars. Since 1931.")).toBe(
+      "Dr. Ing. h.c. F. Porsche AG makes cars.",
+    );
+  });
+  it("returns null for nothing and the whole text without a boundary", () => {
+    expect(firstSentence(null)).toBeNull();
+    expect(firstSentence("  ")).toBeNull();
+    expect(firstSentence("One line only")).toBe("One line only");
   });
 });

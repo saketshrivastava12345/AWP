@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { monogramOf } from "./brand";
 
 const SIZES = {
-  sm: { box: "size-14", text: "text-[15px]", long: "text-[11px]" },
+  sm: { box: "size-12", text: "text-base", long: "text-xs" },
   md: { box: "size-20", text: "text-2xl", long: "text-base" },
   lg: {
     box: "size-24 sm:size-32",
@@ -12,11 +12,12 @@ const SIZES = {
 } as const;
 
 /**
- * A marque's typographic monogram in a machined tile.
+ * A brand's typographic monogram: its initials on a quiet rounded tile.
  *
  * `logo_url` is empty for every maker today, and drawing a logo would mean
- * inventing one, so the tile carries the maker's initials set in the display
- * face instead. Decorative: the name is always printed next to it.
+ * inventing one, so the tile carries the initials instead. Decorative: the
+ * name is always printed next to it. No gold and no corner brackets; the
+ * brand pages no longer use it, and it remains for teasers that do.
  */
 export function Monogram({
   name,
@@ -34,19 +35,14 @@ export function Monogram({
     <span
       aria-hidden="true"
       className={cn(
-        "relative inline-grid shrink-0 place-items-center border border-line",
-        "bg-linear-to-b from-surface-3 via-surface-2 to-surface-1",
-        "shadow-[inset_0_1px_0_0_oklch(1_0_0/8%)]",
+        "inline-grid shrink-0 place-items-center rounded-card bg-surface-2",
         scale.box,
         className,
       )}
     >
-      {/* The corner brackets live on their own layer: hud-corners paints with
-          `background`, which would otherwise replace the tile's gradient. */}
-      <span className="pointer-events-none absolute inset-0 opacity-70 hud-corners" />
       <span
         className={cn(
-          "gold-gradient-text font-display leading-none tracking-[0.02em]",
+          "font-display leading-none font-medium text-ink-200",
           letters.length >= 3 ? scale.long : scale.text,
         )}
       >

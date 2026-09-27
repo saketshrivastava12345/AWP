@@ -3,8 +3,10 @@ import {
   brandTabs,
   buildLineup,
   groupByCountry,
+  heroVisual,
   monogramOf,
   powerRange,
+  rangeLabel,
   segmentOptions,
   websiteLink,
   type LineupCar,
@@ -252,5 +254,38 @@ describe("websiteLink", () => {
     expect(websiteLink("not a url")).toBeNull();
     expect(websiteLink(null)).toBeNull();
     expect(websiteLink("  ")).toBeNull();
+  });
+});
+
+describe("heroVisual", () => {
+  const car = (
+    primary_image_url: string | null,
+    body_type: "coupe" | "sedan" = "coupe",
+  ) => ({
+    primary_image_url,
+    body_type,
+    fuel_type: "petrol" as const,
+  });
+
+  it("picks the first car that has a photograph", () => {
+    const cars = [car(null), car("/images/b.jpg", "sedan"), car("/images/c.jpg")];
+    expect(heroVisual(cars)).toEqual({
+      kind: "photo",
+      car: cars[1],
+      src: "/images/b.jpg",
+    });
+  });
+
+  it("falls back to the first car's drawing, and to nothing without cars", () => {
+    const cars = [car(null, "sedan"), car("  ")];
+    expect(heroVisual(cars)).toEqual({ kind: "drawing", car: cars[0] });
+    expect(heroVisual([])).toBeNull();
+  });
+});
+
+describe("rangeLabel", () => {
+  it("joins a range with an en dash and collapses equal ends", () => {
+    expect(rangeLabel({ min: 450, max: 761 }, String)).toBe("450–761");
+    expect(rangeLabel({ min: 510, max: 510 }, String)).toBe("510");
   });
 });

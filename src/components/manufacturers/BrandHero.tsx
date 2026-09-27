@@ -135,7 +135,9 @@ export function BrandHero({
           {visual ? <div className="min-w-0 lg:col-span-7">{visual}</div> : null}
         </div>
 
-        {children ? <div className="mt-12 pb-12 lg:mt-10 lg:pb-16">{children}</div> : null}
+        {children ? (
+          <div className="mt-12 pb-12 lg:mt-10 lg:pb-16">{children}</div>
+        ) : null}
         {!children ? <div className="pb-12 lg:pb-16" /> : null}
       </Container>
     </section>
@@ -152,7 +154,7 @@ function HeroPhoto({ photo }: { photo: BrandHeroPhoto }) {
           // Fade into the ground at the bottom (and on desktop, the left),
           // so the photograph sits in the page rather than on it.
           "[mask-image:linear-gradient(to_top,transparent,black_22%)]",
-          "lg:[mask-composite:intersect] lg:[mask-image:linear-gradient(to_top,transparent,black_22%),linear-gradient(to_right,transparent,black_12%)]",
+          "lg:[mask-image:linear-gradient(to_top,transparent,black_22%),linear-gradient(to_right,transparent,black_12%)] lg:[mask-composite:intersect]",
           BLEED_RIGHT,
         )}
       >
@@ -206,11 +208,7 @@ function DrawingArt({
         aria-hidden="true"
         fill="none"
       >
-        <path
-          d={shape.body}
-          className="fill-surface-2 stroke-ink-500"
-          strokeWidth={2}
-        />
+        <path d={shape.body} className="fill-surface-2 stroke-ink-500" strokeWidth={2} />
         {shape.glass ? <path d={shape.glass} className="fill-void/60" /> : null}
         {shape.wheels.map((wheel) => (
           <g key={wheel.cx}>

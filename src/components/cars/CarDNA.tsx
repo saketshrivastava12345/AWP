@@ -1,4 +1,3 @@
-import { cn } from "@/lib/utils";
 import { ordinal } from "@/lib/detail/figures";
 import type { DnaMetric } from "@/lib/dna";
 import { InfoHint } from "@/components/ui/Tooltip";
@@ -30,11 +29,7 @@ export function CarDNA({
   if (shown.length === 0) return null;
 
   return (
-    <section
-      id="dna"
-      aria-labelledby="dna-heading"
-      className={className}
-    >
+    <section id="dna" aria-labelledby="dna-heading" className={className}>
       <DetailHeading
         id="dna-heading"
         level={headingLevel}

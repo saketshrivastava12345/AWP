@@ -49,7 +49,10 @@ export function DataConfidence({
       />
 
       <div className="mt-8 border-t border-line">
-        <div aria-hidden="true" className={cn(COLUMNS, "hidden py-3 text-caption md:grid")}>
+        <div
+          aria-hidden="true"
+          className={cn(COLUMNS, "hidden py-3 text-caption md:grid")}
+        >
           <span>Block</span>
           <span>Status</span>
           <span>Source</span>

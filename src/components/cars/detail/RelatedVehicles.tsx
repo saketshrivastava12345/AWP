@@ -47,7 +47,7 @@ export async function RelatedVehicles({
         description={`Other ${modelName} variants first, then more from the ${categoryName} category, then cars within 15% of its power.`}
       />
       {/* Bleeds into the page gutter on phones so the next card peeks in. */}
-      <ul className="no-scrollbar -mx-5 mt-8 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto overscroll-x-contain px-5 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0 lg:gap-6">
+      <ul className="-mx-5 mt-8 no-scrollbar flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto overscroll-x-contain px-5 pb-2 sm:mx-0 sm:scroll-px-0 sm:px-0 lg:gap-6">
         {cars.map((car) => (
           <li
             key={car.variant_id}

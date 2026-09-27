@@ -267,3 +267,16 @@ export function modelVariantName(
   if (v.includes(m)) return variantName;
   return `${modelName} ${variantName}`;
 }
+
+/**
+ * The first sentence of a description, for a one-line hero lead. A sentence
+ * ends at ".", "!" or "?" after a word of three or more lower-case letters
+ * or digits, followed by a capital — so "Dr. Ing. h.c. F. Porsche" is not
+ * cut. Text with no such boundary is returned whole.
+ */
+export function firstSentence(text: string | Nullish): string | null {
+  const value = text?.trim();
+  if (!value) return null;
+  const match = /[a-z0-9)]{3,}[.!?](?=\s+["“‘(]?[A-Z])/.exec(value);
+  return match ? value.slice(0, match.index + match[0].length) : value;
+}

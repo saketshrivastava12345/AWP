@@ -72,7 +72,7 @@ export function PriceSummary({
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="flex items-center gap-1.5 text-label">
+        <p className="flex items-center gap-1.5 text-body-s text-ink-300">
           <KeepHyphens text={headline?.label ?? PRICE_TYPE_LABELS[price.price_type]} />
           {headline ? (
             <InfoHint label={`What “${headline.label}” means`}>{headline.note}</InfoHint>
@@ -83,21 +83,18 @@ export function PriceSummary({
 
       <div ref={figureRef}>
         <p
-          className={cn(
-            "mt-3 font-display text-[1.75rem] leading-tight tracking-wide sm:text-[2.25rem] xl:text-[2.5rem]",
-            isTotal ? "gold-gradient-text" : "text-ink-50",
-          )}
+          className={cn("mt-3 text-figure-xl", isTotal ? "text-ink-50" : "text-ink-100")}
         >
           {headline ? formatPrice(headline.amount, headline.currency) : "Not available"}
         </p>
         {headline?.kind === "calculated" ? (
-          <p className="mt-1.5 text-xs text-ink-400">
+          <p className="mt-2 text-caption">
             Sum of the published components, added up by AURIX — not a quotation.
           </p>
         ) : null}
       </div>
 
-      <p className="mt-4 flex items-start gap-2 text-sm text-ink-200">
+      <p className="mt-4 flex items-start gap-2 text-body-s text-ink-200">
         <MapPin className="mt-0.5 size-4 shrink-0 text-ink-500" aria-hidden="true" />
         <span>
           <span className="sr-only">Market: </span>
@@ -106,14 +103,14 @@ export function PriceSummary({
       </p>
 
       {notice ? (
-        <p className="mt-4 flex items-start gap-2.5 rounded-sm border border-line bg-surface-2/50 px-3.5 py-3 text-sm leading-relaxed text-ink-200">
+        <p className="mt-4 flex items-start gap-2.5 rounded-card bg-surface-2 px-4 py-3 text-body-s text-ink-200">
           <Info className="mt-0.5 size-4 shrink-0 text-ink-400" aria-hidden="true" />
           {notice}
         </p>
       ) : null}
 
       {fresh?.stale ? (
-        <p className="mt-3 flex items-start gap-2.5 rounded-sm border border-signal-negative/30 bg-signal-negative/5 px-3.5 py-3 text-sm leading-relaxed text-ink-200">
+        <p className="mt-3 flex items-start gap-2.5 rounded-card border border-signal-negative/30 bg-signal-negative/5 px-4 py-3 text-body-s text-ink-200">
           <AlertTriangle
             className="mt-0.5 size-4 shrink-0 text-signal-negative"
             aria-hidden="true"
@@ -156,35 +153,35 @@ export function PriceSummary({
               {breakdown.total ? (
                 <tr className="border-t border-line-strong">
                   <th scope="row" className="pt-4 pr-4 text-left align-top font-normal">
-                    <span className="block font-display text-[11px] tracking-[0.16em] text-ink-50 uppercase">
+                    <span className="block text-[0.9375rem] leading-snug font-medium text-ink-50">
                       <KeepHyphens text={totalCaption(breakdown.total).label} />
                     </span>
-                    <span className="mt-1 block text-xs text-ink-400">
+                    <span className="mt-1 block text-caption">
                       {totalCaption(breakdown.total).detail}
                     </span>
                   </th>
-                  <td className="tabular pt-4 text-right align-top font-mono text-base whitespace-nowrap text-gold-300">
+                  <td className="pt-4 text-right align-top text-data whitespace-nowrap text-ink-50">
                     {formatPrice(breakdown.total.amount, breakdown.currency)}
                   </td>
                 </tr>
               ) : (
                 <tr className="border-t border-line-strong">
                   <th scope="row" className="pt-4 pr-4 text-left align-top font-normal">
-                    <span className="block font-display text-[11px] tracking-[0.16em] text-ink-300 uppercase">
+                    <span className="block text-[0.9375rem] leading-snug font-medium text-ink-300">
                       On-road total
                     </span>
-                    <span className="mt-1 block text-xs leading-relaxed text-ink-400">
+                    <span className="mt-1 block text-caption">
                       {missingTotalMessage(breakdown.missingForTotal)}
                     </span>
                   </th>
-                  <td className="pt-4 text-right align-top font-mono text-ink-500">—</td>
+                  <td className="pt-4 text-right align-top text-data text-ink-400">—</td>
                 </tr>
               )}
             </tfoot>
           </table>
         </div>
       ) : (
-        <p className="mt-6 flex items-start gap-2.5 border-t border-line pt-4 text-xs leading-relaxed text-ink-400">
+        <p className="mt-6 flex items-start gap-2.5 border-t border-line pt-4 text-caption">
           <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
           {missingTotalMessage(breakdown.missingForTotal)}
         </p>
@@ -214,10 +211,13 @@ function KeepHyphens({ text }: { text: string }) {
 function BreakdownRow({ label, value }: { label: string; value: string }) {
   return (
     <tr className="border-b border-line-subtle last:border-b-0">
-      <th scope="row" className="py-3 pr-4 text-left font-normal text-ink-300">
+      <th
+        scope="row"
+        className="py-3 pr-4 text-left text-body-s font-normal text-ink-300"
+      >
         {label}
       </th>
-      <td className="tabular py-3 text-right font-mono whitespace-nowrap text-ink-100">
+      <td className="py-3 text-right text-data whitespace-nowrap text-ink-100">
         {value}
       </td>
     </tr>

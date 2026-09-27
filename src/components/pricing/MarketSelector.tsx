@@ -125,12 +125,10 @@ export function MarketSelector({
       {/* Floated so the legend lays out as an ordinary block (not in the
           fieldset border) and can share its row with the key. */}
       <legend className="float-left mb-4 flex w-full items-baseline justify-between gap-4">
-        <span className="font-display text-xs tracking-[0.18em] text-ink-50 uppercase">
-          Market
-        </span>
+        <span className="text-h4">Market</span>
         {/* Visual key only: the same fact reaches assistive technology
             through the option groups. */}
-        <span aria-hidden="true" className="flex items-center gap-2 text-xs text-ink-400">
+        <span aria-hidden="true" className="flex items-center gap-2 text-caption">
           <span className="size-1.5 rounded-full bg-gold-500" />
           Prices recorded
         </span>

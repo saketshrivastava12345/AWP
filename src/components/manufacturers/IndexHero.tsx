@@ -32,7 +32,12 @@ export function IndexHero({
       {stats.length > 0 ? (
         <StatRow className="mt-12 lg:mt-16">
           {stats.map((stat) => (
-            <StatCard key={stat.label} label={stat.label} value={stat.value} hint={stat.hint} />
+            <StatCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              hint={stat.hint}
+            />
           ))}
         </StatRow>
       ) : null}

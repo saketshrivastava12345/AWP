@@ -47,7 +47,7 @@ export function BrandTabs({ tabs, label }: { tabs: BrandTab[]; label: string }) 
       <div
         role="tablist"
         aria-label={label}
-        className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-0.5 edge-fade-x sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:[mask-image:none]"
+        className="-mx-5 no-scrollbar flex gap-2 overflow-x-auto edge-fade-x px-5 py-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:[mask-image:none] sm:px-0"
       >
         {tabs.map((tab, index) => {
           const selected = tab.id === active.id;

@@ -342,7 +342,7 @@ export function CompareCombobox({
             full
               ? "Remove a car to add another"
               : hero
-                ? "Search by make, model or variant…"
+                ? "Search make or model…"
                 : "Add a car…"
           }
           onChange={(event) => {

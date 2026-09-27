@@ -115,7 +115,7 @@ export function HomeCarousel({
       <div
         ref={track}
         className={cn(
-          "no-scrollbar mt-9 snap-x snap-mandatory overflow-x-auto overscroll-x-contain pt-1 pb-3",
+          "mt-9 no-scrollbar snap-x snap-mandatory overflow-x-auto overscroll-x-contain pt-1 pb-3",
           BLEED,
         )}
       >

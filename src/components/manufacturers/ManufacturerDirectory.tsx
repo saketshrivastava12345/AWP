@@ -52,7 +52,7 @@ export function ManufacturerDirectory({ makers }: { makers: ManufacturerListItem
       <div
         className={cn(
           "sticky top-(--nav-offset) z-(--z-sticky) -mx-5 border-b border-line-subtle px-5 py-3 sm:-mx-8 sm:px-8",
-          "bg-void/85 backdrop-blur-md backdrop-saturate-150 lg:-mx-12 lg:px-12 min-[1440px]:-mx-16 min-[1440px]:px-16",
+          "bg-void/85 backdrop-blur-md backdrop-saturate-150 min-[1440px]:-mx-16 min-[1440px]:px-16 lg:-mx-12 lg:px-12",
         )}
       >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
@@ -70,7 +70,10 @@ export function ManufacturerDirectory({ makers }: { makers: ManufacturerListItem
             className="w-full shrink-0 sm:w-64"
             value={country}
             onChange={(event) => setCountry(event.target.value)}
-            options={[{ value: ALL_COUNTRIES, label: "All countries" }, ...countryOptions]}
+            options={[
+              { value: ALL_COUNTRIES, label: "All countries" },
+              ...countryOptions,
+            ]}
           />
         </div>
       </div>
@@ -90,7 +93,11 @@ export function ManufacturerDirectory({ makers }: { makers: ManufacturerListItem
 
       {groups.length === 0 ? (
         <div className="mt-8 flex flex-col items-center rounded-card bg-surface-1 px-6 py-16 text-center">
-          <SearchX className="size-6 text-ink-400" strokeWidth={1.25} aria-hidden="true" />
+          <SearchX
+            className="size-6 text-ink-400"
+            strokeWidth={1.25}
+            aria-hidden="true"
+          />
           <p className="mt-4 text-h4">No brand matches both filters</p>
           <p className="mt-2 max-w-sm text-body-s text-ink-400">
             No brand in the catalogue belongs to that segment in that country.
@@ -137,7 +144,10 @@ export function ManufacturerDirectory({ makers }: { makers: ManufacturerListItem
               <ul className="mt-6 grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
                 {group.makers.map((maker) => (
                   <li key={maker.id}>
-                    <ManufacturerCard maker={maker} showCountry={group.slug === "unknown"} />
+                    <ManufacturerCard
+                      maker={maker}
+                      showCountry={group.slug === "unknown"}
+                    />
                   </li>
                 ))}
               </ul>

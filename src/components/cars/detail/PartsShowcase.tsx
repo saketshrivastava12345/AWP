@@ -133,11 +133,7 @@ function PartCard({
         <p className="text-caption">
           {part.viewer_group ? GROUP_LABELS[part.viewer_group] : "Component"}
         </p>
-        {catalogued ? (
-          <Badge tone="positive">Catalogued</Badge>
-        ) : (
-          <Badge>Typical</Badge>
-        )}
+        {catalogued ? <Badge tone="positive">Catalogued</Badge> : <Badge>Typical</Badge>}
       </div>
 
       <h4 className="mt-3 text-h4">

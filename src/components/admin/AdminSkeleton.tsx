@@ -15,14 +15,14 @@ export function AdminSkeleton({
       </p>
       <div aria-hidden="true">
         {header ? (
-          <div className="mb-8 border-b border-line pb-6">
+          <div className="mb-8 border-b border-line-subtle pb-6">
             <Skeleton className="h-3 w-40" />
-            <Skeleton className="mt-5 h-6 w-72" />
+            <Skeleton className="mt-5 h-9 w-72 max-w-full" />
             <Skeleton className="mt-3 h-3.5 w-full max-w-lg" />
           </div>
         ) : null}
         <Skeleton className="h-24 w-full" />
-        <div className="mt-6 flex flex-col gap-px overflow-hidden rounded-md border border-line">
+        <div className="mt-6 flex flex-col gap-px overflow-hidden rounded-card border border-line">
           {Array.from({ length: rows }, (_, index) => (
             <div
               key={index}

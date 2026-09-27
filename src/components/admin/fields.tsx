@@ -185,8 +185,8 @@ export type FieldOption = { value: string; label: string; disabled?: boolean };
 export type FieldOptionGroup = { label: string; options: FieldOption[] };
 
 const SELECT_CLASSES =
-  "h-11 w-full min-w-0 appearance-none rounded-sm border border-line-strong bg-surface-1 pr-9 pl-3 " +
-  "text-sm text-ink-100 transition-colors duration-(--duration-fast) hover:border-ink-500 " +
+  "h-12 w-full min-w-0 appearance-none rounded-control border border-line-strong bg-surface-1 pr-9 pl-3.5 " +
+  "text-[15px] text-ink-50 transition-colors duration-(--duration-fast) hover:border-ink-500 " +
   "focus-visible:border-gold-500 disabled:cursor-not-allowed disabled:opacity-50 " +
   "aria-[invalid=true]:border-signal-negative";
 
@@ -306,12 +306,16 @@ export function CheckboxField({
         <span>{label}</span>
       </label>
       {hint ? (
-        <p id={`${id}-hint`} className="-mt-1 pl-7 text-xs leading-relaxed text-ink-500">
+        <p id={`${id}-hint`} className="-mt-1 pl-7 text-caption">
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={`${id}-error`} role="alert" className="pl-7 text-xs text-signal-negative">
+        <p
+          id={`${id}-error`}
+          role="alert"
+          className="pl-7 text-caption text-signal-negative"
+        >
           {error}
         </p>
       ) : null}
@@ -343,14 +347,14 @@ export function RadioQuestion({
       aria-describedby={describedBy(id, hint, error)}
       aria-invalid={error ? true : undefined}
     >
-      <legend className="text-label">
+      <legend className="text-body-s font-medium text-ink-200">
         {legend}
-        <span className="ml-1 text-gold-400" aria-hidden="true">
+        <span className="ml-1 text-ink-400" aria-hidden="true">
           *
         </span>
       </legend>
       {hint ? (
-        <p id={`${id}-hint`} className="text-xs leading-relaxed text-ink-500">
+        <p id={`${id}-hint`} className="text-caption">
           {hint}
         </p>
       ) : null}
@@ -359,7 +363,7 @@ export function RadioQuestion({
           <label
             key={option.value}
             className={cn(
-              "flex cursor-pointer items-start gap-3 rounded-sm border px-3 py-3 text-sm transition-colors",
+              "flex cursor-pointer items-start gap-3 rounded-control border px-3 py-3 text-sm transition-colors",
               "border-line-strong hover:border-ink-500 has-[:checked]:border-gold-600 has-[:checked]:bg-gold-500/5",
               error && "border-signal-negative/60",
             )}
@@ -375,16 +379,14 @@ export function RadioQuestion({
             <span className="min-w-0">
               <span className="block text-ink-100">{option.label}</span>
               {option.description ? (
-                <span className="mt-0.5 block text-xs leading-relaxed text-ink-500">
-                  {option.description}
-                </span>
+                <span className="mt-0.5 block text-caption">{option.description}</span>
               ) : null}
             </span>
           </label>
         ))}
       </div>
       {error ? (
-        <p id={`${id}-error`} role="alert" className="text-xs text-signal-negative">
+        <p id={`${id}-error`} role="alert" className="text-caption text-signal-negative">
           {error}
         </p>
       ) : null}
@@ -481,13 +483,9 @@ export function FieldSet({
 }) {
   return (
     <fieldset className={cn("min-w-0 border-t border-line pt-5", className)}>
-      <legend className="float-left mb-4 w-full font-display text-micro tracking-hud text-ink-200 uppercase">
-        {legend}
-      </legend>
+      <legend className="float-left mb-4 w-full text-h4">{legend}</legend>
       {description ? (
-        <p className="clear-left mb-5 max-w-3xl text-xs leading-relaxed text-ink-500">
-          {description}
-        </p>
+        <p className="clear-left mb-5 max-w-3xl text-caption">{description}</p>
       ) : null}
       <div
         className={cn(

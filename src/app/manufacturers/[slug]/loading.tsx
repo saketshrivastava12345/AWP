@@ -1,5 +1,5 @@
 import { DetailPageSkeleton } from "@/components/manufacturers/PageSkeletons";
 
 export default function Loading() {
-  return <DetailPageSkeleton label="the manufacturer" />;
+  return <DetailPageSkeleton label="the brand" />;
 }

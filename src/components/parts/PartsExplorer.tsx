@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useId, useMemo, useState } from "react";
-import { Search, SearchX, X } from "lucide-react";
+import { ArrowRight, Search, SearchX, X } from "lucide-react";
 import { Input } from "@/components/ui/Field";
 import { IconButton } from "@/components/ui/IconButton";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { CategoryChips } from "./CategoryChips";
-import { PartCard, type PartCardData } from "./PartCard";
+import { PartList, type PartCardData } from "./PartCard";
 import { matchesQuery } from "./parts-helpers";
 
 export type ExplorerPart = PartCardData & {
@@ -76,83 +77,89 @@ export function PartsExplorer({ categories }: { categories: ExplorerCategory[] }
 
   return (
     <div>
-      <div className="border-y border-line py-5">
-        <label htmlFor={inputId} className="text-label">
-          Filter components
-        </label>
-        <div className="relative mt-2 max-w-2xl">
-          <Search
-            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-500"
-            aria-hidden="true"
-          />
-          <Input
-            id={inputId}
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape" && query) {
-                event.preventDefault();
-                setQuery("");
-              }
-            }}
-            placeholder="Name, material or job: “turbo”, “carbon”, “cooling”"
-            autoComplete="off"
-            spellCheck={false}
-            aria-describedby={countId}
-            className="pr-12 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
-          />
-          {query ? (
-            <IconButton
-              label="Clear the filter"
-              onClick={clearQuery}
-              className="absolute top-0 right-0"
-            >
-              <X className="size-4" aria-hidden="true" />
-            </IconButton>
-          ) : null}
-        </div>
+      {/* Sticky bar: the text filter and the category chips, under the navbar. */}
+      <div
+        className={cn(
+          "sticky top-(--nav-offset) z-(--z-sticky) -mx-5 border-b border-line-subtle px-5 py-3 sm:-mx-8 sm:px-8",
+          "bg-void/85 backdrop-blur-md backdrop-saturate-150 min-[1440px]:-mx-16 min-[1440px]:px-16 lg:-mx-12 lg:px-12",
+        )}
+      >
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-6">
+          <div className="relative w-full shrink-0 lg:w-80">
+            <label htmlFor={inputId} className="sr-only">
+              Filter components
+            </label>
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-400"
+              aria-hidden="true"
+            />
+            <Input
+              id={inputId}
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && query) {
+                  event.preventDefault();
+                  setQuery("");
+                }
+              }}
+              placeholder="Filter by name, material or job"
+              autoComplete="off"
+              spellCheck={false}
+              aria-describedby={countId}
+              className="h-11 pr-12 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
+            />
+            {query ? (
+              <IconButton
+                label="Clear the filter"
+                onClick={clearQuery}
+                className="absolute top-0 right-0"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </IconButton>
+            ) : null}
+          </div>
 
-        <CategoryChips
-          label="Filter components by category"
-          className="mt-4"
-          value={category}
-          onChange={setCategory}
-          options={[
-            { value: ALL, label: "All", count: matchCount },
-            ...matching.map((entry) => ({
-              value: entry.slug,
-              label: entry.name,
-              count: entry.parts.length,
-            })),
-          ]}
-        />
+          <CategoryChips
+            label="Filter components by category"
+            className="min-w-0 flex-1"
+            value={category}
+            onChange={setCategory}
+            options={[
+              { value: ALL, label: "All", count: matchCount },
+              ...matching.map((entry) => ({
+                value: entry.slug,
+                label: entry.name,
+                count: entry.parts.length,
+              })),
+            ]}
+          />
+        </div>
       </div>
 
-      <div className="mt-6 flex min-h-9 flex-wrap items-center justify-between gap-3">
-        <p id={countId} className="text-hud" aria-live="polite">
+      <div className="mt-6 flex min-h-11 flex-wrap items-center justify-between gap-3">
+        <p id={countId} className="text-body-s text-ink-400" aria-live="polite">
           {filtering
             ? `${shown} of ${total} components match`
             : `${total} components in ${categories.length} categories`}
         </p>
         {filtering ? (
-          <Button variant="ghost" size="sm" onClick={reset}>
+          <Button variant="link" size="sm" arrow={false} onClick={reset}>
             Clear filters
           </Button>
         ) : null}
       </div>
 
       {results.length === 0 ? (
-        <div className="mt-8 flex flex-col items-center border border-dashed border-line px-6 py-16 text-center">
+        <div className="mt-8 flex flex-col items-center rounded-card bg-surface-1 px-6 py-16 text-center">
           <SearchX
-            className="size-6 text-ink-500"
+            className="size-6 text-ink-400"
             strokeWidth={1.25}
             aria-hidden="true"
           />
-          <p className="mt-4 font-display text-xs tracking-button text-ink-100 uppercase">
-            No component matches
-          </p>
-          <p className="mt-3 max-w-sm text-sm leading-relaxed text-ink-400">
+          <p className="mt-4 text-h4">No component matches</p>
+          <p className="mt-2 max-w-sm text-body-s text-ink-400">
             {query.trim()
               ? `Nothing${activeCategory ? ` in ${activeCategory.name}` : ""} matches “${query.trim()}”. Try a single word, or a broader one.`
               : "This category has no components yet."}
@@ -162,40 +169,43 @@ export function PartsExplorer({ categories }: { categories: ExplorerCategory[] }
           </Button>
         </div>
       ) : (
-        <div className="mt-6 space-y-14">
+        <div className="mt-8 space-y-16 lg:space-y-20">
           {results.map((entry) => (
             <section key={entry.id} aria-labelledby={`parts-${entry.slug}`}>
-              <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-line pb-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
                 <div className="min-w-0">
-                  <h2
-                    id={`parts-${entry.slug}`}
-                    className="flex items-baseline gap-3 font-display text-sm tracking-hud text-ink-50 uppercase"
-                  >
+                  <h2 id={`parts-${entry.slug}`} className="text-h3">
                     {entry.name}
-                    <span className="tabular font-mono text-xs text-ink-500">
+                    <span className="ml-3 align-middle text-caption font-normal tracking-normal">
                       {entry.parts.length}
                     </span>
                   </h2>
                   {!filtering && entry.description ? (
-                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-400">
+                    <p className="mt-2 max-w-[68ch] text-body-s text-ink-400">
                       {entry.description}
                     </p>
                   ) : null}
                 </div>
                 <Link
                   href={`/parts/${entry.slug}`}
-                  className="inline-flex min-h-11 shrink-0 items-center text-hud transition-colors duration-(--duration-fast) hover:text-gold-300"
+                  className={buttonClasses("link", "sm")}
                 >
-                  {entry.name} overview →
+                  Category overview
+                  <span className="sr-only">: {entry.name}</span>
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="text-ink-400 transition-[translate,color] duration-(--duration-base) group-hover/button:translate-x-1 group-hover/button:text-ink-50"
+                  />
                 </Link>
               </div>
-              <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {entry.parts.map((part) => (
-                  <li key={part.id}>
-                    <PartCard part={part} />
-                  </li>
-                ))}
-              </ul>
+              <PartList
+                className="mt-5"
+                parts={entry.parts.map((part) => ({
+                  ...part,
+                  systemLabel: null,
+                  key: part.id,
+                }))}
+              />
             </section>
           ))}
         </div>

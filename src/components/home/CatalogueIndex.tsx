@@ -17,7 +17,8 @@ import type { HomeSegment } from "./home-data";
  * as a drawing. Either is decorative: the tile's name is its label.
  */
 
-const SIZES = "(min-width: 1360px) 420px, (min-width: 1024px) 31vw, (min-width: 640px) 46vw, 76vw";
+const SIZES =
+  "(min-width: 1360px) 420px, (min-width: 1024px) 31vw, (min-width: 640px) 46vw, 76vw";
 
 function SegmentTile({ segment }: { segment: HomeSegment }) {
   const drawing = <Silhouette bodyType={segment.bodyType} fuelType={segment.fuelType} />;
@@ -33,12 +34,7 @@ function SegmentTile({ segment }: { segment: HomeSegment }) {
       >
         <span className="absolute inset-0 transition-transform duration-(--duration-normal) ease-standard group-hover:scale-[1.03] motion-reduce:group-hover:scale-100">
           {segment.photo ? (
-            <CarPhoto
-              src={segment.photo.url}
-              alt=""
-              sizes={SIZES}
-              fallback={drawing}
-            />
+            <CarPhoto src={segment.photo.url} alt="" sizes={SIZES} fallback={drawing} />
           ) : (
             drawing
           )}
@@ -75,9 +71,7 @@ export function CatalogueIndex({ segments }: { segments: HomeSegment[] }) {
           actionLabel="All cars"
         />
         {/* Phones: a swipeable row. From sm: a grid, every tile whole. */}
-        <ul
-          className="no-scrollbar -mx-5 mt-10 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pt-1 pb-3 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:p-0 lg:grid-cols-3 lg:gap-6"
-        >
+        <ul className="-mx-5 mt-10 no-scrollbar flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pt-1 pb-3 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:p-0 lg:grid-cols-3 lg:gap-6">
           {segments.map((segment) => (
             <li
               key={segment.href}

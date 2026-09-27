@@ -56,9 +56,7 @@ export function ModelLineup({
             <p className="mt-6 flex flex-wrap items-baseline gap-x-2 text-ink-50">
               {power ? (
                 <>
-                  <span className="text-figure">
-                    {rangeLabel(power, formatNumber)}
-                  </span>
+                  <span className="text-figure">{rangeLabel(power, formatNumber)}</span>
                   <span className="text-body-s text-ink-400">hp</span>
                   <span aria-hidden="true" className="text-ink-500">
                     ·

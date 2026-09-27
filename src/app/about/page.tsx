@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { ButtonLink } from "@/components/ui/Button";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { SubNav } from "@/components/ui/SubNav";
 import { IndexHero } from "@/components/manufacturers/IndexHero";
 import { getCatalogueCounts } from "@/lib/queries/cars";
 import { listMediaCredits, type MediaCreditEntry } from "@/lib/queries/credits";
@@ -84,10 +87,11 @@ const PROVENANCE_ORDER: readonly ProvenanceStatus[] = [
   "unsourced",
 ];
 
-const PROVENANCE_TONE: Record<ProvenanceStatus, string> = {
-  verified: "bg-signal-positive",
-  "source-recorded": "bg-gold-500",
-  unsourced: "bg-ink-600",
+/** The same tones as the car page's data-provenance table. */
+const PROVENANCE_TONE: Record<ProvenanceStatus, BadgeTone> = {
+  verified: "positive",
+  "source-recorded": "neutral",
+  unsourced: "neutral",
 };
 
 const CONVENTIONS = [
@@ -171,7 +175,7 @@ const OTHER_CREDITS = [
   {
     term: "Typefaces",
     detail:
-      "Michroma, Inter and JetBrains Mono, each under the SIL Open Font License, served through next/font.",
+      "Inter Tight, Inter, JetBrains Mono and, for the wordmark, Michroma, each under the SIL Open Font License, served through next/font.",
   },
   {
     term: "Icons",
@@ -189,7 +193,7 @@ function ExternalLink({
   className,
 }: {
   href: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
@@ -198,39 +202,73 @@ function ExternalLink({
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "inline-flex items-baseline gap-0.5 text-gold-300 underline decoration-gold-800 underline-offset-4 transition-colors duration-(--duration-fast) hover:text-gold-200 hover:decoration-gold-500",
+        "inline-flex items-baseline gap-0.5 text-ink-100 underline decoration-ink-600 underline-offset-4 transition-colors duration-(--duration-fast) hover:text-ink-50 hover:decoration-ink-300",
         className,
       )}
     >
       {children}
-      <ArrowUpRight className="size-3 self-center" aria-hidden="true" />
+      <ArrowUpRight className="size-3.5 self-center text-ink-400" aria-hidden="true" />
       <span className="sr-only"> (opens in a new tab)</span>
     </a>
   );
 }
 
-function SectionTitle({
+/**
+ * One chapter of the page: the title (and an optional lead) in the left
+ * third on desktop, the content in the right two thirds, so prose keeps a
+ * readable measure without a narrow page.
+ */
+function Chapter({
   id,
-  index,
   title,
+  lead,
+  first = false,
+  children,
 }: {
   id: string;
-  index: number;
   title: string;
+  lead?: ReactNode;
+  first?: boolean;
+  children: ReactNode;
 }) {
   return (
-    <div className="flex items-baseline gap-4 border-b border-line pb-4">
-      <span className="tabular font-mono text-xs text-gold-500">
-        {String(index).padStart(2, "0")}
-      </span>
-      <h2
-        id={id}
-        className="font-display text-lg tracking-[0.06em] text-ink-50 sm:text-xl"
-      >
-        {title}
-      </h2>
-    </div>
+    <Container
+      as="section"
+      id={id}
+      aria-labelledby={`${id}-heading`}
+      className={cn("py-16 lg:py-24", !first && "border-t border-line-subtle")}
+    >
+      <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+        <div className="lg:col-span-4">
+          <h2 id={`${id}-heading`} className="text-h2">
+            {title}
+          </h2>
+          {lead ? <p className="mt-4 max-w-[48ch] text-body">{lead}</p> : null}
+        </div>
+        <div className="min-w-0 lg:col-span-8">{children}</div>
+      </div>
+    </Container>
   );
+}
+
+/** A sub-heading inside a chapter. */
+function SubTitle({ children }: { children: ReactNode }) {
+  return <h3 className="text-h3">{children}</h3>;
+}
+
+/**
+ * Deed URL for a ported Creative Commons licence ("CC BY-SA 3.0 de"), which
+ * the shared helper does not read. Only the licence's own jurisdiction code
+ * is used; anything else stays unlinked rather than guessed.
+ */
+function portedLicenseUrl(license: string | null | undefined): string | null {
+  const match = /^CC[ -]?(BY(?:-NC)?(?:-SA|-ND)?)[ -]?(\d\.\d)[ -]([a-z]{2})$/i.exec(
+    license?.trim().replace(/\s+/g, " ") ?? "",
+  );
+  if (!match) return null;
+  const [, terms, version, jurisdiction] = match;
+  if (!terms || !version || !jurisdiction) return null;
+  return `https://creativecommons.org/licenses/${terms.toLowerCase()}/${version}/${jurisdiction.toLowerCase()}/`;
 }
 
 /** One credit as table cells that stack into labelled lines on small screens. */
@@ -242,16 +280,17 @@ function CreditCells({
   showFidelity: boolean;
 }) {
   const credit = entry.credit;
+  const licenseHref = credit?.licenseUrl ?? portedLicenseUrl(credit?.license);
   const cell =
     "block py-1 align-top md:table-cell md:border-b md:border-line-subtle md:py-4 md:pr-6 " +
-    "before:mr-2 before:font-display before:text-[9px] before:tracking-hud before:text-ink-500 before:uppercase before:content-[attr(data-label)] md:before:content-none";
+    "before:mr-2 before:text-caption before:content-[attr(data-label)] md:before:content-none";
 
   return (
     <>
       <td className={cn(cell, "pt-4 md:pt-4")} data-label="Car">
         <Link
           href={entry.carHref}
-          className="text-ink-100 transition-colors duration-(--duration-fast) hover:text-gold-300"
+          className="text-ink-50 transition-colors duration-(--duration-fast) hover:text-ink-200"
         >
           {entry.carName}
         </Link>
@@ -263,13 +302,13 @@ function CreditCells({
       </td>
       <td className={cell} data-label="Licence">
         {credit?.license ? (
-          credit.licenseUrl ? (
-            <ExternalLink href={credit.licenseUrl}>{credit.license}</ExternalLink>
+          licenseHref ? (
+            <ExternalLink href={licenseHref}>{credit.license}</ExternalLink>
           ) : (
             <span className="text-ink-300">{credit.license}</span>
           )
         ) : (
-          <span className="text-ink-500">Not recorded</span>
+          <span className="text-ink-400">Not recorded</span>
         )}
       </td>
       <td className={cn(cell, !showFidelity && "pb-4")} data-label="Source">
@@ -306,7 +345,7 @@ function CreditTable({
   showFidelity?: boolean;
 }) {
   return (
-    <table className="mt-6 w-full border-t border-line text-left text-sm">
+    <table className="mt-6 w-full border-t border-line-subtle text-left text-body-s">
       <caption className="sr-only">{caption}</caption>
       <thead className="sr-only md:not-sr-only">
         <tr>
@@ -316,7 +355,7 @@ function CreditTable({
               <th
                 key={heading}
                 scope="col"
-                className="border-b border-line py-3 pr-6 font-display text-[10px] font-normal tracking-hud text-ink-400 uppercase"
+                className="border-b border-line-subtle py-3 pr-6 text-caption font-normal"
               >
                 {heading}
               </th>
@@ -343,23 +382,24 @@ export default async function AboutPage() {
   const models = credits.filter((entry) => entry.type === "glb");
   const hasCounts = counts.variants > 0 || counts.manufacturers > 0;
 
+  const rowList = "border-t border-line-subtle";
+  const row =
+    "grid gap-2 border-b border-line-subtle py-5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-8";
+  const term = "text-body-s font-medium text-ink-50";
+  const detail = "text-body-s text-ink-300";
+
   return (
     <>
       <IndexHero
         overline="About the project"
-        title={
-          <>
-            A GLOBAL ENCYCLOPEDIA <br className="hidden sm:block" />
-            OF THE AUTOMOBILE
-          </>
-        }
+        title="A global encyclopedia of the automobile"
         lead={
           <>
             <p>
-              AURIX organises the car from the outside in: country, manufacturer, model,
-              variant, specification and component, each explorable in depth and in 3D.
+              AURIX organises the car from the outside in: country, brand, model, variant,
+              specification and component, each explorable in depth and in 3D.
             </p>
-            <p className="mt-4 text-sm text-ink-400">
+            <p className="mt-4 text-body-s text-ink-400">
               Built as a mini project for B.Tech Computer Science and Engineering at
               Pimpri Chinchwad University.
             </p>
@@ -369,7 +409,7 @@ export default async function AboutPage() {
           hasCounts
             ? [
                 { label: "Countries", value: formatNumber(counts.countries) },
-                { label: "Marques", value: formatNumber(counts.manufacturers) },
+                { label: "Brands", value: formatNumber(counts.manufacturers) },
                 {
                   label: "Variants",
                   value: formatNumber(counts.variants),
@@ -381,265 +421,223 @@ export default async function AboutPage() {
         }
       />
 
-      <Container className="py-14 sm:py-20">
-        <div className="grid gap-12 lg:grid-cols-[12rem_minmax(0,1fr)] lg:gap-16">
-          <nav aria-label="On this page" className="lg:sticky lg:top-24 lg:self-start">
-            <p className="text-label">On this page</p>
-            <ol className="mt-4 flex flex-wrap gap-2 lg:flex-col lg:gap-0 lg:border-l lg:border-line">
-              {SECTIONS.map((section, index) => (
-                <li key={section.id}>
-                  <a
-                    href={`#${section.id}`}
-                    className="inline-flex min-h-10 items-center gap-2.5 border border-line px-3 text-sm text-ink-300 transition-colors duration-(--duration-fast) hover:border-gold-800 hover:text-gold-200 lg:-ml-px lg:min-h-11 lg:border-0 lg:border-l lg:border-transparent lg:pl-4 lg:hover:border-gold-500"
-                  >
-                    <span className="tabular font-mono text-[11px] text-ink-500">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    {section.label}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </nav>
+      <SubNav
+        items={SECTIONS.map((section) => ({
+          label: section.label,
+          href: `#${section.id}`,
+        }))}
+      />
 
-          <div className="min-w-0 space-y-24">
-            {/* ------------------------------------------------ Principles */}
-            <section id="principles" aria-labelledby="principles-heading">
-              <SectionTitle id="principles-heading" index={1} title="Principles" />
-              <p className="mt-6 max-w-2xl leading-relaxed text-ink-300">
-                A car encyclopedia is only useful if it can be trusted, so these rules win
-                over completeness every time.
+      {/* ---------------------------------------------------- Principles */}
+      <Chapter
+        id="principles"
+        first
+        title="Principles"
+        lead="A car encyclopedia is only useful if it can be trusted, so these rules win over completeness every time."
+      >
+        <ol className={rowList}>
+          {PRINCIPLES.map((principle, index) => (
+            <li
+              key={principle.title}
+              className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-4 border-b border-line-subtle py-7"
+            >
+              <span className="pt-0.5 text-body-s text-ink-400 tabular-nums">
+                {index + 1}
+              </span>
+              <div>
+                <h3 className="text-h4">{principle.title}</h3>
+                <p className="mt-2 max-w-[68ch] text-body">{principle.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </Chapter>
+
+      {/* -------------------------------------------------------- Data */}
+      <Chapter
+        id="data"
+        title="Data & sources"
+        lead="Where the figures and prices come from, how they are checked, and the conventions they follow."
+      >
+        <div className="space-y-16">
+          <div className="grid gap-12 xl:grid-cols-2">
+            <div>
+              <SubTitle>Where figures come from</SubTitle>
+              <div className="mt-4 space-y-4 text-body">
+                <p>
+                  Specifications are taken from what manufacturers publish: technical
+                  specification sheets, press kits and official configurators. Range and
+                  efficiency come from the homologation test the car was certified under.
+                </p>
+                <p>
+                  The catalogue is curated by hand in PostgreSQL, where constraints
+                  enforce the rules above: a price cannot be saved without a source link,
+                  and a 3D model cannot be added without saying whether it is the exact
+                  vehicle.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <SubTitle>Provenance and verification</SubTitle>
+              <p className="mt-4 text-body">
+                Every specification table records its source, a link to it and the date it
+                was last verified. Each block of a car&apos;s page shows its status:
               </p>
-              <ol className="mt-8 grid gap-4 md:grid-cols-2">
-                {PRINCIPLES.map((principle, index) => (
-                  <li
-                    key={principle.title}
-                    className={cn(
-                      "edge-light relative border border-line bg-surface-1/70 p-6 sm:p-7",
-                      index === PRINCIPLES.length - 1 && "md:col-span-2",
-                    )}
-                  >
-                    <p className="tabular font-mono text-[11px] text-gold-500">
-                      {String(index + 1).padStart(2, "0")}
-                    </p>
-                    <h3 className="mt-3 font-display text-xs tracking-hud text-ink-50 uppercase">
-                      {principle.title}
-                    </h3>
-                    <p className="mt-4 text-sm leading-relaxed text-ink-300">
-                      {principle.body}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            </section>
-
-            {/* ---------------------------------------------------- Data */}
-            <section id="data" aria-labelledby="data-heading">
-              <SectionTitle id="data-heading" index={2} title="Data & sources" />
-
-              <div className="mt-8 grid gap-10 lg:grid-cols-2">
-                <div>
-                  <h3 className="text-label">Where figures come from</h3>
-                  <div className="mt-4 space-y-4 text-sm leading-relaxed text-ink-300">
-                    <p>
-                      Specifications are taken from what manufacturers publish: technical
-                      specification sheets, press kits and official configurators. Range
-                      and efficiency come from the homologation test the car was certified
-                      under.
-                    </p>
-                    <p>
-                      The catalogue is curated by hand in PostgreSQL, where constraints
-                      enforce the rules above: a price cannot be saved without a source
-                      link, and a 3D model cannot be added without saying whether it is
-                      the exact vehicle.
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-label">Provenance and verification</h3>
-                  <p className="mt-4 text-sm leading-relaxed text-ink-300">
-                    Every specification table records its source, a link to it and the
-                    date it was last verified. Each block of a car&apos;s page shows its
-                    status:
-                  </p>
-                  <dl className="mt-5 space-y-3">
-                    {PROVENANCE_ORDER.map((status) => (
-                      <div key={status} className="flex gap-3">
-                        <dt className="flex w-36 shrink-0 items-center gap-2 text-sm text-ink-100">
-                          <span
-                            aria-hidden="true"
-                            className={cn("size-2 rounded-full", PROVENANCE_TONE[status])}
-                          />
-                          {PROVENANCE_LABELS[status]}
-                        </dt>
-                        <dd className="text-sm leading-relaxed text-ink-400">
-                          {PROVENANCE_DESCRIPTIONS[status]}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              </div>
-
-              <div className="mt-12">
-                <h3 className="text-label">How prices are sourced</h3>
-                <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-300">
-                  Every price is a dated observation with a source link, scoped to a
-                  market (a country, a state or a city, since on-road charges differ), and
-                  history is kept rather than overwritten. What a figure is matters as
-                  much as the number, so each one carries its type:
-                </p>
-                <dl className="mt-6 grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
-                  {PRICE_TYPES.map((type) => (
-                    <div key={type} className="bg-surface-1 p-5">
-                      <dt className="font-display text-[11px] tracking-hud text-ink-50 uppercase">
-                        {PRICE_TYPE_LABELS[type]}
-                      </dt>
-                      <dd className="mt-2.5 text-sm leading-relaxed text-ink-400">
-                        {type === "calculated" ? CALCULATED_NOTE : PRICE_TYPE_NOTES[type]}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-                <p className="mt-4 text-xs leading-relaxed text-ink-500">
-                  A price not re-verified within {STALE_AFTER_DAYS} days is marked as
-                  possibly out of date. Prices are never converted between currencies.
-                </p>
-              </div>
-
-              <div className="mt-12">
-                <h3 className="text-label">Conventions</h3>
-                <dl className="mt-4 border-t border-line">
-                  {CONVENTIONS.map((item) => (
-                    <div
-                      key={item.term}
-                      className="grid gap-2 border-b border-line-subtle py-5 sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-8"
-                    >
-                      <dt className="font-display text-[11px] tracking-hud text-ink-100 uppercase">
-                        {item.term}
-                      </dt>
-                      <dd className="text-sm leading-relaxed text-ink-300">
-                        {item.detail}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            </section>
-
-            {/* ------------------------------------------------- Credits */}
-            <section id="credits" aria-labelledby="credits-heading">
-              <SectionTitle id="credits-heading" index={3} title="Credits" />
-
-              <div className="mt-8">
-                <h3 className="text-label">
-                  Photographs{" "}
-                  <span className="tabular font-mono text-ink-500">{photos.length}</span>
-                </h3>
-                {photos.length > 0 ? (
-                  <>
-                    <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-300">
-                      Car photographs are published under free licences; Creative Commons
-                      licences require attribution, which is given here for every one of
-                      them and beside each photograph on its car&apos;s page.
-                    </p>
-                    <CreditTable entries={photos} caption="Photograph credits" />
-                  </>
-                ) : (
-                  <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-400">
-                    No photographs are in use right now, so there is nothing to credit.
-                    Cars are shown with body-style drawings instead.
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-12">
-                <h3 className="text-label">
-                  3D models{" "}
-                  <span className="tabular font-mono text-ink-500">{models.length}</span>
-                </h3>
-                {models.length > 0 ? (
-                  <CreditTable entries={models} caption="3D model credits" showFidelity />
-                ) : (
-                  <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-400">
-                    No third-party 3D models are in use. Every car in the viewer is
-                    AURIX&apos;s own representation, built from its published dimensions
-                    and specification, so there is no one else to credit.
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-12">
-                <h3 className="text-label">Map, type and icons</h3>
-                <dl className="mt-4 border-t border-line">
-                  {OTHER_CREDITS.map((item) => (
-                    <div
-                      key={item.term}
-                      className="grid gap-2 border-b border-line-subtle py-5 sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-8"
-                    >
-                      <dt className="font-display text-[11px] tracking-hud text-ink-100 uppercase">
-                        {item.term}
-                      </dt>
-                      <dd className="text-sm leading-relaxed text-ink-300">
-                        {item.detail}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            </section>
-
-            {/* --------------------------------------------------- Stack */}
-            <section id="stack" aria-labelledby="stack-heading">
-              <SectionTitle id="stack-heading" index={4} title="Technology" />
-              <dl className="mt-8 border-t border-line">
-                {STACK.map((item) => (
+              <dl className="mt-6 space-y-4">
+                {PROVENANCE_ORDER.map((status) => (
                   <div
-                    key={item.name}
-                    className="grid gap-2 border-b border-line-subtle py-6 sm:grid-cols-[minmax(0,14rem)_1fr] sm:gap-8"
+                    key={status}
+                    className="grid gap-2 sm:grid-cols-[9rem_minmax(0,1fr)]"
                   >
-                    <dt className="font-display text-[11px] tracking-hud text-ink-100 uppercase">
-                      {item.name}
+                    <dt>
+                      <Badge tone={PROVENANCE_TONE[status]}>
+                        {PROVENANCE_LABELS[status]}
+                      </Badge>
                     </dt>
-                    <dd className="text-sm leading-relaxed text-ink-300">
-                      {item.detail}
+                    <dd className="text-body-s text-ink-300">
+                      {PROVENANCE_DESCRIPTIONS[status]}
                     </dd>
                   </div>
                 ))}
               </dl>
-              <p className="mt-6 text-sm text-ink-400">
-                The source code is public:{" "}
-                <ExternalLink href={siteConfig.repository}>
-                  GitHub repository
-                </ExternalLink>
-                .
-              </p>
-            </section>
+            </div>
+          </div>
 
-            {/* ------------------------------------------------- Notice */}
-            <section
-              aria-labelledby="notice-heading"
-              className="border-t border-line pt-10"
-            >
-              <h2
-                id="notice-heading"
-                className="font-display text-xs tracking-hud text-ink-100 uppercase"
-              >
-                A note on specifications
-              </h2>
-              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink-400">
-                {siteConfig.disclaimer} All marque names, model names and specifications
-                are the property of their respective manufacturers; AURIX is a
-                non-commercial educational project and is not affiliated with any of them.
+          <div>
+            <SubTitle>How prices are sourced</SubTitle>
+            <p className="mt-4 max-w-[68ch] text-body">
+              Every price is a dated observation with a source link, scoped to a market (a
+              country, a state or a city, since on-road charges differ), and history is
+              kept rather than overwritten. What a figure is matters as much as the
+              number, so each one carries its type:
+            </p>
+            <dl className="mt-8 grid gap-x-12 border-t border-line-subtle sm:grid-cols-2">
+              {PRICE_TYPES.map((type) => (
+                <div key={type} className="border-b border-line-subtle py-5">
+                  <dt className={term}>{PRICE_TYPE_LABELS[type]}</dt>
+                  <dd className="mt-1.5 text-body-s text-ink-400">
+                    {type === "calculated" ? CALCULATED_NOTE : PRICE_TYPE_NOTES[type]}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-5 text-caption">
+              A price not re-verified within {STALE_AFTER_DAYS} days is marked as possibly
+              out of date. Prices are never converted between currencies.
+            </p>
+          </div>
+
+          <div>
+            <SubTitle>Conventions</SubTitle>
+            <dl className={cn("mt-6", rowList)}>
+              {CONVENTIONS.map((item) => (
+                <div key={item.term} className={row}>
+                  <dt className={term}>{item.term}</dt>
+                  <dd className={detail}>{item.detail}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </Chapter>
+
+      {/* ----------------------------------------------------- Credits */}
+      <Chapter
+        id="credits"
+        title="Credits"
+        lead="Creative Commons licences require attribution. It is given here for every photograph and model, and beside each photograph on its car's page."
+      >
+        <div className="space-y-16">
+          <div>
+            <SubTitle>
+              Photographs{" "}
+              <span className="text-body-s font-normal text-ink-400 tabular-nums">
+                {photos.length}
+              </span>
+            </SubTitle>
+            {photos.length > 0 ? (
+              <CreditTable entries={photos} caption="Photograph credits" />
+            ) : (
+              <p className="mt-4 max-w-[68ch] text-body text-ink-400">
+                No photographs are in use right now, so there is nothing to credit. Cars
+                are shown with body-style drawings instead.
               </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <ButtonLink href="/cars">Browse the collection</ButtonLink>
-                <ButtonLink href="/parts" variant="secondary">
-                  Parts encyclopedia
-                </ButtonLink>
-              </div>
-            </section>
+            )}
+          </div>
+
+          <div>
+            <SubTitle>
+              3D models{" "}
+              <span className="text-body-s font-normal text-ink-400 tabular-nums">
+                {models.length}
+              </span>
+            </SubTitle>
+            {models.length > 0 ? (
+              <CreditTable entries={models} caption="3D model credits" showFidelity />
+            ) : (
+              <p className="mt-4 max-w-[68ch] text-body text-ink-400">
+                No third-party 3D models are in use. Every car in the viewer is
+                AURIX&apos;s own representation, built from its published dimensions and
+                specification, so there is no one else to credit.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <SubTitle>Map, type and icons</SubTitle>
+            <dl className={cn("mt-6", rowList)}>
+              {OTHER_CREDITS.map((item) => (
+                <div key={item.term} className={row}>
+                  <dt className={term}>{item.term}</dt>
+                  <dd className={detail}>{item.detail}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </Chapter>
+
+      {/* ------------------------------------------------------- Stack */}
+      <Chapter
+        id="stack"
+        title="Technology"
+        lead="What AURIX is built with, and why each piece is there."
+      >
+        <dl className={rowList}>
+          {STACK.map((item) => (
+            <div key={item.name} className={row}>
+              <dt className={term}>{item.name}</dt>
+              <dd className={detail}>{item.detail}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-6 text-body-s text-ink-300">
+          The source code is public:{" "}
+          <ExternalLink href={siteConfig.repository}>GitHub repository</ExternalLink>.
+        </p>
+      </Chapter>
+
+      {/* ------------------------------------------------------ Notice */}
+      <Container
+        as="section"
+        aria-labelledby="notice-heading"
+        className="border-t border-line-subtle pt-16 pb-24 lg:pt-24 lg:pb-32"
+      >
+        <div className="max-w-3xl">
+          <h2 id="notice-heading" className="text-h3">
+            A note on specifications
+          </h2>
+          <p className="mt-4 max-w-[68ch] text-body-s text-ink-400">
+            {siteConfig.disclaimer} All brand names, model names and specifications are
+            the property of their respective manufacturers; AURIX is a non-commercial
+            educational project and is not affiliated with any of them.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <ButtonLink href="/cars">Browse the collection</ButtonLink>
+            <ButtonLink href="/parts" variant="secondary">
+              Parts encyclopedia
+            </ButtonLink>
           </div>
         </div>
       </Container>

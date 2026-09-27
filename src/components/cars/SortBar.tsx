@@ -25,13 +25,19 @@ export function SortBar({
   active,
   hidden,
   action,
+  name = "sort",
+  label = "Sort by",
   className,
 }: {
   choices: readonly SortChoice[];
   active: string;
-  /** Current state minus sort and page, for the no-JavaScript form. */
+  /** Current state minus this param and the page, for the no-JavaScript form. */
   hidden: [string, string][];
   action: string;
+  /** The search param the select writes. Also used for "Per page" (pageSize). */
+  name?: string;
+  /** Visible label (from 640px) and the select's accessible name. */
+  label?: string;
   className?: string;
 }) {
   const router = useRouter();
@@ -51,16 +57,16 @@ export function SortBar({
         htmlFor={id}
         className="hidden shrink-0 text-body-s whitespace-nowrap text-ink-400 sm:block"
       >
-        Sort by
+        {label}
       </label>
       <div className="relative min-w-0">
         <select
           id={id}
-          name="sort"
+          name={name}
           value={active}
           aria-busy={pending || undefined}
           // The visible label is hidden on phones; the name must not be.
-          aria-label="Sort by"
+          aria-label={label}
           onChange={(event) => {
             const next = choices.find((choice) => choice.key === event.target.value);
             if (next) startTransition(() => router.push(next.href, { scroll: false }));
@@ -84,7 +90,7 @@ export function SortBar({
       </div>
       <noscript>
         <button type="submit" className={buttonClasses("secondary", "sm")}>
-          Sort
+          Apply
         </button>
       </noscript>
     </form>

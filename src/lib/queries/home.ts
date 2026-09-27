@@ -224,7 +224,11 @@ async function readSegmentPhotos(): Promise<SegmentPhotoRow[]> {
       row.primary_image_url
         ? [
             {
-              name: carDisplayName(row.manufacturer_name, row.model_name, row.variant_name),
+              name: carDisplayName(
+                row.manufacturer_name,
+                row.model_name,
+                row.variant_name,
+              ),
               image_url: row.primary_image_url,
               category_slug: row.category_slug,
               body_type: row.body_type,
@@ -292,7 +296,7 @@ export async function getHomePageData(): Promise<HomePageData> {
     countries,
     manufacturers,
     parts,
-    rivals: picker.reachable ? quickStarts(picker.options, 2) : [],
+    rivals: picker.reachable ? quickStarts(picker.options, 1) : [],
     segments,
   };
 }

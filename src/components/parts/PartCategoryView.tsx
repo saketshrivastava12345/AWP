@@ -4,7 +4,8 @@ import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { ButtonLink } from "@/components/ui/Button";
 import { GROUP_LABELS } from "@/components/3d/viewer-config";
 import { cn } from "@/lib/utils";
-import { PartCard } from "./PartCard";
+import { PartList } from "./PartCard";
+import { chipClasses } from "@/components/manufacturers/brand";
 import { PartLocationFigure } from "./PartLocationFigure";
 import { firstSentence } from "./parts-helpers";
 import { breadcrumbJsonLd, serializeJsonLd, type JsonLd } from "@/lib/json-ld";
@@ -53,60 +54,41 @@ export function PartCategoryView({ data }: { data: PartCategoryPageData }) {
         dangerouslySetInnerHTML={{ __html: serializeJsonLd([termSet, breadcrumbs]) }}
       />
 
-      <section className="relative isolate overflow-hidden border-b border-line">
-        <div aria-hidden="true" className="absolute inset-0 -z-10 tech-grid opacity-80" />
-        <div
-          aria-hidden="true"
-          className="absolute -top-48 -left-40 -z-10 h-[28rem] w-[40rem] max-w-none rounded-full bg-gold-700/10 blur-[150px]"
-        />
-        <Container className="pt-8 pb-14 sm:pt-10 sm:pb-16">
+      <section className="border-b border-line-subtle">
+        <Container className="pt-6 pb-12 lg:pt-8 lg:pb-16">
           <Breadcrumbs
             items={[{ label: "Parts", href: "/parts" }, { label: category.name }]}
           />
 
           <div
             className={cn(
-              "mt-10",
-              groups.length > 0 &&
-                "grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] lg:items-start",
+              "mt-10 lg:mt-12",
+              groups.length > 0 && "grid gap-12 lg:grid-cols-12 lg:items-center",
             )}
           >
-            <div className="min-w-0">
-              <p className="text-hud text-gold-400">
-                Category · {category.parts.length}{" "}
+            <div
+              className={cn("min-w-0", groups.length > 0 ? "lg:col-span-6" : "max-w-3xl")}
+            >
+              <p className="text-eyebrow">
+                {category.parts.length}{" "}
                 {category.parts.length === 1 ? "component" : "components"}
               </p>
-              <h1 className="mt-5 font-display text-[clamp(1.9rem,6vw,4rem)] leading-[1.06] tracking-[0.05em] break-words text-ink-50 uppercase">
-                {category.name}
-              </h1>
+              <h1 className="mt-4 text-display-l hyphens-auto">{category.name}</h1>
               {category.description ? (
-                <p className="mt-7 max-w-2xl text-base leading-relaxed text-ink-300 sm:text-lg">
-                  {category.description}
-                </p>
+                <p className="mt-6 max-w-[60ch] text-lead">{category.description}</p>
               ) : null}
 
-              {groups.length > 0 ? (
-                <p className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <span className="text-label">3D systems</span>
-                  {groups.map((group) => (
-                    <span
-                      key={group}
-                      className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.08em] text-gold-400 uppercase"
-                    >
-                      <span
-                        className="size-1.5 rounded-full bg-gold-500"
-                        aria-hidden="true"
-                      />
-                      {GROUP_LABELS[group]}
-                    </span>
-                  ))}
-                </p>
-              ) : null}
-
-              {recorded > 0 ? (
-                <p className="mt-4 text-sm text-ink-400">
-                  {recorded} of these {recorded === 1 ? "is" : "are"} recorded on
-                  catalogued cars, with notes specific to each car.
+              {groups.length > 0 || recorded > 0 ? (
+                <p className="mt-5 text-body-s text-ink-400">
+                  {groups.length > 0
+                    ? `3D ${groups.length === 1 ? "system" : "systems"}: ${groups
+                        .map((group) => GROUP_LABELS[group])
+                        .join(", ")}.`
+                    : null}
+                  {groups.length > 0 && recorded > 0 ? " " : null}
+                  {recorded > 0
+                    ? `${recorded} of these ${recorded === 1 ? "is" : "are"} recorded on catalogued cars, with notes specific to each car.`
+                    : null}
                 </p>
               ) : null}
 
@@ -118,29 +100,27 @@ export function PartCategoryView({ data }: { data: PartCategoryPageData }) {
             </div>
 
             {groups.length > 0 ? (
-              <PartLocationFigure groups={groups} id={`category-${category.slug}`} />
+              <PartLocationFigure
+                groups={groups}
+                id={`category-${category.slug}`}
+                className="lg:col-span-6"
+              />
             ) : null}
           </div>
         </Container>
       </section>
 
-      <Container className="py-12 sm:py-14">
-        <nav aria-label="Part categories" className="border-b border-line pb-5">
-          <ul className="flex [scrollbar-width:none] gap-2 overflow-x-auto pb-1">
+      <Container className="pt-10 pb-24 lg:pb-32">
+        <nav aria-label="Part categories">
+          <ul className="-mx-5 no-scrollbar flex gap-2 overflow-x-auto edge-fade-x px-5 py-0.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:[mask-image:none] sm:px-0">
             {categories.map((entry) => {
               const current = entry.slug === category.slug;
               return (
-                <li key={entry.id} className="shrink-0">
+                <li key={entry.id} className="flex shrink-0">
                   <Link
                     href={`/parts/${entry.slug}`}
                     aria-current={current ? "page" : undefined}
-                    className={cn(
-                      "inline-flex min-h-10 items-center rounded-xs border px-3.5 font-display text-micro tracking-hud whitespace-nowrap uppercase",
-                      "transition-colors duration-(--duration-fast)",
-                      current
-                        ? "border-gold-600 bg-gold-500/10 text-gold-300"
-                        : "border-line text-ink-300 hover:border-gold-800 hover:text-gold-200",
-                    )}
+                    className={chipClasses(current)}
                   >
                     {entry.name}
                   </Link>
@@ -152,32 +132,28 @@ export function PartCategoryView({ data }: { data: PartCategoryPageData }) {
 
         <h2 className="sr-only">Components in {category.name}</h2>
         {category.parts.length > 0 ? (
-          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {category.parts.map((part) => (
-              <li key={part.id}>
-                <PartCard
-                  part={{
-                    slug: part.slug,
-                    name: part.name,
-                    summary: firstSentence(part.function ?? part.description),
-                    // Worth saying per card only when the category spans systems.
-                    systemLabel:
-                      groups.length > 1 && part.viewer_group
-                        ? GROUP_LABELS[part.viewer_group]
-                        : null,
-                    usageCount: part.usageCount,
-                  }}
-                />
-              </li>
-            ))}
-          </ul>
+          <PartList
+            className="mt-10"
+            parts={category.parts.map((part) => ({
+              key: part.id,
+              slug: part.slug,
+              name: part.name,
+              summary: firstSentence(part.function ?? part.description),
+              // Worth saying per row only when the category spans systems.
+              systemLabel:
+                groups.length > 1 && part.viewer_group
+                  ? GROUP_LABELS[part.viewer_group]
+                  : null,
+              usageCount: part.usageCount,
+            }))}
+          />
         ) : (
-          <p className="mt-10 text-sm text-ink-500">
+          <p className="mt-10 text-body text-ink-400">
             No components are recorded in this category yet.
           </p>
         )}
 
-        <p className="mt-20 border-t border-line pt-8 text-xs leading-relaxed text-ink-500">
+        <p className="mt-20 max-w-[68ch] border-t border-line-subtle pt-8 text-caption">
           Component descriptions are general engineering explanations, not specific to any
           one vehicle.
         </p>

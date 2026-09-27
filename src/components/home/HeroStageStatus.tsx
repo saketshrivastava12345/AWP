@@ -32,7 +32,12 @@ export function HeroStageStatus({ className }: { className?: string }) {
     <div role="status" className={cn("flex flex-wrap items-center gap-x-3", className)}>
       {note ? <p className="min-w-0 text-caption">{note}</p> : null}
       {canOptIn ? (
-        <Button variant="ghost" size="sm" onClick={optIn} className="-ml-4 lg:-mr-4 lg:ml-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={optIn}
+          className="-ml-4 lg:-mr-4 lg:ml-0"
+        >
           <Box aria-hidden="true" />
           Load 3D scene
         </Button>

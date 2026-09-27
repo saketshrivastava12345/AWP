@@ -64,42 +64,24 @@ function toExplorer(index: PartsIndexCategory[]): ExplorerCategory[] {
 export default async function PartsPage() {
   const index = await getPartsIndex();
   const parts = index.flatMap((category) => category.parts);
-  const systems = new Set(parts.map((part) => part.viewer_group).filter(Boolean));
-  const recorded = parts.filter((part) => part.usageCount > 0).length;
   const hasData = parts.length > 0;
 
   return (
     <>
       <IndexHero
-        overline="Anatomy of the machine"
-        title="COMPONENTS, EXPLAINED"
+        title="Parts encyclopedia"
         lead={
           <p>
-            What each part does, what it is made of, where it sits, how it fails and what
-            it actually contributes. Filter by name, material or job, or open a category.
+            What each component does, what it is made of, where it sits, how it fails and
+            what it actually contributes.
+            {hasData
+              ? ` ${formatNumber(parts.length)} components in ${formatNumber(index.length)} categories: filter by name, material or job, or open a category.`
+              : null}
           </p>
-        }
-        stats={
-          hasData
-            ? [
-                { label: "Components", value: formatNumber(parts.length) },
-                { label: "Categories", value: formatNumber(index.length) },
-                {
-                  label: "3D systems",
-                  value: formatNumber(systems.size),
-                  hint: "The subsystems the 3D viewer separates a car into; every component belongs to one.",
-                },
-                {
-                  label: "In use",
-                  value: formatNumber(recorded),
-                  hint: "Components that at least one published car records, with a note specific to that car.",
-                },
-              ]
-            : []
         }
       />
 
-      <Container className="py-12 sm:py-16">
+      <Container className="pb-24 lg:pb-32">
         {hasData ? (
           <PartsExplorer categories={toExplorer(index)} />
         ) : (
@@ -110,7 +92,7 @@ export default async function PartsPage() {
           />
         )}
 
-        <p className="mt-20 border-t border-line pt-8 text-xs leading-relaxed text-ink-500">
+        <p className="mt-20 max-w-[68ch] border-t border-line-subtle pt-8 text-caption">
           Component descriptions are general engineering explanations, not specific to any
           one vehicle. Where a car&apos;s own component differs, its page says so.
         </p>

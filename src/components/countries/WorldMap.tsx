@@ -76,7 +76,6 @@ export function WorldMap({
   return (
     <figure className={cn("relative", className)}>
       <div className="relative">
-
         <svg
           viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT.toFixed(2)}`}
           className="block h-auto w-full"

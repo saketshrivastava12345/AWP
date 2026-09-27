@@ -40,7 +40,7 @@ export function CountryLocator({
     <figure className={cn("relative", className)}>
       <svg
         viewBox={`${left.toFixed(1)} ${top.toFixed(1)} ${width} ${height.toFixed(1)}`}
-        className="block h-auto w-full"
+        className="block h-auto w-full [mask-image:radial-gradient(ellipse_at_center,black_55%,transparent_100%)]"
         role="img"
         aria-label={`Location of ${name} on a world map`}
       >

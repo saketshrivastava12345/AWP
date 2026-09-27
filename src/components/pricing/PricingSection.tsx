@@ -25,6 +25,7 @@ import {
   MARKET_PENDING_SCRIPT,
 } from "@/lib/pricing/market-url";
 import { cn } from "@/lib/utils";
+import type { ListedPriceData } from "@/components/cars/ListedPrice";
 import { MarketSelector } from "./MarketSelector";
 import { PriceSummary } from "./PriceSummary";
 import { PriceProvenance } from "./PriceProvenance";
@@ -37,6 +38,11 @@ export type PricingSectionProps = {
   pricing: VariantPricing;
   /** Used in captions and empty states: "911 GT3". */
   variantName: string;
+  /**
+   * The base price recorded on the variant without a market or source (the
+   * header shows it as unverified), so the empty state can acknowledge it.
+   */
+  recordedBasePrice?: ListedPriceData | null;
   className?: string;
 };
 
@@ -54,6 +60,7 @@ export function PricingSection({
   geography,
   pricing,
   variantName,
+  recordedBasePrice = null,
   className,
 }: PricingSectionProps) {
   const { current, history } = pricing;
@@ -106,7 +113,11 @@ export function PricingSection({
       history.find((row) => row.effective_to !== null)?.effective_from ?? null;
     return (
       <div className={cn("space-y-6", className)}>
-        <NoPriceData variantName={variantName} lastRecorded={lastRecorded} />
+        <NoPriceData
+          variantName={variantName}
+          lastRecorded={lastRecorded}
+          recordedBasePrice={recordedBasePrice}
+        />
         <Disclaimer />
       </div>
     );
@@ -153,7 +164,7 @@ export function PricingSection({
               onSelect={choose}
             />
             {source === "default" && applied ? (
-              <p className="mt-3 text-xs leading-relaxed text-ink-400">
+              <p className="mt-3 text-caption">
                 Showing the most recently verified market. Choose yours above.
               </p>
             ) : null}
@@ -202,7 +213,7 @@ export function PricingSection({
 
 function Disclaimer() {
   return (
-    <p className="flex items-start gap-2.5 border-t border-line-subtle pt-5 text-xs leading-relaxed text-ink-500">
+    <p className="flex max-w-[80ch] items-start gap-2.5 border-t border-line-subtle pt-5 text-caption">
       <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
       <span>
         Prices vary by dealer, insurance provider, variant, tax rules and registration

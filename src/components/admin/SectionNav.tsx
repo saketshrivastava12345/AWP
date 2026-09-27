@@ -14,7 +14,7 @@ export function SectionNav({ links, label }: { links: SectionLink[]; label: stri
   const pathname = usePathname();
   return (
     <nav aria-label={label} className="mt-5 -mb-6">
-      <ul className="flex [scrollbar-width:none] gap-x-1 overflow-x-auto md:flex-wrap md:overflow-visible">
+      <ul className="no-scrollbar flex gap-x-6 overflow-x-auto md:flex-wrap md:overflow-visible">
         {links.map((link) => {
           const active = pathname === link.href;
           return (
@@ -23,17 +23,15 @@ export function SectionNav({ links, label }: { links: SectionLink[]; label: stri
                 href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "-mb-px flex min-h-11 items-center gap-1.5 border-b px-2.5 font-display text-micro tracking-hud whitespace-nowrap uppercase transition-colors",
+                  "-mb-px flex min-h-12 items-center gap-1.5 border-b-2 text-body-s whitespace-nowrap transition-colors duration-(--duration-fast)",
                   active
-                    ? "border-gold-500 text-gold-300"
-                    : "border-transparent text-ink-400 hover:text-ink-100",
+                    ? "border-gold-500 text-ink-50"
+                    : "border-transparent text-ink-300 hover:text-ink-50",
                 )}
               >
                 {link.label}
                 {link.count ? (
-                  <span className="font-mono text-nano tracking-normal text-ink-500">
-                    {link.count}
-                  </span>
+                  <span className="text-caption tabular-nums">{link.count}</span>
                 ) : null}
               </Link>
             </li>

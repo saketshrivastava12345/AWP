@@ -3,11 +3,13 @@ import { Container } from "@/components/ui/Container";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { ButtonLink } from "@/components/ui/Button";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { StatCard, StatRow } from "@/components/ui/StatCard";
 import { GROUP_LABELS } from "@/components/3d/viewer-config";
-import { PartCard } from "./PartCard";
+import { cn } from "@/lib/utils";
+import { PartList } from "./PartCard";
 import { PartApplications } from "./PartApplications";
 import { PartLocationFigure } from "./PartLocationFigure";
-import { firstSentence, usageLabel } from "./parts-helpers";
+import { firstSentence } from "./parts-helpers";
 import { breadcrumbJsonLd, serializeJsonLd, type JsonLd } from "@/lib/json-ld";
 import { carDisplayName } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
@@ -71,6 +73,17 @@ export function PartDetailView({ data }: { data: PartPageData }) {
     siteConfig.url,
   );
 
+  const facts = [
+    { label: "Category", value: category.name },
+    ...(systemLabel ? [{ label: "3D system", value: systemLabel }] : []),
+    {
+      label: "Catalogued cars",
+      value: String(applications.length),
+      hint: "Published cars that record this part, each with a note specific to that car.",
+    },
+    { label: "Related parts", value: String(related.length) },
+  ];
+
   return (
     <>
       <script
@@ -78,13 +91,8 @@ export function PartDetailView({ data }: { data: PartPageData }) {
         dangerouslySetInnerHTML={{ __html: serializeJsonLd([term, breadcrumbs]) }}
       />
 
-      <section className="relative isolate overflow-hidden border-b border-line">
-        <div aria-hidden="true" className="absolute inset-0 -z-10 tech-grid opacity-80" />
-        <div
-          aria-hidden="true"
-          className="absolute -top-48 -right-40 -z-10 h-[28rem] w-[40rem] max-w-none rounded-full bg-gold-700/10 blur-[150px]"
-        />
-        <Container className="pt-8 pb-14 sm:pt-10 sm:pb-16">
+      <section className="border-b border-line-subtle">
+        <Container className="pt-6 pb-12 lg:pt-8 lg:pb-16">
           <Breadcrumbs
             items={[
               { label: "Parts", href: "/parts" },
@@ -94,39 +102,24 @@ export function PartDetailView({ data }: { data: PartPageData }) {
           />
 
           <div
-            className={
-              group
-                ? "mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] lg:items-start"
-                : "mt-10"
-            }
+            className={cn(
+              "mt-10 lg:mt-12",
+              group && "grid gap-12 lg:grid-cols-12 lg:items-center lg:gap-12",
+            )}
           >
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className={cn("min-w-0", group ? "lg:col-span-6" : "max-w-3xl")}>
+              <p className="text-eyebrow">
                 <Link
                   href={`/parts/${category.slug}`}
-                  className="text-hud transition-colors duration-(--duration-fast) hover:text-gold-300"
+                  className="inline-flex min-h-6 items-center transition-colors duration-(--duration-fast) hover:text-ink-50"
                 >
                   {category.name}
                 </Link>
-                {systemLabel ? (
-                  <span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.08em] text-gold-400 uppercase">
-                    <span
-                      className="size-1.5 rounded-full bg-gold-500"
-                      aria-hidden="true"
-                    />
-                    3D system · {systemLabel}
-                  </span>
-                ) : null}
-              </div>
-
-              <h1 className="mt-5 font-display text-[clamp(1.75rem,5.5vw,3.75rem)] leading-[1.08] tracking-[0.04em] break-words text-ink-50 uppercase">
-                {part.name}
-              </h1>
+              </p>
+              <h1 className="mt-4 text-display-l hyphens-auto">{part.name}</h1>
 
               {part.description ? (
-                <p className="mt-7 max-w-2xl text-base leading-relaxed text-ink-300 sm:text-lg">
-                  {part.description}
-                </p>
+                <p className="mt-6 max-w-[60ch] text-lead">{part.description}</p>
               ) : null}
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -138,7 +131,7 @@ export function PartDetailView({ data }: { data: PartPageData }) {
                 </ButtonLink>
               </div>
               {showcaseHref && showcaseName ? (
-                <p className="mt-3 max-w-xl text-xs leading-relaxed text-ink-500">
+                <p className="mt-4 max-w-[60ch] text-caption">
                   Opens the {showcaseName}
                   {systemLabel
                     ? ` with its ${systemLabel.toLowerCase()} system selected`
@@ -149,117 +142,95 @@ export function PartDetailView({ data }: { data: PartPageData }) {
             </div>
 
             {group ? (
-              <PartLocationFigure groups={[group]} id={`part-${part.slug}`} />
+              <PartLocationFigure
+                groups={[group]}
+                id={`part-${part.slug}`}
+                className="lg:col-span-6"
+              />
             ) : null}
           </div>
+
+          <StatRow className="mt-12 lg:mt-16">
+            {facts.map((fact) => (
+              <StatCard
+                key={fact.label}
+                label={fact.label}
+                value={fact.value}
+                hint={fact.hint}
+                size="sm"
+              />
+            ))}
+          </StatRow>
         </Container>
       </section>
 
-      <Container className="py-14 sm:py-16">
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-16">
-          <section aria-labelledby="engineering-heading">
-            <h2 id="engineering-heading" className="text-label">
-              Engineering notes
-            </h2>
-            {aspects.length > 0 ? (
-              <dl className="mt-6 border-t border-line">
-                {aspects.map((aspect, index) => (
-                  <div
-                    key={aspect.key}
-                    className="grid gap-3 border-b border-line-subtle py-7 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-8"
-                  >
-                    <dt className="flex items-baseline gap-3 font-display text-[11px] tracking-hud text-ink-100 uppercase">
-                      <span className="tabular font-mono text-[11px] tracking-normal text-gold-500">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      {aspect.label}
-                    </dt>
-                    <dd className="max-w-3xl text-[15px] leading-[1.8] text-ink-300">
-                      {aspect.body}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            ) : (
-              <p className="mt-6 text-sm text-ink-500">
-                No engineering notes are recorded for this part yet.
-              </p>
-            )}
-          </section>
-
-          <aside aria-label="At a glance" className="lg:pt-10">
-            <dl className="edge-light border border-line bg-surface-1/70 p-5 text-sm">
-              <div className="border-b border-line-subtle pb-4">
-                <dt className="text-label">Category</dt>
-                <dd className="mt-1.5">
-                  <Link
-                    href={`/parts/${category.slug}`}
-                    className="text-ink-100 transition-colors hover:text-gold-300"
-                  >
-                    {category.name}
-                  </Link>
-                </dd>
+      <Container
+        as="section"
+        aria-labelledby="engineering-heading"
+        className="py-16 lg:py-24"
+      >
+        <h2 id="engineering-heading" className="text-h2">
+          Engineering notes
+        </h2>
+        {aspects.length > 0 ? (
+          <dl className="mt-10 grid gap-x-16 gap-y-10 border-t border-line-subtle pt-10 lg:grid-cols-2">
+            {aspects.map((aspect) => (
+              <div key={aspect.key} className="min-w-0">
+                <dt className="text-h4">{aspect.label}</dt>
+                <dd className="mt-3 max-w-[68ch] text-body">{aspect.body}</dd>
               </div>
-              <div className="border-b border-line-subtle py-4">
-                <dt className="text-label">3D system</dt>
-                <dd className="mt-1.5 text-ink-100">{systemLabel ?? "Not assigned"}</dd>
-              </div>
-              <div className="border-b border-line-subtle py-4">
-                <dt className="text-label">Catalogued cars</dt>
-                <dd className="mt-1.5 text-ink-100">
-                  {usageLabel(applications.length) ?? "None record it yet"}
-                </dd>
-              </div>
-              <div className="pt-4">
-                <dt className="text-label">Related parts</dt>
-                <dd className="tabular mt-1.5 font-mono text-ink-100">
-                  {related.length}
-                </dd>
-              </div>
-            </dl>
-          </aside>
-        </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="mt-6 text-body text-ink-400">
+            No engineering notes are recorded for this part yet.
+          </p>
+        )}
+      </Container>
 
-        {related.length > 0 ? (
-          <section className="mt-20" aria-labelledby="related-heading">
-            <SectionHeading
-              overline="Works with"
-              title={<span id="related-heading">Related components</span>}
-              description="Parts that work directly with this one."
-            />
-            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {related.map((item) => (
-                <li key={item.id}>
-                  <PartCard
-                    part={{
-                      slug: item.slug,
-                      name: item.name,
-                      summary: firstSentence(item.function ?? item.description),
-                      systemLabel: item.viewer_group
-                        ? GROUP_LABELS[item.viewer_group]
-                        : null,
-                    }}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
+      {related.length > 0 ? (
+        <Container
+          as="section"
+          aria-labelledby="related-heading"
+          className="border-t border-line-subtle py-16 lg:py-24"
+        >
+          <SectionHeading
+            id="related-heading"
+            title="Related components"
+            description="Parts that work directly with this one."
+          />
+          <PartList
+            className="mt-10"
+            parts={related.map((item) => ({
+              key: item.id,
+              slug: item.slug,
+              name: item.name,
+              summary: firstSentence(item.function ?? item.description),
+              systemLabel: item.viewer_group ? GROUP_LABELS[item.viewer_group] : null,
+            }))}
+          />
+        </Container>
+      ) : null}
 
-        {applications.length > 0 ? (
-          <section className="mt-20" aria-labelledby="applications-heading">
-            <SectionHeading
-              overline="In the catalogue"
-              title={<span id="applications-heading">Cars that record this part</span>}
-              description="Each with the detail that is specific to that car. Open one to see the part in its 3D viewer."
-            />
-            <div className="mt-8">
-              <PartApplications applications={applications} />
-            </div>
-          </section>
-        ) : null}
+      {applications.length > 0 ? (
+        <Container
+          as="section"
+          aria-labelledby="applications-heading"
+          className="border-t border-line-subtle py-16 lg:py-24"
+        >
+          <SectionHeading
+            id="applications-heading"
+            title="Cars that record this part"
+            description="Each with the detail that is specific to that car. Open one to see the part in its 3D viewer."
+          />
+          <div className="mt-10">
+            <PartApplications applications={applications} />
+          </div>
+        </Container>
+      ) : null}
 
-        <p className="mt-20 border-t border-line pt-8 text-xs leading-relaxed text-ink-500">
+      <Container className="pb-24">
+        <p className="max-w-[68ch] border-t border-line-subtle pt-8 text-caption">
           Component descriptions are general engineering explanations, not specific to any
           one vehicle; a car&apos;s own note above says where it differs.
         </p>

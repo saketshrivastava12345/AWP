@@ -82,10 +82,11 @@ export async function VehicleHeader({
         {/* ------------------------------------------------------- Name */}
         <header className="@container min-w-0 lg:col-span-5 lg:row-start-1">
           <h1>
-            <span className="block text-lead text-ink-300">
-              {manufacturer.name}
-            </span>
-            <span className="mt-3 block text-display-xl" style={nameplateSize(model.name)}>
+            <span className="block text-lead text-ink-300">{manufacturer.name}</span>
+            <span
+              className="mt-3 block text-display-xl"
+              style={nameplateSize(model.name)}
+            >
               {model.name}
             </span>
             {variantLine ? (
@@ -110,7 +111,10 @@ export async function VehicleHeader({
                 <span className="inline-flex items-center gap-2">
                   {meta.length > 0 ? <Dot /> : null}
                   <span>{lifecycle.label}</span>
-                  <InfoHint label={`About the status: ${lifecycle.label}`} className="-ml-1">
+                  <InfoHint
+                    label={`About the status: ${lifecycle.label}`}
+                    className="-ml-1"
+                  >
                     {lifecycle.derived
                       ? `Derived from the recorded production years: ${lowerFirst(lifecycle.detail)}.`
                       : "Lifecycle status as recorded in the catalogue."}
@@ -231,9 +235,7 @@ function hasAmount(price: ListedPriceData): boolean {
       ? Number(price.listed_price)
       : price.listed_price;
   return (
-    amount !== null &&
-    Number.isFinite(amount) &&
-    Boolean(price.listed_price_currency)
+    amount !== null && Number.isFinite(amount) && Boolean(price.listed_price_currency)
   );
 }
 

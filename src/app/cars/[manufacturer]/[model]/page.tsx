@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeftRight, ArrowRight } from "lucide-react";
+import { ArrowLeftRight } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Badge } from "@/components/ui/Badge";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { ButtonLink } from "@/components/ui/Button";
+import { StatRow } from "@/components/ui/StatCard";
+import { SubNav } from "@/components/ui/SubNav";
 import { CarGrid } from "@/components/cars/CarGrid";
-import { CarPhoto } from "@/components/cars/CarPhoto";
-import { Silhouette } from "@/components/cars/catalogue/Silhouette";
+import { HierarchyHero } from "@/components/cars/catalogue/HierarchyHero";
 import { CatalogueUnavailable } from "@/components/cars/catalogue/CatalogueUnavailable";
 import { JsonLdScript } from "@/components/cars/catalogue/JsonLdScript";
 import { SpecRange } from "@/components/cars/catalogue/SpecRange";
@@ -22,7 +22,7 @@ import { compareHref, toCompareSlug, MAX_COMPARE } from "@/lib/compare-slug";
 import { breadcrumbJsonLd } from "@/lib/json-ld";
 import { PLACEHOLDER_PARAM, withPlaceholder } from "@/lib/static-params";
 import { BODY_LABELS } from "@/lib/facets";
-import { formatNumber, formatYearRange } from "@/lib/format";
+import { firstSentence, formatNumber, formatYearSpan } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
 
@@ -76,7 +76,7 @@ export async function generateMetadata({
 }
 
 function yearsLabel(start: number | null, end: number | null): string | null {
-  return start !== null ? formatYearRange(start, end) : null;
+  return start !== null ? formatYearSpan(start, end) : null;
 }
 
 /** "2 of 3 variants publish this", when not all of them do. */
@@ -109,6 +109,15 @@ export default async function ModelPage({
     .filter((slug): slug is string => slug !== null)
     .slice(0, MAX_COMPARE);
   const hasElectric = ranges.electricRange !== null;
+  const span = yearsLabel(years.start, years.end);
+
+  // One sentence in the hero; the rest of the description, if any, opens
+  // the overview.
+  const opening = firstSentence(model.description);
+  const remainder =
+    model.description && opening && model.description.trim().length > opening.length
+      ? model.description.trim().slice(opening.length).trim()
+      : null;
 
   const crumbs = [
     { name: "Cars", path: "/cars" },
@@ -125,11 +134,23 @@ export default async function ModelPage({
     );
   }
 
+  const facts = [
+    { label: "Brand", value: manufacturer.name },
+    { label: "Segment", value: category.name },
+    { label: "Body style", value: BODY_LABELS[model.body_type] },
+    { label: "Country", value: country.name },
+  ];
+
   return (
     <>
       <JsonLdScript data={breadcrumbJsonLd(crumbs, siteConfig.url)} />
 
-      <Container className="pt-10 pb-20 sm:pt-12">
+      <HierarchyHero
+        image={lead?.primary_image_url ?? null}
+        imageAlt={`${name} ${lead?.variant_name ?? ""}`.trim()}
+        bodyType={model.body_type}
+        fuelType={lead?.fuel_type ?? null}
+      >
         <Breadcrumbs
           items={[
             { label: "Cars", href: "/cars" },
@@ -137,232 +158,214 @@ export default async function ModelPage({
             { label: model.name },
           ]}
         />
-
-        <header className="mt-8 grid gap-10 md:grid-cols-[minmax(0,1fr)_17rem] md:items-center lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-          <div>
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-label">
-              <Link
-                href={`/cars/${manufacturer.slug}`}
-                className="text-gold-400 transition-colors hover:text-gold-200"
-              >
-                {manufacturer.name}
-              </Link>
-              <span aria-hidden="true" className="text-ink-600">
-                /
-              </span>
-              <span>{category.name}</span>
-              <span aria-hidden="true" className="text-ink-600">
-                /
-              </span>
-              <span>{BODY_LABELS[model.body_type]}</span>
-            </p>
-
-            <h1 className="mt-5 font-display text-3xl tracking-[0.04em] text-ink-50 sm:text-4xl lg:text-5xl">
-              <span className="sr-only">{manufacturer.name} </span>
-              {model.name}
-            </h1>
-
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              {generations.map((generation) => (
-                <Badge key={generation.id} tone="gold">
-                  {generation.name}
-                </Badge>
-              ))}
-              {yearsLabel(years.start, years.end) ? (
-                <span className="tabular font-mono text-xs text-ink-400">
-                  {yearsLabel(years.start, years.end)}
-                </span>
-              ) : null}
-              <span className="text-xs text-ink-500">
-                ·{" "}
-                {country.flag_emoji ? (
-                  <span aria-hidden="true">{country.flag_emoji} </span>
-                ) : null}
-                {country.name}
-              </span>
-            </div>
-
-            {model.description ? (
-              <p className="mt-6 max-w-2xl leading-relaxed text-ink-300">
-                {model.description}
-              </p>
+        <p className="mt-6 text-body-s text-ink-300">{manufacturer.name}</p>
+        <h1 className="mt-1 text-display-xl">
+          <span className="sr-only">{manufacturer.name} </span>
+          {model.name}
+        </h1>
+        {generations.length > 0 || span ? (
+          <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+            {generations.map((generation) => (
+              <Badge key={generation.id} className="bg-void/50 backdrop-blur-md">
+                {generation.name}
+              </Badge>
+            ))}
+            {span ? (
+              <span className="text-body-s text-ink-300">Model years {span}</span>
             ) : null}
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              {compareSlugs.length >= 2 ? (
-                <ButtonLink href={compareHref(compareSlugs)} size="md">
-                  <ArrowLeftRight className="size-4" aria-hidden="true" />
-                  {variants.length <= MAX_COMPARE
-                    ? `Compare all ${variants.length} variants`
-                    : `Compare the top ${MAX_COMPARE} of ${variants.length}`}
-                </ButtonLink>
-              ) : null}
-              <ButtonLink
-                href={`/cars/${manufacturer.slug}`}
-                variant="secondary"
-                size="md"
-              >
-                All {manufacturer.name} models
-                <ArrowRight className="size-3.5" aria-hidden="true" />
-              </ButtonLink>
-            </div>
           </div>
+        ) : null}
+        {opening ? <p className="mt-5 max-w-2xl text-lead">{opening}</p> : null}
 
-          {lead ? (
-            <div className="relative aspect-[16/10] overflow-hidden rounded-md border border-line bg-surface-2">
-              {lead.primary_image_url ? (
-                <CarPhoto
-                  src={lead.primary_image_url}
-                  alt={`${name} ${lead.variant_name ?? ""}`.trim()}
-                  sizes="(min-width: 1024px) 416px, (min-width: 768px) 272px, 100vw"
-                  loading="preload"
-                  fallback={
-                    <Silhouette bodyType={model.body_type} fuelType={lead.fuel_type} />
-                  }
-                />
-              ) : (
-                <Silhouette bodyType={model.body_type} fuelType={lead.fuel_type} />
-              )}
-            </div>
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+          {compareSlugs.length >= 2 ? (
+            <ButtonLink href={compareHref(compareSlugs)} size="md">
+              <ArrowLeftRight aria-hidden="true" />
+              {variants.length <= MAX_COMPARE
+                ? `Compare all ${variants.length} variants`
+                : `Compare the top ${MAX_COMPARE} of ${variants.length}`}
+            </ButtonLink>
           ) : null}
-        </header>
+          <ButtonLink href={`/cars/${manufacturer.slug}`} variant="link" size="md">
+            All {manufacturer.name} models
+          </ButtonLink>
+        </div>
+      </HierarchyHero>
 
-        <section aria-labelledby="range-heading" className="mt-16">
-          <h2
-            id="range-heading"
-            className="font-display text-sm tracking-[0.18em] text-ink-50 uppercase"
-          >
-            Across the range
-          </h2>
-          <p className="mt-2 text-sm text-ink-400">
-            Lowest to highest published figure among the {formatNumber(variants.length)}{" "}
-            {variants.length === 1 ? "variant" : "variants"} below.
-          </p>
+      <SubNav
+        items={[
+          { label: "Overview", href: "#overview" },
+          { label: "Variants", href: "#variants" },
+          ...(generations.length > 0
+            ? [
+                {
+                  label: generations.length === 1 ? "Generation" : "Generations",
+                  href: "#generation",
+                },
+              ]
+            : []),
+        ]}
+      />
+
+      <Container
+        as="section"
+        id="overview"
+        aria-labelledby="overview-heading"
+        className="pt-16 lg:pt-24"
+      >
+        <h2 id="overview-heading" className="text-h2">
+          Across the range
+        </h2>
+        <p className="mt-4 max-w-2xl text-lead">
+          Lowest to highest published figure among the{" "}
+          {variants.length === 1
+            ? "one variant"
+            : `${formatNumber(variants.length)} variants`}{" "}
+          below.
+        </p>
+
+        <StatRow
+          className={cn("mt-10", hasElectric ? "lg:grid-cols-5" : "lg:grid-cols-4")}
+        >
+          <SpecRange
+            label="Power"
+            unit="hp"
+            range={ranges.power}
+            note={coverage(
+              variants.map((variant) => variant.power_hp),
+              ranges.power,
+            )}
+          />
+          <SpecRange
+            label="Torque"
+            unit="Nm"
+            range={ranges.torque}
+            note={coverage(
+              variants.map((variant) => variant.torque_nm),
+              ranges.torque,
+            )}
+          />
+          <SpecRange
+            label="0–100 km/h"
+            unit="s"
+            decimals={1}
+            range={ranges.zeroTo100}
+            note={coverage(
+              variants.map((variant) => variant.zero_to_100_s),
+              ranges.zeroTo100,
+            )}
+          />
+          <SpecRange
+            label="Top speed"
+            unit="km/h"
+            range={ranges.topSpeed}
+            note={coverage(
+              variants.map((variant) => variant.top_speed_kmh),
+              ranges.topSpeed,
+            )}
+          />
+          {hasElectric ? (
+            <SpecRange
+              label="Electric range"
+              unit="km"
+              range={ranges.electricRange}
+              note={coverage(
+                variants.map((variant) => variant.range_km),
+                ranges.electricRange,
+              )}
+            />
+          ) : null}
+        </StatRow>
+
+        <div className="mt-16 grid gap-10 lg:grid-cols-12 lg:gap-12">
+          {remainder ? <p className="text-body lg:col-span-7">{remainder}</p> : null}
           <dl
             className={cn(
-              "mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-3",
-              hasElectric ? "lg:grid-cols-5" : "lg:grid-cols-4",
+              "grid grid-cols-2 gap-x-8 sm:grid-cols-4",
+              remainder ? "lg:col-span-5 lg:grid-cols-2" : "lg:col-span-12",
             )}
           >
-            <SpecRange
-              label="Power"
-              unit="hp"
-              range={ranges.power}
-              note={coverage(
-                variants.map((variant) => variant.power_hp),
-                ranges.power,
-              )}
-            />
-            <SpecRange
-              label="Torque"
-              unit="Nm"
-              range={ranges.torque}
-              note={coverage(
-                variants.map((variant) => variant.torque_nm),
-                ranges.torque,
-              )}
-            />
-            <SpecRange
-              label="0–100 km/h"
-              unit="s"
-              decimals={1}
-              range={ranges.zeroTo100}
-              note={coverage(
-                variants.map((variant) => variant.zero_to_100_s),
-                ranges.zeroTo100,
-              )}
-            />
-            <SpecRange
-              label="Top speed"
-              unit="km/h"
-              range={ranges.topSpeed}
-              note={coverage(
-                variants.map((variant) => variant.top_speed_kmh),
-                ranges.topSpeed,
-              )}
-            />
-            {hasElectric ? (
-              <SpecRange
-                label="Electric range"
-                unit="km"
-                range={ranges.electricRange}
-                note={coverage(
-                  variants.map((variant) => variant.range_km),
-                  ranges.electricRange,
-                )}
-              />
-            ) : null}
+            {facts.map((fact) => (
+              <div key={fact.label} className="border-t border-line-subtle py-4">
+                <dt className="text-caption text-ink-400">{fact.label}</dt>
+                <dd className="mt-1 text-body-s text-ink-100">{fact.value}</dd>
+              </div>
+            ))}
           </dl>
-        </section>
+        </div>
+      </Container>
 
-        {generations.length > 0 ? (
-          <section aria-labelledby="generations-heading" className="mt-16">
-            <h2
-              id="generations-heading"
-              className="font-display text-sm tracking-[0.18em] text-ink-50 uppercase"
-            >
-              {generations.length === 1 ? "Generation" : "Generations"}
-            </h2>
-            <ol
-              className={cn(
-                "mt-6 grid gap-4",
-                generations.length > 1 && "sm:grid-cols-2 lg:grid-cols-3",
-              )}
-            >
-              {generations.map((generation, index) => {
-                const count = variantsByGeneration.get(generation.name) ?? 0;
-                const span = yearsLabel(generation.year_start, generation.year_end);
-                return (
-                  <li
-                    key={generation.id}
-                    className="relative rounded-md border border-line bg-surface-1 px-5 py-5"
-                  >
-                    {generations.length > 1 ? (
-                      <span className="text-hud text-ink-500">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                    ) : null}
-                    <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <span className="font-display text-lg tracking-[0.04em] text-gold-200">
-                        {generation.name}
-                      </span>
-                      <span className="tabular font-mono text-xs text-ink-400">
-                        {span ?? "Years not recorded"}
-                      </span>
-                    </p>
-                    {generation.description ? (
-                      <p className="mt-3 text-sm leading-relaxed text-ink-300">
-                        {generation.description}
-                      </p>
-                    ) : null}
-                    <p className="mt-3 text-xs text-ink-500">
-                      {count > 0
-                        ? `${formatNumber(count)} ${count === 1 ? "variant" : "variants"} in the catalogue`
-                        : "No variant of this generation is catalogued"}
-                    </p>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
-        ) : null}
+      <Container
+        as="section"
+        id="variants"
+        aria-labelledby="variants-heading"
+        className="pt-20 lg:pt-28"
+      >
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <h2 id="variants-heading" className="text-h2">
+            {variants.length === 1 ? "The variant" : "Variants"}
+          </h2>
+          <p className="text-body-s text-ink-400">
+            {formatNumber(variants.length)} in the catalogue
+          </p>
+        </div>
+        <CarGrid
+          cars={variants}
+          columns={variants.length <= 2 ? "two" : "three"}
+          label={`${name} variants`}
+          className="mt-10"
+        />
+      </Container>
 
-        <section aria-labelledby="variants-heading" className="mt-16">
-          <div className="flex items-baseline justify-between gap-4 border-b border-line pb-4">
-            <h2
-              id="variants-heading"
-              className="font-display text-sm tracking-[0.18em] text-ink-50 uppercase"
-            >
-              Variants
-            </h2>
-            <span className="tabular font-mono text-xs text-ink-500">
-              {formatNumber(variants.length)}
-            </span>
-          </div>
-          <CarGrid cars={variants} className="mt-8" />
-        </section>
+      {generations.length > 0 ? (
+        <Container
+          as="section"
+          id="generation"
+          aria-labelledby="generation-heading"
+          className="pt-20 lg:pt-28"
+        >
+          <h2 id="generation-heading" className="text-h2">
+            {generations.length === 1 ? "Generation" : "Generations"}
+          </h2>
+          <ol
+            className={cn(
+              "mt-10 grid gap-x-10 border-t border-line",
+              generations.length > 1 && "sm:grid-cols-2 lg:grid-cols-3",
+            )}
+          >
+            {generations.map((generation) => {
+              const count = variantsByGeneration.get(generation.name) ?? 0;
+              const genSpan = yearsLabel(generation.year_start, generation.year_end);
+              return (
+                <li key={generation.id} className="relative pt-8 pb-4">
+                  {/* A mark on the timeline rule above. */}
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-[5px] left-0 size-[9px] rounded-full border border-ink-400 bg-void"
+                  />
+                  <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                    <span className="text-h3">{generation.name}</span>
+                    <span className="tabular text-body-s text-ink-300">
+                      {genSpan ?? "Years not recorded"}
+                    </span>
+                  </p>
+                  {generation.description ? (
+                    <p className="mt-3 max-w-prose text-body">{generation.description}</p>
+                  ) : null}
+                  <p className="mt-3 text-caption text-ink-400">
+                    {count > 0
+                      ? `${formatNumber(count)} ${count === 1 ? "variant" : "variants"} in the catalogue`
+                      : "No variant of this generation is catalogued"}
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
+        </Container>
+      ) : null}
 
-        <p className="mt-20 border-t border-line pt-8 text-xs leading-relaxed text-ink-500">
+      <Container className="pt-20 pb-24 lg:pt-28">
+        <p className="max-w-3xl border-t border-line-subtle pt-8 text-caption text-ink-400">
           {siteConfig.disclaimer}
         </p>
       </Container>

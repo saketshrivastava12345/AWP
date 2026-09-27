@@ -164,7 +164,10 @@ export default async function ManufacturerPage({
       />
 
       <BrandHero
-        crumbs={[{ label: "Brands", href: "/manufacturers" }, { label: manufacturer.name }]}
+        crumbs={[
+          { label: "Brands", href: "/manufacturers" },
+          { label: manufacturer.name },
+        ]}
         title={manufacturer.name}
         lead={firstSentence(manufacturer.description, 240)}
         meta={[

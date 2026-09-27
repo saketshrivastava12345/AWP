@@ -46,13 +46,10 @@ export function PriceHistory({
   return (
     <section aria-labelledby={headingId}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3
-          id={headingId}
-          className="font-display text-xs tracking-[0.18em] text-ink-50 uppercase"
-        >
+        <h3 id={headingId} className="text-h4">
           Price history
         </h3>
-        <p className="text-xs text-ink-400">{title}</p>
+        <p className="text-caption">{title}</p>
       </div>
 
       {chart ? (
@@ -61,7 +58,7 @@ export function PriceHistory({
           <HistoryTable points={chart.points} currency={currency} />
         </>
       ) : (
-        <p className="mt-4 border-y border-line-subtle py-4 text-sm leading-relaxed text-ink-400">
+        <p className="mt-4 border-y border-line-subtle py-4 text-body-s text-ink-400">
           {points.length === 1 ? (
             <>
               One observation so far ({formatDate(points[0]!.date)}). History will appear
@@ -293,7 +290,7 @@ function Readout({ point, currency }: { point: PlottedPoint; currency: string })
       aria-hidden="true"
       className={cn(
         "pointer-events-none absolute z-(--z-raised) w-max max-w-[15rem] rounded-sm border border-line-strong",
-        "bg-surface-2/95 px-3 py-2 shadow-lg backdrop-blur-sm",
+        "bg-surface-2/95 px-3 py-2 shadow-overlay backdrop-blur-sm",
         align,
         below ? "translate-y-4" : "-translate-y-[calc(100%+1rem)]",
       )}
@@ -325,7 +322,7 @@ function HistoryTable({
     <details className="group/table mt-4 border-t border-line-subtle">
       <summary
         className={cn(
-          "flex min-h-11 cursor-pointer list-none items-center gap-2 font-display text-[10px] tracking-button text-ink-300 uppercase",
+          "flex min-h-11 cursor-pointer list-none items-center gap-2 text-body-s text-ink-300",
           "transition-colors hover:text-ink-50 [&::-webkit-details-marker]:hidden",
         )}
       >

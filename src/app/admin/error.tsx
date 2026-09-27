@@ -22,21 +22,19 @@ export default function AdminError({
   return (
     <div
       role="alert"
-      className="rounded-md border border-signal-negative/40 bg-signal-negative/5 px-6 py-10"
+      className="rounded-card border-l-2 border-signal-negative bg-surface-1 px-6 py-10"
     >
       <TriangleAlert
         className="size-6 text-signal-negative"
         strokeWidth={1.5}
         aria-hidden="true"
       />
-      <h1 className="mt-4 font-display text-sm tracking-hud text-ink-50 uppercase">
-        This page could not be loaded
-      </h1>
-      <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-300">
+      <h1 className="mt-4 text-h3">This page could not be loaded</h1>
+      <p className="mt-3 max-w-xl text-body">
         Nothing was changed. The database may be unreachable for a moment; try again, or
         go back to the dashboard.
         {error.digest ? (
-          <span className="mt-2 block font-mono text-xs text-ink-500">
+          <span className="mt-2 block font-mono text-xs text-ink-400">
             Reference {error.digest}
           </span>
         ) : null}

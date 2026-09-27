@@ -133,16 +133,13 @@ export function ConfirmAction({
       <Dialog open={open} onClose={close} title={title} size="sm">
         <ActionForm action={action} onSuccess={close}>
           <HiddenFields fields={fields} />
-          <div className="text-sm leading-relaxed text-ink-300">{description}</div>
+          <div className="text-body-s text-ink-300">{description}</div>
           {children ? <div className="mt-4 flex flex-col gap-4">{children}</div> : null}
           {confirmText ? (
             <label className="mt-5 block">
-              <span className="text-label">
-                Type{" "}
-                <span className="font-mono tracking-normal text-ink-100 normal-case">
-                  {confirmText}
-                </span>{" "}
-                to confirm
+              <span className="text-body-s font-medium text-ink-200">
+                Type <span className="font-mono text-ink-50">{confirmText}</span> to
+                confirm
               </span>
               <Input
                 name="confirmation"

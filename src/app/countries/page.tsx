@@ -9,7 +9,7 @@ import { formatNumber } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
 
 const DESCRIPTION =
-  "Automotive nations: the engineering traditions behind the catalogue, the manufacturers each country is home to and the cars they build.";
+  "Automotive nations: the engineering traditions behind the catalogue, the brands each country is home to and the cars they build.";
 
 export const metadata: Metadata = {
   title: "Countries",
@@ -32,30 +32,18 @@ export default async function CountriesPage() {
   return (
     <>
       <IndexHero
-        overline="Origins"
-        title="AUTOMOTIVE NATIONS"
+        title="Countries"
         lead={
           <p>
-            Where a car is engineered shapes what it is engineered for. Explore the map,
-            or open a country for its history, its manufacturers and every car it builds.
+            Where a car is engineered shapes what it is engineered for.
+            {hasData
+              ? ` ${formatNumber(countries.length)} countries, ${formatNumber(makers)} brands and ${formatNumber(cars)} cars: explore the map, or open a country for its history, its brands and every car it builds.`
+              : " Open a country for its history, its brands and every car it builds."}
           </p>
-        }
-        stats={
-          hasData
-            ? [
-                { label: "Countries", value: formatNumber(countries.length) },
-                { label: "Marques", value: formatNumber(makers) },
-                {
-                  label: "Cars",
-                  value: formatNumber(cars),
-                  hint: "Published variants in the catalogue.",
-                },
-              ]
-            : []
         }
       />
 
-      <Container className="py-12 sm:py-16">
+      <Container className="pb-24 lg:pb-32">
         {hasData ? (
           <CountryAtlas countries={countries} />
         ) : (

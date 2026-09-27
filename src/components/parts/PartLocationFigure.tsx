@@ -102,15 +102,11 @@ export function PartLocationFigure({
 
   return (
     <figure
-      className={cn("relative border border-line bg-surface-1/60 p-5 sm:p-6", className)}
+      className={cn("relative min-w-0 rounded-card bg-surface-1 p-5 sm:p-8", className)}
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-2 opacity-70 hud-corners"
-      />
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <p className="text-hud text-gold-400">Typical location</p>
-        <p className="text-hud text-ink-500">Side elevation · generic saloon</p>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="text-h4">Typical location</p>
+        <p className="text-caption">Side elevation · generic saloon</p>
       </div>
 
       <svg
@@ -217,25 +213,22 @@ export function PartLocationFigure({
           ),
         )}
 
-        <g className="font-mono" fontSize="15" letterSpacing="1.5">
-          <text x={-padX * 0.2} y={labelY} className="fill-ink-500">
-            ← REAR
+        <g className="font-sans" fontSize="16">
+          <text x={-padX * 0.2} y={labelY} className="fill-ink-400">
+            ← Rear
           </text>
-          <text x={W + padX * 0.2} y={labelY} textAnchor="end" className="fill-ink-500">
-            FRONT →
+          <text x={W + padX * 0.2} y={labelY} textAnchor="end" className="fill-ink-400">
+            Front →
           </text>
         </g>
       </svg>
 
-      <figcaption className="mt-4 space-y-2.5 border-t border-line-subtle pt-4">
+      <figcaption className="mt-5 space-y-3 border-t border-line-subtle pt-5">
         {unique.map((group) => (
-          <p
-            key={group}
-            className="flex items-start gap-3 text-sm leading-relaxed text-ink-300"
-          >
+          <p key={group} className="flex items-start gap-3 text-body-s text-ink-300">
             <span
               aria-hidden="true"
-              className="mt-1.5 size-2.5 shrink-0 border border-gold-400 bg-gold-500/30"
+              className="mt-1.5 size-2.5 shrink-0 rounded-[2px] border border-gold-400 bg-gold-500/30"
             />
             <span>
               <span className="text-ink-100">{GROUP_LABELS[group]}.</span>{" "}
@@ -243,7 +236,7 @@ export function PartLocationFigure({
             </span>
           </p>
         ))}
-        <p className="text-xs leading-relaxed text-ink-500">
+        <p className="text-caption">
           Drawn on a generic saloon from AURIX&apos;s own body profiles: where this
           usually sits, not a drawing of any particular car.
         </p>

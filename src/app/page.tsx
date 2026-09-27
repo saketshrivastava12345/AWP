@@ -50,8 +50,8 @@ export default async function HomePage() {
             <>
               {featuredHeading}
               <p className="mt-10 text-body">
-                The collection could not be read just now. The full catalogue is one
-                click away under “All cars”.
+                The collection could not be read just now. The full catalogue is one click
+                away under “All cars”.
               </p>
             </>
           )}

@@ -50,8 +50,8 @@ export function CategoryChips({
       role="radiogroup"
       aria-label={label}
       className={cn(
-        "no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-0.5 edge-fade-x",
-        "sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:[mask-image:none]",
+        "-mx-5 no-scrollbar flex gap-2 overflow-x-auto edge-fade-x px-5 py-0.5",
+        "sm:mx-0 sm:flex-wrap sm:overflow-visible sm:[mask-image:none] sm:px-0",
         className,
       )}
     >

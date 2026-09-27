@@ -43,7 +43,9 @@ export function CountryCard({
       </h3>
 
       {country.description ? (
-        <p className="mt-4 line-clamp-2 text-body-s text-ink-300">{country.description}</p>
+        <p className="mt-4 line-clamp-2 text-body-s text-ink-300">
+          {country.description}
+        </p>
       ) : null}
 
       {country.makers.length > 0 ? (
@@ -54,7 +56,8 @@ export function CountryCard({
       ) : null}
 
       <p className="mt-auto pt-6 text-caption">
-        {brands} {brands === 1 ? "brand" : "brands"} · {cars} {cars === 1 ? "car" : "cars"}
+        {brands} {brands === 1 ? "brand" : "brands"} · {cars}{" "}
+        {cars === 1 ? "car" : "cars"}
       </p>
     </Link>
   );

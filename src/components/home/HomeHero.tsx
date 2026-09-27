@@ -41,7 +41,8 @@ const beatAnchor = (beat: HeroBeat) => `anatomy-${beat.id}`;
  * drawn; `group/story` is set on HeroStory's wrapper below.
  */
 const SCENE = {
-  section: "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:bg-transparent",
+  section:
+    "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:bg-transparent",
   intro:
     "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:max-w-md " +
     "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:pb-0",
@@ -107,7 +108,10 @@ function StageCaption({ car }: { car: HeroCar | null }) {
         </Link>
         <span>
           {" "}
-          · {car.complete ? "drawn to published dimensions" : "drawn from published figures"}
+          ·{" "}
+          {car.complete
+            ? "drawn to published dimensions"
+            : "drawn from published figures"}
         </span>
       </p>
       <InfoHint label="About the car on stage" side="top">
