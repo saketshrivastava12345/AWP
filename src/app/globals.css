@@ -1160,7 +1160,10 @@ html.js [data-reveal-stagger] > :nth-child(n + 13) {
 .fx-count-live {
   position: absolute;
   inset: 0;
-  white-space: nowrap;
+  /* Wrap exactly like the final value under it, and never reach past it:
+     a nowrap overlay on a figure that wraps on a phone widened the page. */
+  white-space: inherit;
+  overflow: hidden;
   visibility: hidden;
 }
 .fx-count[data-counting] > .fx-count-final {
