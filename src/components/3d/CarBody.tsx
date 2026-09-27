@@ -49,6 +49,7 @@ export function CarBody({
   kit,
   ghost,
   glassTransmission = false,
+  edgeMaterial = null,
 }: {
   layout: CarLayout;
   geometry: BodyGeometry;
@@ -57,6 +58,11 @@ export function CarBody({
   ghost: number;
   /** The windscreen is drawn by transmission (solid base opacity). */
   glassTransmission?: boolean;
+  /**
+   * Draw the panel lines with this material instead of the body's own gold
+   * one, so the blueprint can tone them (its opacity still follows `ghost`).
+   */
+  edgeMaterial?: THREE.LineBasicMaterial | null;
 }) {
   const { def } = layout.spec;
   const invalidate = useThree((state) => state.invalidate);
@@ -134,6 +140,7 @@ export function CarBody({
   useEffect(() => () => decalMaterials.dispose(), [decalMaterials]);
 
   const glassMaterial = kit.get("glass");
+  const edges = edgeMaterial ?? decalMaterials.materials.edges;
 
   // Every body material, with its solid opacity and its ghosted opacity.
   const fades = useMemo<Fade[]>(() => {
@@ -171,7 +178,7 @@ export function CarBody({
   useEffect(() => {
     current.current = -1;
     invalidate();
-  }, [fades, invalidate]);
+  }, [fades, edges, invalidate]);
 
   useEffect(() => {
     invalidate();
@@ -186,7 +193,7 @@ export function CarBody({
         : THREE.MathUtils.damp(previous, target, 5, Math.min(delta, 0.1));
     if (previous >= 0 && Math.abs(next - previous) < 0.0005) return;
     current.current = Math.abs(next - target) < 0.002 ? target : next;
-    applyGhost(fades, decalMaterials.materials.edges, current.current);
+    applyGhost(fades, edges, current.current);
     if (liningRef.current) liningRef.current.visible = current.current < 0.6;
     // Keep frames coming until the fade has settled (on-demand rendering).
     if (current.current !== target) invalidate();
@@ -216,11 +223,7 @@ export function CarBody({
         material={kit.get("lining")}
         raycast={noRaycast}
       />
-      <lineSegments
-        geometry={geometry.edges}
-        material={decalMaterials.materials.edges}
-        raycast={noRaycast}
-      />
+      <lineSegments geometry={geometry.edges} material={edges} raycast={noRaycast} />
 
       {geometry.glass.map((glass, index) => (
         <mesh key={index} geometry={glass} material={glassMaterial} renderOrder={2} />

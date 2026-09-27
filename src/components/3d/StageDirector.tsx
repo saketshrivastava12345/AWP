@@ -28,6 +28,7 @@ export function Director({
   motionRef,
   reducedMotion,
   drive,
+  phoneLift = true,
 }: {
   shots: Shot[];
   progressRef: RefObject<TourProgress>;
@@ -37,6 +38,11 @@ export function Director({
   reducedMotion: boolean;
   /** How far the car has driven at a given beat, in metres. */
   drive: (beat: number) => number;
+  /**
+   * On phones, lift the car into the top of the frame because the cards sit
+   * over the bottom of it. False when the cards are laid out below the stage.
+   */
+  phoneLift?: boolean;
 }) {
   const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera;
   const size = useThree((state) => state.size);
@@ -83,7 +89,7 @@ export function Director({
         : size.width >= 768
           ? -size.width * 0.07
           : 0;
-    const y = size.width < 768 ? size.height * 0.2 : 0;
+    const y = phoneLift && size.width < 768 ? size.height * 0.2 : 0;
     camera.setViewOffset(size.width, size.height, x, y, size.width, size.height);
   });
 
@@ -95,9 +101,12 @@ export function Director({
 export function Road({
   layout,
   motionRef,
+  visibilityRef,
 }: {
   layout: CarLayout;
   motionRef: RefObject<CarMotion>;
+  /** 0–1, read every frame: fades the markings out (the blueprint's grid replaces them). */
+  visibilityRef?: RefObject<number>;
 }) {
   const spacing = 4.5;
   const count = 14;
@@ -127,7 +136,13 @@ export function Road({
     [geometry, material],
   );
 
+  const groupRef = useRef<THREE.Group>(null);
   useFrame(() => {
+    if (visibilityRef) {
+      const visibility = visibilityRef.current ?? 1;
+      material.opacity = 0.32 * visibility;
+      if (groupRef.current) groupRef.current.visible = visibility > 0.001;
+    }
     const distance = motionRef.current.distance;
     refs.current.forEach((mesh, index) => {
       if (!mesh) return;
@@ -138,7 +153,7 @@ export function Road({
   });
 
   return (
-    <group position={[0, 0.004, 0]}>
+    <group ref={groupRef} position={[0, 0.004, 0]}>
       {Array.from({ length: count * 2 }, (_, index) => (
         <mesh
           key={index}

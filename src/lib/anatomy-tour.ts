@@ -173,49 +173,66 @@ const PACK_PARTS = [
 /** Parts encyclopedia, indexed by slug. */
 type PartIndex = Map<string, Part>;
 
-export function buildAnatomyTour(detail: VariantDetail, allParts: Part[]): TourStop[] {
-  const { variant, model, engine, transmission, performance, dimensions, ev } = detail;
-  const kind = powertrainKind(variant.fuel_type);
-  const index: PartIndex = new Map(allParts.map((part) => [part.slug, part]));
+/** Index the parts encyclopedia by slug, for `partComponents`. */
+export function indexParts(allParts: readonly Part[]): PartIndex {
+  return new Map(allParts.map((part) => [part.slug, part]));
+}
+
+/**
+ * Components for one subsystem: this variant's own catalogued parts in that
+ * group first, then the general ones named in `slugs` (skipping any the
+ * encyclopedia does not hold). `exclude` keeps a part to the one stop it
+ * belongs to when two stops share a viewer group (an EV's motors and its
+ * battery).
+ */
+export function partComponents(
+  detail: Pick<VariantDetail, "parts">,
+  index: PartIndex,
+  group: ViewerGroup,
+  slugs: string[],
+  exclude: string[] = [],
+  max = MAX_COMPONENTS,
+): TourComponent[] {
   const variantNotes = new Map(
     detail.parts.map(({ part, detail: note }) => [part.slug, note]),
   );
   const variantParts = new Map(detail.parts.map(({ part }) => [part.slug, part]));
+  const ordered = [
+    ...detail.parts
+      .filter(({ part }) => part.viewer_group === group)
+      .map(({ part }) => part.slug),
+    ...slugs,
+  ].filter((slug) => !exclude.includes(slug));
+  const seen = new Set<string>();
+  const out: TourComponent[] = [];
+  for (const slug of ordered) {
+    if (seen.has(slug)) continue;
+    seen.add(slug);
+    const part = variantParts.get(slug) ?? index.get(slug);
+    if (!part) continue;
+    out.push({
+      name: part.name,
+      slug: part.slug,
+      summary: firstSentence(part.function ?? part.description),
+      note: variantNotes.get(slug) ?? null,
+    });
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+export function buildAnatomyTour(detail: VariantDetail, allParts: Part[]): TourStop[] {
+  const { variant, model, engine, transmission, performance, dimensions, ev } = detail;
+  const kind = powertrainKind(variant.fuel_type);
+  const index = indexParts(allParts);
+  const variantParts = new Map(detail.parts.map(({ part }) => [part.slug, part]));
   const featureSlugs = new Set(detail.features.map(({ feature }) => feature.slug));
 
-  /**
-   * Components for a stop: this variant's own catalogued parts first, then
-   * the general ones. `exclude` keeps a part to the one stop it belongs to
-   * when two stops share a viewer group (an EV's motors and its battery).
-   */
   const components = (
     group: ViewerGroup,
     slugs: string[],
     exclude: string[] = [],
-  ): TourComponent[] => {
-    const ordered = [
-      ...detail.parts
-        .filter(({ part }) => part.viewer_group === group)
-        .map(({ part }) => part.slug),
-      ...slugs,
-    ].filter((slug) => !exclude.includes(slug));
-    const seen = new Set<string>();
-    const out: TourComponent[] = [];
-    for (const slug of ordered) {
-      if (seen.has(slug)) continue;
-      seen.add(slug);
-      const part = variantParts.get(slug) ?? index.get(slug);
-      if (!part) continue;
-      out.push({
-        name: part.name,
-        slug: part.slug,
-        summary: firstSentence(part.function ?? part.description),
-        note: variantNotes.get(slug) ?? null,
-      });
-      if (out.length >= MAX_COMPONENTS) break;
-    }
-    return out;
-  };
+  ): TourComponent[] => partComponents(detail, index, group, slugs, exclude);
 
   const features = (categories: string[]) =>
     detail.features

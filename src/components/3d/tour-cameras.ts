@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { TourStop, TourStopId } from "@/lib/anatomy-tour";
 import type { ViewerGroup } from "@/types/domain";
+import { explodeDirections, type GroupExtent } from "@/lib/viewer-explode";
 import type { CarLayout } from "./car-layout";
 
 /**
@@ -181,6 +182,127 @@ export function storyShots(layout: CarLayout, ids: readonly StoryShotId[]): Shot
         };
     }
   });
+}
+
+/**
+ * Where a group sits in the assembled car, roughly: enough to aim a camera
+ * at, not to place a part. (The car measures itself for the real explode.)
+ */
+function groupCentre(layout: CarLayout, group: ViewerGroup): THREE.Vector3 {
+  const { spec, anchors } = layout;
+  const R = spec.wheelRadius;
+  switch (group) {
+    case "body":
+      return v(0, spec.height * 0.55, 0);
+    case "wheels":
+    case "brakes":
+      return v(0, R, (spec.frontAxleZ + spec.rearAxleZ) / 2);
+    case "suspension":
+      return v(0, R + 0.1, (spec.frontAxleZ + spec.rearAxleZ) / 2);
+    case "engine":
+      return layout.engine?.center.clone() ?? anchors.engine.clone();
+    case "battery":
+      return layout.battery?.center.clone() ?? anchors.motor.clone();
+    case "transmission":
+      return layout.gearbox?.center.clone() ?? anchors.gearbox.clone();
+    case "exhaust":
+      return v(0, spec.groundClearance + 0.15, spec.tailZ + 0.6);
+    case "interior":
+      return v(0, layout.cabin.floorY + 0.35, layout.cabin.seatRows[0] ?? 0);
+    case "electronics":
+      return v(0, spec.height * 0.45, layout.cabin.dashZ);
+  }
+}
+
+/** Where a group ends up when the car is exploded, roughly (see groupCentre). */
+export function explodedCentre(layout: CarLayout, group: ViewerGroup): THREE.Vector3 {
+  const { build, spec } = layout;
+  const groups: ViewerGroup[] = [group];
+  // The engine's and gearbox's paths depend on each other (a mid-engined
+  // gearbox travels past the engine), so both are always considered.
+  if (group === "engine" || group === "transmission")
+    groups.push(group === "engine" ? "transmission" : "engine");
+  const extents: GroupExtent[] = groups.map((name) => ({
+    group: name,
+    minY: 0.1,
+    centerZ: groupCentre(layout, name).z,
+  }));
+  const direction = explodeDirections({
+    groups: extents,
+    powertrain: build.powertrain,
+    enginePosition: layout.engine ? build.enginePosition : null,
+    length: spec.length,
+  })[group] ?? [0, 0, 0];
+  return groupCentre(layout, group).add(v(...direction));
+}
+
+/**
+ * Shots for the blueprint (the anatomy tour taken apart): the opening shot,
+ * the drawing with its dimensions, one shot per group as it comes off, and the
+ * whole car exploded.
+ *
+ * The camera stays high and three-quarter on, as an exploded drawing is, and
+ * backs away as more of the car is separated; for each group it leans toward
+ * where that group is going, so the part in motion is the centre of the frame.
+ */
+export function blueprintShots(layout: CarLayout, groups: readonly ViewerGroup[]): Shot[] {
+  const { spec } = layout;
+  const k = spec.length / 4.5;
+  const H = spec.height;
+  const opening = tourShots(layout, [])[0];
+  const deg = THREE.MathUtils.degToRad;
+
+  /** A shot on a sphere around `target`: azimuth from +z toward +x, elevation above level. */
+  const orbit = (
+    target: THREE.Vector3,
+    radius: number,
+    azimuth: number,
+    elevation: number,
+  ): THREE.Vector3 =>
+    new THREE.Vector3(
+      Math.sin(deg(azimuth)) * Math.cos(deg(elevation)),
+      Math.sin(deg(elevation)),
+      Math.cos(deg(azimuth)) * Math.cos(deg(elevation)),
+    )
+      .multiplyScalar(radius)
+      .add(target);
+
+  const drawingTarget = v(0, H * 0.4, 0);
+  const drawing: Shot = {
+    position: orbit(drawingTarget, 7.4 * k, 58, 20),
+    target: drawingTarget,
+    ghost: 1,
+    highlight: null,
+  };
+
+  const count = Math.max(1, groups.length);
+  const perGroup = groups.map((group, index): Shot => {
+    const progress = (index + 1) / count;
+    const whole = v(0, H * 0.45 + 0.55 * k * progress, 0.1 * k);
+    const target = whole.lerp(explodedCentre(layout, group), 0.35);
+    target.y = Math.max(0.35, target.y);
+    return {
+      position: orbit(
+        target,
+        (8.4 + 3.2 * progress) * k,
+        60 - 10 * progress,
+        22 + 4 * progress,
+      ),
+      target,
+      ghost: 1,
+      highlight: group,
+    };
+  });
+
+  const finaleTarget = v(0, 0.95 * k, 0.1 * k);
+  const finale: Shot = {
+    position: orbit(finaleTarget, 12.2 * k, 50, 25),
+    target: finaleTarget,
+    ghost: 1,
+    highlight: null,
+  };
+
+  return [...(opening ? [opening] : []), drawing, ...perGroup, finale];
 }
 
 const spherical = new THREE.Spherical();

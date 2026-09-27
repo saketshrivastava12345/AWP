@@ -14,7 +14,12 @@ import gsap from "gsap";
 import * as THREE from "three";
 import type { ViewerGroup } from "@/types/domain";
 import { GOLD } from "@/lib/viewer-colors";
-import { offsetAt, planExplode, type GroupExtent } from "@/lib/viewer-explode";
+import {
+  offsetAt,
+  planExplode,
+  type ExplodePlan,
+  type GroupExtent,
+} from "@/lib/viewer-explode";
 import {
   DISC_PARAMS,
   WHEEL_FINISH_PARAMS,
@@ -43,6 +48,7 @@ import {
 import { buildSystems, type Part } from "./car-systems";
 import { buildBodyGeometry } from "./body-geometry";
 import { useCachedGeometry } from "./geometry-cache";
+import { edgeMaterial, mergedEdges, toneEdges } from "./blueprint-edges";
 import { CarBody } from "./CarBody";
 import { wheelDefaults } from "./wheel-defaults";
 
@@ -76,6 +82,23 @@ export type CarAppearance = {
   /** Caliper colour, hex. */
   caliper: string;
   disc: DiscType;
+};
+
+/**
+ * The blueprint (the scroll-driven exploded drawing) drives the car through
+ * this object, written by the stage every frame. Separation per group is set
+ * directly on the groups from it, so scrolling never causes a React render.
+ */
+export type BlueprintState = {
+  /** 0 = the rendered car, 1 = the line drawing. Scales the line work. */
+  drawing: number;
+  /** Separation per group: 0 assembled, 1 at its exploded position. */
+  explode: Partial<Record<ViewerGroup, number>>;
+  /**
+   * Filled by the car once it has measured itself: a point above each group
+   * that rides with it, for the finale's labels.
+   */
+  labels: Map<ViewerGroup, AnchorPoint>;
 };
 
 /** A point that rides on part of the car, for hotspots and callouts. */
@@ -116,6 +139,19 @@ export type ProceduralCarProps = {
   onExplodeMotion?: (moving: boolean) => void;
   /** The geometry is built and in the scene. */
   onReady?: () => void;
+  /**
+   * Scroll-driven blueprint. When set, the `explode` prop is ignored and each
+   * group is placed from `blueprint.current.explode` every frame.
+   */
+  blueprint?: RefObject<BlueprintState>;
+  /** Build the hairline edges of every part (the blueprint's line work). */
+  lineWork?: boolean;
+  /** How far groups that are not the subject step back (0–1). */
+  restDim?: number;
+  /** How warm the line work of groups that are not the subject is (0–1). */
+  restEdge?: number;
+  /** The same for the body's panel lines; defaults to `restEdge`. */
+  shellEdge?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -287,6 +323,9 @@ function Subsystem({
   onHover,
   onSelect,
   register,
+  lines,
+  restEdge = 0,
+  blueprint,
   children,
 }: {
   name: ViewerGroup;
@@ -300,6 +339,15 @@ function Subsystem({
   onHover?: ProceduralCarProps["onHoverGroup"];
   onSelect?: (group: ViewerGroup) => void;
   register: (name: ViewerGroup, group: THREE.Group | null) => void;
+  /**
+   * The group's blueprint line work. Its colour runs from ink to gold with
+   * the highlight; its opacity follows the drawing, except on the body, whose
+   * panel lines fade with the ghosted shell instead.
+   */
+  lines?: THREE.LineBasicMaterial | null;
+  /** Warmth of the line work when the group is not the subject (0–1). */
+  restEdge?: number;
+  blueprint?: RefObject<BlueprintState>;
   children: ReactNode;
 }) {
   const ref = useRef<THREE.Group>(null);
@@ -313,9 +361,10 @@ function Subsystem({
   // Changes of subject dissolve rather than switch.
   const amount = useRef(0);
   const faded = useRef(0);
+  const warmth = useRef(0);
   useEffect(() => {
     invalidate();
-  }, [highlight, dim, invalidate]);
+  }, [highlight, dim, restEdge, invalidate]);
 
   useFrame((_, delta) => {
     const step = Math.min(delta, 0.1);
@@ -331,6 +380,19 @@ function Subsystem({
       faded.current = Math.abs(next - dim) < 0.01 ? dim : next;
       setDim(kit, faded.current);
       moving = moving || faded.current !== dim;
+    }
+    if (lines) {
+      const target = Math.max(highlight, restEdge);
+      if (warmth.current !== target) {
+        const next = THREE.MathUtils.damp(warmth.current, target, 5, step);
+        warmth.current = Math.abs(next - target) < 0.01 ? target : next;
+        moving = moving || warmth.current !== target;
+      }
+      const drawing = blueprint?.current?.drawing ?? 0;
+      // The subject's lines are strong; the rest stay hairlines.
+      const opacity =
+        name === "body" ? null : drawing * (0.2 + 0.72 * warmth.current);
+      toneEdges(lines, warmth.current, opacity);
     }
     if (moving) invalidate();
   });
@@ -384,14 +446,25 @@ function Subsystem({
   );
 }
 
+/** Blueprint line work is decoration: never picked by the pointer. */
+const noRaycast = () => null;
+
 function PartList({
   parts,
   kit,
   shadows,
+  lines,
+  owner,
+  cacheKey,
 }: {
   parts: Part[];
   kit: MaterialKit;
   shadows: boolean;
+  /** Draw the parts' hard edges with this material (blueprint). */
+  lines?: THREE.LineBasicMaterial | null;
+  /** Cache owner and key for the edge buffer (the layout, and the group). */
+  owner: object;
+  cacheKey: string;
 }) {
   return (
     <>
@@ -403,8 +476,31 @@ function PartList({
           castShadow={shadows}
         />
       ))}
+      {lines && parts.length > 0 ? (
+        <PartEdges parts={parts} material={lines} owner={owner} cacheKey={cacheKey} />
+      ) : null}
     </>
   );
+}
+
+/** The merged hard edges of a group's parts, built once per car and detail level. */
+function PartEdges({
+  parts,
+  material,
+  owner,
+  cacheKey,
+}: {
+  parts: Part[];
+  material: THREE.LineBasicMaterial;
+  owner: object;
+  cacheKey: string;
+}) {
+  const build = useCallback(
+    () => mergedEdges(parts.map((part) => part.geometry)),
+    [parts],
+  );
+  const geometry = useCachedGeometry(owner, `edges:${cacheKey}`, build);
+  return <lineSegments geometry={geometry} material={material} raycast={noRaycast} />;
 }
 
 type Corners = { wheels: (THREE.Group | null)[]; brakes: (THREE.Group | null)[] };
@@ -417,6 +513,7 @@ function Wheels({
   style,
   motion,
   corners,
+  lines,
 }: {
   layout: CarLayout;
   kit: MaterialKit;
@@ -424,6 +521,7 @@ function Wheels({
   style: WheelStyle;
   motion?: RefObject<CarMotion | null>;
   corners: RefObject<Corners>;
+  lines?: THREE.LineBasicMaterial | null;
 }) {
   const { spec } = layout;
   const geometry = useMemo(() => {
@@ -436,6 +534,15 @@ function Wheels({
     };
   }, [spec, lowDetail, style]);
   useEffect(() => () => Object.values(geometry).forEach((g) => g.dispose()), [geometry]);
+  const wantLines = Boolean(lines);
+  const edges = useMemo(
+    () =>
+      wantLines
+        ? mergedEdges([geometry.tyre, geometry.barrel, geometry.spokes, geometry.hub])
+        : null,
+    [geometry, wantLines],
+  );
+  useEffect(() => () => edges?.dispose(), [edges]);
 
   const spinners = useRef<(THREE.Group | null)[]>([]);
   useFrame(() => {
@@ -468,6 +575,9 @@ function Wheels({
             <mesh geometry={geometry.barrel} material={rim} />
             <mesh geometry={geometry.spokes} material={rim} castShadow />
             <mesh geometry={geometry.hub} material={kit.get("chrome")} />
+            {edges && lines ? (
+              <lineSegments geometry={edges} material={lines} raycast={noRaycast} />
+            ) : null}
           </group>
         </group>
       ))}
@@ -481,11 +591,13 @@ function Brakes({
   kit,
   motion,
   corners,
+  lines,
 }: {
   layout: CarLayout;
   kit: MaterialKit;
   motion?: RefObject<CarMotion | null>;
   corners: RefObject<Corners>;
+  lines?: THREE.LineBasicMaterial | null;
 }) {
   const { spec } = layout;
   const geometry = useMemo(
@@ -496,6 +608,21 @@ function Brakes({
     [spec],
   );
   useEffect(() => () => Object.values(geometry).forEach((g) => g.dispose()), [geometry]);
+  const wantLines = Boolean(lines);
+  const edges = useMemo(
+    () =>
+      wantLines
+        ? { disc: mergedEdges([geometry.disc]), caliper: mergedEdges([geometry.caliper]) }
+        : null,
+    [geometry, wantLines],
+  );
+  useEffect(
+    () => () => {
+      edges?.disc.dispose();
+      edges?.caliper.dispose();
+    },
+    [edges],
+  );
 
   const spinners = useRef<(THREE.Group | null)[]>([]);
   useFrame(() => {
@@ -526,6 +653,9 @@ function Brakes({
             }}
           >
             <mesh geometry={geometry.disc} material={kit.get("disc")} />
+            {edges && lines ? (
+              <lineSegments geometry={edges.disc} material={lines} raycast={noRaycast} />
+            ) : null}
           </group>
           <mesh
             geometry={geometry.caliper}
@@ -533,6 +663,14 @@ function Brakes({
             position={[inboard, 0, 0]}
             castShadow
           />
+          {edges && lines ? (
+            <lineSegments
+              geometry={edges.caliper}
+              material={lines}
+              position={[inboard, 0, 0]}
+              raycast={noRaycast}
+            />
+          ) : null}
         </group>
       ))}
     </>
@@ -562,6 +700,11 @@ export function ProceduralCar({
   anchors,
   onExplodeMotion,
   onReady,
+  blueprint,
+  lineWork = false,
+  restDim = 0,
+  restEdge = 0,
+  shellEdge,
 }: ProceduralCarProps) {
   const { build, spec } = layout;
   const invalidate = useThree((state) => state.invalidate);
@@ -577,6 +720,25 @@ export function ProceduralCar({
     [],
   );
   useEffect(() => () => Object.values(kits).forEach((kit) => kit.dispose()), [kits]);
+
+  // Blueprint line work: one hairline material per group, so the subject can
+  // turn gold while the rest stay ink. Created only when asked for.
+  const lineMaterials = useMemo(
+    () =>
+      lineWork
+        ? (Object.fromEntries(
+            VIEWER_GROUPS.map((group) => [group, edgeMaterial()]),
+          ) as Record<ViewerGroup, THREE.LineBasicMaterial>)
+        : null,
+    [lineWork],
+  );
+  useEffect(
+    () => () => {
+      if (lineMaterials)
+        Object.values(lineMaterials).forEach((material) => material.dispose());
+    },
+    [lineMaterials],
+  );
   useLayoutEffect(() => {
     for (const kit of Object.values(kits)) kit.setSurfaceDetail(surfaceDetail);
     kits.body.setGlassTransmission(glassTransmission);
@@ -629,41 +791,51 @@ export function ProceduralCar({
     onExplodeMotionRef.current = onExplodeMotion;
   }, [onExplodeMotion]);
 
+  // Measure every group as assembled, then plan where each goes. Measured
+  // rather than assumed, so the floor rule holds for any car.
+  const measurePlan = useCallback((): {
+    plan: ExplodePlan;
+    boxes: Map<ViewerGroup, THREE.Box3>;
+  } | null => {
+    const root = rootRef.current;
+    if (!root) return null;
+    root.updateWorldMatrix(true, true);
+    const inverse = root.matrixWorld.clone().invert();
+    const extents: GroupExtent[] = [];
+    const boxes = new Map<ViewerGroup, THREE.Box3>();
+    for (const name of active) {
+      const node = groups.current.get(name);
+      if (!node) continue;
+      const box = new THREE.Box3().setFromObject(node);
+      if (box.isEmpty()) continue;
+      box.applyMatrix4(inverse);
+      box.translate(node.position.clone().negate());
+      boxes.set(name, box);
+      // The engine group also carries the radiator in the nose, so its
+      // position along the car comes from the layout, not its bounds.
+      const centerZ =
+        name === "engine" && layout.engine
+          ? layout.engine.center.z
+          : name === "transmission" && layout.gearbox
+            ? layout.gearbox.center.z
+            : (box.min.z + box.max.z) / 2;
+      extents.push({ group: name, minY: box.min.y, centerZ });
+    }
+    const plan = planExplode({
+      groups: extents,
+      powertrain: build.powertrain,
+      enginePosition: layout.engine ? build.enginePosition : null,
+      length: spec.length,
+    });
+    return { plan, boxes };
+  }, [active, layout, build, spec.length]);
+
   useEffect(() => {
+    // The blueprint places the groups itself, every frame.
+    if (blueprint) return;
     const root = rootRef.current;
     if (!root) return;
-
-    // Measure every group as assembled, then plan where each goes. Measured
-    // rather than assumed, so the floor rule holds for any car.
-    let plan = null;
-    if (explode > 0) {
-      root.updateWorldMatrix(true, true);
-      const inverse = root.matrixWorld.clone().invert();
-      const extents: GroupExtent[] = [];
-      for (const name of active) {
-        const node = groups.current.get(name);
-        if (!node) continue;
-        const box = new THREE.Box3().setFromObject(node);
-        if (box.isEmpty()) continue;
-        box.applyMatrix4(inverse);
-        box.translate(node.position.clone().negate());
-        // The engine group also carries the radiator in the nose, so its
-        // position along the car comes from the layout, not its bounds.
-        const centerZ =
-          name === "engine" && layout.engine
-            ? layout.engine.center.z
-            : name === "transmission" && layout.gearbox
-              ? layout.gearbox.center.z
-              : (box.min.z + box.max.z) / 2;
-        extents.push({ group: name, minY: box.min.y, centerZ });
-      }
-      plan = planExplode({
-        groups: extents,
-        powertrain: build.powertrain,
-        enginePosition: layout.engine ? build.enginePosition : null,
-        length: spec.length,
-      });
-    }
+    const plan = explode > 0 ? (measurePlan()?.plan ?? null) : null;
 
     const timeline = gsap.timeline({
       paused: true,
@@ -721,13 +893,70 @@ export function ProceduralCar({
     explode,
     active,
     layout,
-    build,
-    spec.length,
     body,
     systems,
     reducedMotion,
     invalidate,
+    measurePlan,
+    blueprint,
   ]);
+
+  // --- the blueprint: separation per group, straight from the scroll -----------
+  const blueprintPlan = useRef<ExplodePlan | null>(null);
+  useEffect(() => {
+    // A new car, detail level or set of groups is measured afresh.
+    blueprintPlan.current = null;
+  }, [measurePlan, body, systems]);
+
+  useFrame(() => {
+    const state = blueprint?.current;
+    if (!state) return;
+    if (!blueprintPlan.current) {
+      const measured = measurePlan();
+      if (!measured) return;
+      blueprintPlan.current = measured.plan;
+      // A point just above each group, riding with it, for the labels.
+      state.labels.clear();
+      for (const [name, box] of measured.boxes) {
+        const node = groups.current.get(name);
+        if (!node || name === "wheels" || name === "brakes") continue;
+        const top = new THREE.Vector3(
+          (box.min.x + box.max.x) / 2,
+          box.max.y + 0.04,
+          (box.min.z + box.max.z) / 2,
+        );
+        state.labels.set(name, { object: node, local: top });
+      }
+      // Wheels and brakes are labelled at one corner each (the near side).
+      const wheel = corners.current.wheels[2];
+      if (wheel)
+        state.labels.set("wheels", {
+          object: wheel,
+          local: new THREE.Vector3(0, spec.wheelRadius + 0.05, 0),
+        });
+      const brake = corners.current.brakes[0];
+      if (brake)
+        state.labels.set("brakes", {
+          object: brake,
+          local: new THREE.Vector3(0, spec.rimRadius + 0.04, 0),
+        });
+    }
+    const plan = blueprintPlan.current;
+    for (const name of active) {
+      const node = groups.current.get(name);
+      if (!node) continue;
+      const [x, y, z] = offsetAt(plan, name, state.explode[name] ?? 0);
+      node.position.set(x, y, z);
+    }
+    const wheelsOut = state.explode.wheels ?? 0;
+    const brakesOut = state.explode.brakes ?? 0;
+    layout.wheels.forEach(({ position, side }, index) => {
+      const wheel = corners.current.wheels[index];
+      if (wheel) wheel.position.x = position.x + side * plan.spread.wheels * wheelsOut;
+      const brake = corners.current.brakes[index];
+      if (brake) brake.position.x = position.x + side * plan.spread.brakes * brakesOut;
+    });
+  });
 
   // --- anchors for hotspots and callouts -----------------------------------------
   useLayoutEffect(() => {
@@ -826,10 +1055,10 @@ export function ProceduralCar({
   const dimOf = (group: ViewerGroup) => {
     if (group === "body" || selectedGroup === group) return 0;
     // The tour points at one system: everything else steps back.
-    if (highlightGroup !== null && highlightGroup !== group) return 1;
+    if (highlightGroup !== null) return highlightGroup === group ? 0 : 1;
     // X-ray: the powertrain stands out, the cabin and wiring recede.
     if (emphasis && emphasis.length > 0 && !emphasised(group)) return 0.7;
-    return 0;
+    return restDim;
   };
 
   const sub = (group: ViewerGroup, children: ReactNode) =>
@@ -845,6 +1074,9 @@ export function ProceduralCar({
         onHover={onHoverGroup}
         onSelect={onSelectGroup}
         register={register}
+        lines={lineMaterials?.[group] ?? null}
+        restEdge={group === "body" ? (shellEdge ?? restEdge) : restEdge}
+        blueprint={blueprint}
       >
         {children}
       </Subsystem>
@@ -860,6 +1092,7 @@ export function ProceduralCar({
           kit={kits.body}
           ghost={ghost}
           glassTransmission={glassTransmission}
+          edgeMaterial={lineMaterials?.body ?? null}
         />,
       )}
       {sub(
@@ -871,19 +1104,40 @@ export function ProceduralCar({
           style={wheelStyle}
           motion={motion}
           corners={corners}
+          lines={lineMaterials?.wheels ?? null}
         />,
       )}
       {sub(
         "brakes",
-        <Brakes layout={layout} kit={kits.brakes} motion={motion} corners={corners} />,
+        <Brakes
+          layout={layout}
+          kit={kits.brakes}
+          motion={motion}
+          corners={corners}
+          lines={lineMaterials?.brakes ?? null}
+        />,
       )}
       {sub(
         "suspension",
-        <PartList parts={systems.suspension} kit={kits.suspension} shadows={shadows} />,
+        <PartList
+          parts={systems.suspension}
+          kit={kits.suspension}
+          shadows={shadows}
+          lines={lineMaterials?.suspension ?? null}
+          owner={layout}
+          cacheKey={`suspension:${lowDetail}`}
+        />,
       )}
       {sub(
         "engine",
-        <PartList parts={systems.engine} kit={kits.engine} shadows={shadows} />,
+        <PartList
+          parts={systems.engine}
+          kit={kits.engine}
+          shadows={shadows}
+          lines={lineMaterials?.engine ?? null}
+          owner={layout}
+          cacheKey={`engine:${lowDetail}`}
+        />,
       )}
       {sub(
         "transmission",
@@ -891,23 +1145,54 @@ export function ProceduralCar({
           parts={systems.transmission}
           kit={kits.transmission}
           shadows={shadows}
+          lines={lineMaterials?.transmission ?? null}
+          owner={layout}
+          cacheKey={`transmission:${lowDetail}`}
         />,
       )}
       {sub(
         "battery",
-        <PartList parts={systems.battery} kit={kits.battery} shadows={shadows} />,
+        <PartList
+          parts={systems.battery}
+          kit={kits.battery}
+          shadows={shadows}
+          lines={lineMaterials?.battery ?? null}
+          owner={layout}
+          cacheKey={`battery:${lowDetail}`}
+        />,
       )}
       {sub(
         "exhaust",
-        <PartList parts={systems.exhaust} kit={kits.exhaust} shadows={shadows} />,
+        <PartList
+          parts={systems.exhaust}
+          kit={kits.exhaust}
+          shadows={shadows}
+          lines={lineMaterials?.exhaust ?? null}
+          owner={layout}
+          cacheKey={`exhaust:${lowDetail}`}
+        />,
       )}
       {sub(
         "interior",
-        <PartList parts={systems.interior} kit={kits.interior} shadows={false} />,
+        <PartList
+          parts={systems.interior}
+          kit={kits.interior}
+          shadows={false}
+          lines={lineMaterials?.interior ?? null}
+          owner={layout}
+          cacheKey={`interior:${lowDetail}`}
+        />,
       )}
       {sub(
         "electronics",
-        <PartList parts={systems.electronics} kit={kits.electronics} shadows={false} />,
+        <PartList
+          parts={systems.electronics}
+          kit={kits.electronics}
+          shadows={false}
+          lines={lineMaterials?.electronics ?? null}
+          owner={layout}
+          cacheKey={`electronics:${lowDetail}`}
+        />,
       )}
     </group>
   );
