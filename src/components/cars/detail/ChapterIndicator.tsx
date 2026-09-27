@@ -229,7 +229,10 @@ export function ChapterIndicator({
         className={cn(
           "fixed top-[4.5rem] right-4 z-(--z-sticky) lg:hidden",
           "transition-[opacity,visibility] duration-(--duration-normal)",
-          shown && !pillBlocked ? "visible opacity-100" : "invisible opacity-0",
+          // The blueprint brings its own step read-out on phones too.
+          shown && !pillBlocked && !railYields
+            ? "visible opacity-100"
+            : "invisible opacity-0",
         )}
       >
         <button

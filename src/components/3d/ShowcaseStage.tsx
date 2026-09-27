@@ -171,6 +171,9 @@ export function ShowcaseStage({
         reducedMotion={reducedMotion}
         drive={drive}
         phoneLift={false}
+        // The phone stage is short and nearly square, and the blueprint's
+        // shots already hold the exploded car: only back away when narrower.
+        fitWidth={1.2}
       />
       <BlueprintRig
         layout={layout}

@@ -29,6 +29,7 @@ export function Director({
   reducedMotion,
   drive,
   phoneLift = true,
+  fitWidth = 1.6,
 }: {
   shots: Shot[];
   progressRef: RefObject<TourProgress>;
@@ -43,6 +44,11 @@ export function Director({
    * over the bottom of it. False when the cards are laid out below the stage.
    */
   phoneLift?: boolean;
+  /**
+   * The narrowest aspect ratio (width / height) the shots are framed for; a
+   * narrower stage backs the camera away until the car spans the same width.
+   */
+  fitWidth?: number;
 }) {
   const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera;
   const size = useThree((state) => state.size);
@@ -72,7 +78,7 @@ export function Director({
     // width at the same distance, so back away until it covers the same
     // horizontal span — otherwise the car is cropped at every stop.
     const aspect = size.width / Math.max(1, size.height);
-    const fit = Math.min(2.4, Math.max(1, 1.6 / aspect));
+    const fit = Math.min(2.4, Math.max(1, fitWidth / aspect));
     if (fit > 1) position.sub(target).multiplyScalar(fit).add(target);
     camera.position.copy(position);
     camera.lookAt(target);

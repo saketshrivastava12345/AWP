@@ -15,6 +15,7 @@ import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import type { ViewerGroup } from "@/types/domain";
 import type { CarBuild } from "@/lib/car-build";
 import {
   BLUEPRINT_LABELS,
@@ -61,6 +62,11 @@ const ShowcaseStage = dynamic(
 /** Height of the fixed navbar, px (h-16). */
 const NAV_HEIGHT = 64;
 
+/** Phones: how far below the stage a card's top sits when it is the current one. */
+const PHONE_READ = 72;
+
+const isNarrow = () => window.matchMedia("(max-width: 767px)").matches;
+
 function Stats({ stats }: { stats: BlueprintStep["stats"] }) {
   if (stats.length === 0) return null;
   return (
@@ -81,10 +87,13 @@ function StepCard({
   step,
   index,
   total,
+  legend,
 }: {
   step: BlueprintStep;
   index: number;
   total: number;
+  /** The groups in the order they came off: the finale's key to its labels. */
+  legend: readonly ViewerGroup[];
 }) {
   const headingId = `blueprint-${step.id}`;
   return (
@@ -160,6 +169,17 @@ function StepCard({
         </ul>
       ) : null}
 
+      {step.kind === "finale" && legend.length > 0 ? (
+        <ol className="mt-5 grid grid-cols-2 gap-x-5 gap-y-1.5 border-t border-line-subtle pt-4">
+          {legend.map((group, position) => (
+            <li key={group} className="flex gap-2 font-mono text-micro tracking-hud uppercase">
+              <span className="text-gold-500">{String(position + 1).padStart(2, "0")}</span>
+              <span className="text-ink-200">{BLUEPRINT_LABELS[group]}</span>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+
       {step.group ? (
         // Handled by the page's viewer (DetailViewer): scrolls to it and
         // opens this subsystem. Without JavaScript it is a plain anchor.
@@ -225,15 +245,14 @@ export function CarShowcase({
   const still = webgl === false || failed || reducedMotion;
 
   /**
-   * Where along the section the reading position is: the middle of the
-   * viewport, or on phones the middle of what the short stage leaves visible.
+   * The reading position, in viewport pixels: the middle of the screen, where
+   * a card's middle arrives. On phones the cards pass under a short stage, so
+   * there it is just below the stage, where a card's heading arrives.
    */
   const probeY = useCallback(() => {
     const stage = stageRef.current;
-    const narrow = window.matchMedia("(max-width: 767px)").matches;
-    if (!narrow || !stage) return window.innerHeight / 2;
-    const bottom = Math.max(NAV_HEIGHT, stage.getBoundingClientRect().bottom);
-    return (bottom + window.innerHeight) / 2;
+    if (!isNarrow() || !stage) return window.innerHeight / 2;
+    return NAV_HEIGHT + stage.offsetHeight + PHONE_READ;
   }, []);
 
   // Map the scroll position onto the cards: beat 2.5 means halfway between
@@ -272,10 +291,11 @@ export function CarShowcase({
     const section = sectionRef.current;
     if (!section) return;
     const top = section.getBoundingClientRect().top;
+    const narrow = isNarrow();
     centers.current = stepRefs.current.map((step) => {
       if (!step) return 0;
       const rect = step.getBoundingClientRect();
-      return rect.top - top + rect.height / 2;
+      return rect.top - top + (narrow ? PHONE_READ : rect.height / 2);
     });
     update();
   }, [update]);
@@ -429,8 +449,9 @@ export function CarShowcase({
                   <span className="border border-gold-700/60 bg-void/85 px-1.5 py-0.5 font-mono text-nano tracking-hud whitespace-nowrap text-gold-200 uppercase md:text-micro">
                     <span className="text-gold-500">
                       {String(index + 1).padStart(2, "0")}
-                    </span>{" "}
-                    {BLUEPRINT_LABELS[group]}
+                    </span>
+                    {/* Phones: the number alone; the finale card is the key. */}
+                    <span className="max-md:hidden"> {BLUEPRINT_LABELS[group]}</span>
                   </span>
                   <span className="h-(--lead) w-px bg-gold-500/60" />
                   <span className="-mb-[3px] size-1.5 rounded-full border border-gold-300 bg-gold-500/50" />
@@ -533,7 +554,12 @@ export function CarShowcase({
             )}
           >
             <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
-              <StepCard step={step} index={index + 1} total={steps.length} />
+              <StepCard
+                step={step}
+                index={index + 1}
+                total={steps.length}
+                legend={groups}
+              />
             </div>
           </div>
         ))}

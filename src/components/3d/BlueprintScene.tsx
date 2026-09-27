@@ -282,9 +282,10 @@ type Placed = { element: HTMLElement; x: number; y: number; lead?: number };
 /** Label boxes, measured once per element: reading layout every frame would reflow. */
 const boxSize = new WeakMap<HTMLElement, { width: number; height: number }>();
 
-function sizeOf(element: HTMLElement) {
+function sizeOf(element: HTMLElement, depth = 2) {
   let size = boxSize.get(element);
-  const box = element.firstElementChild?.firstElementChild;
+  let box: Element | null | undefined = element;
+  for (let level = 0; level < depth; level += 1) box = box?.firstElementChild;
   if (!size || size.width === 0) {
     size = {
       width: box instanceof HTMLElement ? box.offsetWidth : 0,
@@ -381,9 +382,23 @@ export function BlueprintLabels({
       if (overlay.grid.style.opacity !== value) overlay.grid.style.opacity = value;
     }
 
+    // Measurements in drawing order; one that would cover an earlier label
+    // (a narrow screen, a steep angle) is left out — its line still shows.
+    const taken: { x: number; y: number; w: number; h: number }[] = [];
     for (const [id, point] of dimensionLabels ?? []) {
       const element = overlay.dimensions.get(id);
-      if (element) place(element, point, values.dimensions);
+      if (!element) continue;
+      const at = project(point);
+      const { width, height } = sizeOf(element, 1);
+      const clash =
+        at !== null &&
+        taken.some(
+          (box) =>
+            Math.abs(box.x - at.x) < (box.w + width) / 2 + 4 &&
+            Math.abs(box.y - at.y) < (box.h + height) / 2 + 2,
+        );
+      place(element, point, clash ? 0 : values.dimensions);
+      if (at && !clash) taken.push({ x: at.x, y: at.y, w: width, h: height });
     }
 
     const focus = focusCardAt(beat, groups.length);
