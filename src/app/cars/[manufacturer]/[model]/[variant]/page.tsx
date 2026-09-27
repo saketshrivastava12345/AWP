@@ -38,6 +38,7 @@ import { buildSpecSections, visibleSections } from "@/lib/spec-sections";
 import { buildDna, buildDistribution } from "@/lib/dna";
 import { carBuildFromDetail } from "@/lib/car-build";
 import { buildAnatomyTour } from "@/lib/anatomy-tour";
+import { blueprintGroups, buildBlueprint } from "@/lib/blueprint";
 import { buildPerformancePopulation } from "@/lib/detail/performance";
 import { buildRangeSamples } from "@/lib/detail/ev";
 import {
@@ -187,6 +188,14 @@ export default async function VariantPage({
   const build = carBuildFromDetail(detail);
   const allParts = partCategories.flatMap((category) => category.parts);
   const tour = buildAnatomyTour(detail, allParts);
+  // The tour, told as an exploded drawing: one card per subsystem the 3D car
+  // actually draws (an EV has no engine or exhaust), in the order it comes apart.
+  const blueprint = buildBlueprint(
+    detail,
+    tour,
+    allParts,
+    blueprintGroups(drawnGroups(build)),
+  );
   const photo = primaryPhoto(detail);
 
   // ------------------------------------------------------------ Figures
@@ -254,7 +263,7 @@ export default async function VariantPage({
       number={engineering.number}
       label={engineering.label}
       title={`How the ${carName} is built`}
-      description="Scroll through its systems one by one, then read the full specification."
+      description="Scroll and it turns into a blueprint, then comes apart one system at a time, each with the figures published for it. The full specification follows."
     />
   );
 
@@ -361,7 +370,7 @@ export default async function VariantPage({
           <div data-chapter-rail="hide">
             <CarShowcase
               build={build}
-              stops={tour}
+              steps={blueprint}
               label={carName}
               intro={engineeringHeader}
             />

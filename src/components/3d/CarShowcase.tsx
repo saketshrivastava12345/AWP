@@ -2,53 +2,73 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { CarBuild } from "@/lib/car-build";
-import type { TourStop } from "@/lib/anatomy-tour";
+import {
+  BLUEPRINT_LABELS,
+  createBlueprintOverlay,
+  focusCardAt,
+  stepGroups,
+  type BlueprintStep,
+} from "@/lib/blueprint";
+import { DIMENSION_LABELS, publishedMeasurements } from "@/lib/viewer-dimensions";
+import { formatNumber } from "@/lib/format";
 import { stableKey } from "@/lib/viewer-lru";
 import type { TourProgress } from "./StageDirector";
 import { ModelErrorBoundary } from "./ModelErrorBoundary";
 import { useSceneLifecycle, useWebGLSupport } from "./useSceneLifecycle";
 
 /**
- * The anatomy tour: a scroll-driven walk through one car's systems.
+ * The blueprint: the anatomy tour as a scroll-driven exploded drawing.
  *
- * Layout is CSS, not a scroll library: the 3D stage is `position: sticky` for
- * the height of the section while the text cards scroll over it in normal
- * flow. So the cards are ordinary server-rendered HTML — readable without
- * JavaScript, by screen readers, and by search engines — and the canvas is
- * scenery layered behind them.
+ * Scroll into it and the rendered car turns into a line drawing over a grid,
+ * with its published dimensions; keep scrolling and it comes apart one
+ * subsystem per card, the part in motion drawn in gold and the rest stepping
+ * back; the last card holds the whole car exploded with every group
+ * labelled. Scrolling back puts it together again.
+ *
+ * Layout is CSS, not a scroll library: the 3D stage is `position: sticky`
+ * for the height of the section while the cards scroll in normal flow — over
+ * the stage on wide screens, beneath a shorter stage on phones. So the cards
+ * are ordinary HTML, readable without JavaScript, by screen readers and by
+ * search engines, and the canvas is scenery.
  *
  * The stage is dynamically imported with ssr:false (three.js touches
  * `window`), mounts as it nears the viewport and unmounts only when far away,
- * and renders only while it is on screen and holds the page's render slot —
- * when the interactive viewer below is the more visible scene, the tour
- * pauses on its last frame. Without WebGL, or if the scene fails, the stage
- * keeps its poster and the tour reads as plain text.
+ * and renders only while it is on screen and holds the page's render slot.
+ * Without WebGL, if the scene fails, or when the visitor prefers reduced
+ * motion, the stage shows a static exploded drawing (`fallback`, rendered on
+ * the server from the same layout) and the cards read as plain text.
  */
 
 const ShowcaseStage = dynamic(
   () => import("./ShowcaseStage").then((m) => m.ShowcaseStage),
-  {
-    ssr: false,
-  },
+  { ssr: false },
 );
 
-function Stats({ stats }: { stats: TourStop["stats"] }) {
+/** Height of the fixed navbar, px (h-16). */
+const NAV_HEIGHT = 64;
+
+function Stats({ stats }: { stats: BlueprintStep["stats"] }) {
   if (stats.length === 0) return null;
   return (
     <dl className="mt-5 grid grid-cols-2 gap-x-5 gap-y-3.5 border-t border-line-subtle pt-4">
-      {stats.map(({ label, value }, index) => (
-        <div key={label} className={cn("min-w-0", index >= 4 && "max-sm:hidden")}>
+      {stats.map(({ label, value }) => (
+        <div key={label} className="min-w-0">
           <dt className="text-label text-[8px]">{label}</dt>
-          <dd
-            className="tabular mt-1 truncate font-mono text-[13px] text-ink-50"
-            title={value}
-          >
+          <dd className="tabular mt-1 font-mono text-[13px] break-words text-ink-50">
             {value}
           </dd>
         </div>
@@ -57,41 +77,43 @@ function Stats({ stats }: { stats: TourStop["stats"] }) {
   );
 }
 
-function StopCard({
-  stop,
+function StepCard({
+  step,
   index,
   total,
 }: {
-  stop: TourStop;
+  step: BlueprintStep;
   index: number;
   total: number;
 }) {
+  const headingId = `blueprint-${step.id}`;
   return (
-    <article className="w-full max-w-md border border-line bg-void/80 p-5 backdrop-blur-md sm:p-7">
+    <article
+      aria-labelledby={headingId}
+      className="relative w-full max-w-md border border-line bg-void/85 p-5 backdrop-blur-md sm:p-7"
+    >
       <p className="text-label text-gold-400">
-        {String(index).padStart(2, "0")} / {String(total).padStart(2, "0")} — {stop.label}
+        {String(index).padStart(2, "0")} / {String(total).padStart(2, "0")} —{" "}
+        {step.label}
       </p>
-      <h2 className="mt-3 font-display text-lg leading-snug tracking-[0.04em] text-ink-50 sm:text-2xl">
-        {stop.title}
-      </h2>
-      {/* On phones the card shares the screen with the car, so it is kept to
-          the essentials; the full specification is further down the page. */}
-      <p className="mt-3 text-[13px] leading-relaxed text-ink-300 max-sm:line-clamp-3 sm:text-sm">
-        {stop.body}
-      </p>
+      <h3
+        id={headingId}
+        className="mt-3 font-display text-lg leading-snug tracking-[0.04em] text-ink-50 sm:text-2xl"
+      >
+        {step.title}
+      </h3>
+      {step.body ? (
+        <p className="mt-3 text-[13px] leading-relaxed text-ink-300 sm:text-sm">
+          {step.body}
+        </p>
+      ) : null}
 
-      <Stats stats={stop.stats} />
+      <Stats stats={step.stats} />
 
-      {stop.features.length > 0 ? (
+      {step.features.length > 0 ? (
         <ul className="mt-5 space-y-2 border-t border-line-subtle pt-4">
-          {stop.features.map((feature, position) => (
-            <li
-              key={feature.name}
-              className={cn(
-                "flex gap-2.5 text-xs leading-relaxed",
-                position >= 2 && "max-sm:hidden",
-              )}
-            >
+          {step.features.map((feature) => (
+            <li key={feature.name} className="flex gap-2.5 text-xs leading-relaxed">
               <span
                 className="mt-1.5 size-1 shrink-0 rounded-full bg-gold-500"
                 aria-hidden="true"
@@ -107,13 +129,13 @@ function StopCard({
         </ul>
       ) : null}
 
-      {stop.components.length > 0 ? (
+      {step.components.length > 0 ? (
         <ul className="mt-5 space-y-3 border-t border-line-subtle pt-4">
-          {stop.components.map((component, position) => (
-            <li key={component.slug} className={cn(position >= 1 && "max-sm:hidden")}>
+          {step.components.map((component, position) => (
+            <li key={component.slug}>
               <Link
                 href={`/parts/${component.slug}`}
-                className="font-display text-[10px] tracking-[0.14em] text-gold-300 uppercase transition-colors hover:text-gold-200"
+                className="inline-flex min-h-6 items-center font-display text-[10px] tracking-[0.14em] text-gold-300 uppercase transition-colors hover:text-gold-200"
               >
                 {component.name} →
               </Link>
@@ -123,7 +145,12 @@ function StopCard({
                   {component.note}
                 </p>
               ) : component.summary ? (
-                <p className="mt-1 text-xs leading-relaxed text-ink-400 max-sm:hidden">
+                <p
+                  className={cn(
+                    "mt-1 text-xs leading-relaxed text-ink-400",
+                    position >= 2 && "max-sm:hidden",
+                  )}
+                >
                   {component.summary}
                 </p>
               ) : null}
@@ -131,27 +158,48 @@ function StopCard({
           ))}
         </ul>
       ) : null}
+
+      {step.group ? (
+        // Handled by the page's viewer (DetailViewer): scrolls to it and
+        // opens this subsystem. Without JavaScript it is a plain anchor.
+        <a
+          href="#explore-3d"
+          data-inspect={step.group}
+          className="mt-5 flex min-h-11 items-center justify-between gap-3 border-t border-line-subtle pt-4 font-display text-[10px] tracking-[0.16em] text-ink-200 uppercase transition-colors hover:text-gold-300"
+        >
+          Inspect in the 3D viewer
+          <ArrowUpRight className="size-3.5 text-gold-500" aria-hidden="true" />
+        </a>
+      ) : null}
     </article>
   );
 }
 
 export function CarShowcase({
   build,
-  stops,
+  steps,
   intro,
   label,
+  fallback,
 }: {
   build: CarBuild;
-  stops: TourStop[];
-  /** The page header, shown over the opening shot. */
+  /** The blueprint's cards (buildBlueprint), intro and finale included. */
+  steps: BlueprintStep[];
+  /** The chapter header, shown over the opening shot. */
   intro: ReactNode;
   /** Accessible name, e.g. "Porsche 911 GT3". */
   label: string;
+  /** Static exploded drawing for reduced motion and devices without WebGL. */
+  fallback?: ReactNode;
 }) {
   const isMobile = useIsMobile();
   const reducedMotion = useReducedMotion();
   const webgl = useWebGLSupport();
   const id = useId();
+
+  const groups = useMemo(() => stepGroups(steps), [steps]);
+  const measurements = useMemo(() => publishedMeasurements(build), [build]);
+  const overlay = useMemo(() => createBlueprintOverlay(), []);
 
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -160,8 +208,10 @@ export function CarShowcase({
   const centers = useRef<number[]>([]);
   const progress = useRef<TourProgress>({ beat: 0 });
   const activeRef = useRef(0);
+  const focusRef = useRef(0);
 
   const [active, setActive] = useState(0);
+  const [focus, setFocus] = useState(0);
   const [ready, setReady] = useState(false);
   const buildKey = stableKey(build);
   // A failure belongs to the car that failed; another car gets its own try.
@@ -170,15 +220,28 @@ export function CarShowcase({
   const { mounted, canRender } = useSceneLifecycle(stageRef, `tour${id}`);
   const handleReady = useCallback(() => setReady(true), []);
   const handleFailed = useCallback(() => setFailedKey(buildKey), [buildKey]);
-  const unavailable = webgl === false || failed;
+  // Reduced motion gets the static drawing: nothing on this stage moves.
+  const still = webgl === false || failed || reducedMotion;
 
-  // Map the scroll position onto the stops: beat 2.5 means halfway between
-  // the second and third card, measured at the middle of the viewport.
+  /**
+   * Where along the section the reading position is: the middle of the
+   * viewport, or on phones the middle of what the short stage leaves visible.
+   */
+  const probeY = useCallback(() => {
+    const stage = stageRef.current;
+    const narrow = window.matchMedia("(max-width: 767px)").matches;
+    if (!narrow || !stage) return window.innerHeight / 2;
+    const bottom = Math.max(NAV_HEIGHT, stage.getBoundingClientRect().bottom);
+    return (bottom + window.innerHeight) / 2;
+  }, []);
+
+  // Map the scroll position onto the cards: beat 2.5 means halfway between
+  // the third and fourth card, measured at the reading position.
   const update = useCallback(() => {
     const section = sectionRef.current;
     const points = centers.current;
     if (!section || points.length === 0) return;
-    const probe = -section.getBoundingClientRect().top + window.innerHeight / 2;
+    const probe = -section.getBoundingClientRect().top + probeY();
     let beat = 0;
     if (probe >= (points.at(-1) ?? 0)) beat = points.length - 1;
     else {
@@ -197,12 +260,22 @@ export function CarShowcase({
       activeRef.current = next;
       setActive(next);
     }
-  }, []);
+    const nextFocus = focusCardAt(beat, groups.length);
+    if (nextFocus !== focusRef.current) {
+      focusRef.current = nextFocus;
+      setFocus(nextFocus);
+    }
+  }, [groups.length, probeY]);
 
   const measure = useCallback(() => {
-    centers.current = stepRefs.current.map((step) =>
-      step ? step.offsetTop + step.offsetHeight / 2 : 0,
-    );
+    const section = sectionRef.current;
+    if (!section) return;
+    const top = section.getBoundingClientRect().top;
+    centers.current = stepRefs.current.map((step) => {
+      if (!step) return 0;
+      const rect = step.getBoundingClientRect();
+      return rect.top - top + rect.height / 2;
+    });
     update();
   }, [update]);
 
@@ -221,36 +294,54 @@ export function CarShowcase({
   }, [measure, update]);
 
   const jumpTo = (index: number) => {
-    stepRefs.current[index]?.scrollIntoView({
-      behavior: reducedMotion ? "auto" : "smooth",
-      block: "center",
-    });
+    const section = sectionRef.current;
+    const center = centers.current[index];
+    if (!section || center === undefined) return;
+    const top =
+      window.scrollY + section.getBoundingClientRect().top + center - probeY();
+    window.scrollTo({ top, behavior: reducedMotion ? "auto" : "smooth" });
   };
 
-  const total = stops.length;
+  const cards = steps.length + 1;
+  const railNames = ["Overview", ...steps.map((step) => step.label)];
+  const current = railNames[active] ?? "";
 
   return (
-    <section ref={sectionRef} className="relative" aria-label={`Anatomy tour: ${label}`}>
+    <section
+      ref={sectionRef}
+      className="relative"
+      aria-label={`Blueprint: ${label}, taken apart system by system`}
+    >
       {/* ------------------------------------------------ Sticky 3D stage */}
       <div
         ref={stageRef}
-        className="sticky top-0 h-[100svh] overflow-hidden bg-void"
+        className="sticky top-16 z-20 h-[46svh] overflow-hidden border-b border-line-subtle bg-void md:top-0 md:z-auto md:h-[100svh] md:border-b-0"
         aria-hidden="true"
       >
         {/* Poster until the first frame: a pool of light where the car will be. */}
         <div
           className={cn(
             "absolute inset-0 transition-opacity duration-1000",
-            ready && !unavailable ? "opacity-0" : "opacity-100",
+            ready && !still ? "opacity-0" : "opacity-100",
           )}
         >
-          <div className="absolute top-[42%] left-[62%] size-[36rem] -translate-1/2 rounded-full bg-gold-800/15 blur-[120px] max-md:left-1/2" />
-          <p className="absolute top-[48%] left-[62%] -translate-1/2 font-display text-[9px] tracking-[0.24em] text-ink-500 uppercase max-md:left-1/2">
-            {unavailable ? "3D view unavailable on this device" : "Preparing 3D model"}
-          </p>
+          {still && fallback ? (
+            <div className="tech-grid absolute inset-0 flex items-center justify-center p-4 md:pl-[34%] md:pr-16 lg:pl-[40%]">
+              {fallback}
+            </div>
+          ) : (
+            <>
+              <div className="absolute top-[42%] left-[62%] size-[36rem] -translate-1/2 rounded-full bg-gold-800/15 blur-[120px] max-md:left-1/2" />
+              <p className="absolute top-[48%] left-[62%] -translate-1/2 font-display text-[9px] tracking-[0.24em] text-ink-500 uppercase max-md:left-1/2">
+                {webgl === false || failed
+                  ? "3D view unavailable on this device"
+                  : "Preparing 3D model"}
+              </p>
+            </>
+          )}
         </div>
 
-        {mounted && webgl === true && !failed ? (
+        {mounted && webgl === true && !failed && !reducedMotion ? (
           <div className="absolute inset-0">
             <ModelErrorBoundary
               label="tour"
@@ -260,9 +351,10 @@ export function CarShowcase({
             >
               <ShowcaseStage
                 build={build}
-                stops={stops}
+                groups={groups}
                 progressRef={progress}
-                active={active}
+                focus={focus}
+                overlay={overlay}
                 reducedMotion={reducedMotion}
                 lowDetail={isMobile}
                 running={canRender}
@@ -272,19 +364,98 @@ export function CarShowcase({
           </div>
         ) : null}
 
-        {/* Legibility: darken behind the text column and at the bottom. */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-void/85 via-void/20 to-transparent max-md:bg-gradient-to-t max-md:from-void/90 max-md:via-void/10" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-void to-transparent" />
+        {/* The drawing's paper: a screen-space grid and a title block, faded
+            in with the blueprint by the scene. */}
+        {!still ? (
+          <div
+            ref={(node) => {
+              overlay.grid = node;
+            }}
+            className="pointer-events-none absolute inset-0 opacity-0"
+          >
+            <div className="tech-grid absolute inset-0 opacity-60" />
+            <div className="absolute right-5 bottom-4 hidden text-right md:block lg:right-40">
+              <p className="text-hud text-gold-400">Blueprint · exploded view</p>
+              <p className="text-hud mt-1 text-ink-500">
+                {measurements.length > 0
+                  ? "Dimension lines: published figures only"
+                  : "No published dimensions"}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Legibility: darken behind the text column (wide screens). */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-void/85 via-void/15 to-transparent max-md:hidden" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-void to-transparent max-md:h-10" />
+
+        {/* Labels, positioned by the scene every frame. */}
+        {!still ? (
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            {measurements.map(({ id: dimension, mm }) => (
+              <div
+                key={dimension}
+                ref={(node) => {
+                  if (node) overlay.dimensions.set(dimension, node);
+                  else overlay.dimensions.delete(dimension);
+                }}
+                className="absolute top-0 left-0 opacity-0 will-change-transform"
+              >
+                <div className="-translate-1/2 border border-gold-700/50 bg-void/85 px-1.5 py-0.5 whitespace-nowrap">
+                  <span className="font-mono text-micro tracking-hud text-ink-300 uppercase max-md:hidden">
+                    {DIMENSION_LABELS[dimension]}{" "}
+                  </span>
+                  <span className="tabular font-mono text-micro text-gold-200 md:text-xs">
+                    {formatNumber(mm)} mm
+                  </span>
+                </div>
+              </div>
+            ))}
+            {groups.map((group, index) => (
+              <div
+                key={group}
+                ref={(node) => {
+                  if (node) overlay.groups.set(group, node);
+                  else overlay.groups.delete(group);
+                }}
+                className="absolute top-0 left-0 opacity-0 will-change-transform"
+              >
+                <div className="flex -translate-x-1/2 -translate-y-full flex-col items-center">
+                  <span className="border border-gold-700/60 bg-void/85 px-1.5 py-0.5 font-mono text-nano tracking-hud whitespace-nowrap text-gold-200 uppercase md:text-micro">
+                    <span className="text-gold-500">{String(index + 1).padStart(2, "0")}</span>{" "}
+                    {BLUEPRINT_LABELS[group]}
+                  </span>
+                  <span className="h-4 w-px bg-gold-500/60 md:h-6" />
+                  <span className="size-1.5 rounded-full border border-gold-300 bg-gold-500/50" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {/* Phones: which card this is, and a hairline progress bar. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 md:hidden">
+          <p className="text-hud px-5 pb-2 text-gold-400">
+            {String(active).padStart(2, "0")} / {String(cards - 1).padStart(2, "0")} ·{" "}
+            {current}
+          </p>
+          <div className="h-px bg-line">
+            <div
+              className="h-px bg-gold-500 transition-[width] duration-500"
+              style={{ width: `${(active / Math.max(1, cards - 1)) * 100}%` }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* ------------------------------------------------ Progress rail */}
       <nav
-        aria-label="Tour stops"
+        aria-label="Blueprint steps"
         className="pointer-events-none absolute inset-y-0 right-0 z-20 hidden lg:block"
       >
-        <ol className="pointer-events-auto sticky top-[50vh] mr-6 -translate-y-1/2 space-y-3.5 py-6 xl:mr-10">
-          {["Overview", ...stops.map((stop) => stop.label)].map((name, index) => (
-            <li key={name}>
+        <ol className="pointer-events-auto sticky top-[50vh] mr-6 -translate-y-1/2 space-y-3 py-6 xl:mr-10">
+          {railNames.map((name, index) => (
+            <li key={`${index}-${name}`}>
               <button
                 type="button"
                 onClick={() => jumpTo(index)}
@@ -315,33 +486,20 @@ export function CarShowcase({
         </ol>
       </nav>
 
-      {/* Phones: a hairline progress bar under the navbar. */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 bottom-0 z-20 lg:hidden"
-        aria-hidden="true"
-      >
-        <div className="sticky top-16 h-px bg-line">
-          <div
-            className="h-px bg-gold-500 transition-[width] duration-500"
-            style={{ width: `${(active / Math.max(1, total)) * 100}%` }}
-          />
-        </div>
-      </div>
-
       {/* ------------------------------------------------ Cards */}
-      <div ref={stepsRef} className="relative z-10 -mt-[100svh]">
+      <div ref={stepsRef} className="relative z-10 md:-mt-[100svh]">
         <div
           ref={(node) => {
             stepRefs.current[0] = node;
           }}
-          className="flex min-h-[100svh] items-end pt-24 pb-10 md:items-center md:pb-16"
+          className="flex min-h-[60svh] items-start pt-8 pb-10 md:min-h-[100svh] md:items-center md:pt-24 md:pb-16"
         >
           <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
             <div className="max-w-xl">{intro}</div>
             <button
               type="button"
               onClick={() => jumpTo(1)}
-              className="mt-10 flex items-center gap-3 text-label transition-colors hover:text-gold-300"
+              className="mt-10 flex min-h-11 items-center gap-3 text-label transition-colors hover:text-gold-300"
             >
               <span className="flex size-8 items-center justify-center rounded-full border border-line-strong">
                 <ChevronDown
@@ -349,21 +507,26 @@ export function CarShowcase({
                   aria-hidden="true"
                 />
               </span>
-              Scroll to explore the anatomy
+              Scroll to take it apart
             </button>
           </div>
         </div>
 
-        {stops.map((stop, index) => (
+        {steps.map((step, index) => (
           <div
-            key={stop.id}
+            key={step.id}
             ref={(node) => {
               stepRefs.current[index + 1] = node;
             }}
-            className="flex min-h-[100svh] items-end pt-24 pb-10 md:items-center md:pb-0"
+            className={cn(
+              "flex items-start pt-6 pb-10 md:items-center md:pt-24 md:pb-0",
+              step.kind === "group"
+                ? "min-h-[64svh] md:min-h-[92svh]"
+                : "min-h-[64svh] md:min-h-[100svh]",
+            )}
           >
             <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
-              <StopCard stop={stop} index={index + 1} total={total} />
+              <StepCard step={step} index={index + 1} total={steps.length} />
             </div>
           </div>
         ))}
