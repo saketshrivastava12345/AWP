@@ -350,7 +350,7 @@ export function CarShowcase({
           )}
         >
           {still && fallback ? (
-            <div className="absolute inset-0 flex items-center justify-center tech-grid p-4 pt-8 md:pr-16 md:pl-[34%] lg:pr-60 lg:pl-[40%]">
+            <div className="absolute inset-0 flex items-center justify-center tech-grid p-4 pt-8 md:pr-16 md:pl-[42%] lg:pr-56 lg:pl-[48%]">
               {fallback}
             </div>
           ) : (
@@ -485,9 +485,12 @@ export function CarShowcase({
         aria-label="Blueprint steps"
         className="pointer-events-none absolute inset-y-0 right-0 z-20 hidden lg:block"
       >
-        <ol className="pointer-events-auto sticky top-[50vh] mr-6 -translate-y-1/2 space-y-3 py-6 xl:mr-10">
+        {/* A viewport-tall sticky column with the list centred in it: the
+            rail stays inside the section at both ends instead of hanging
+            half its height over the section above (a translated list did). */}
+        <ol className="sticky top-0 mr-6 flex h-[100svh] flex-col justify-center gap-3 py-20 xl:mr-10">
           {railNames.map((name, index) => (
-            <li key={`${index}-${name}`}>
+            <li key={`${index}-${name}`} className="pointer-events-auto">
               <button
                 type="button"
                 onClick={() => jumpTo(index)}

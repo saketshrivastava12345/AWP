@@ -104,6 +104,38 @@ export async function BlueprintDiagram({
 
   const names = data.groups.map(({ group }) => BLUEPRINT_LABELS[group]).join(", ");
 
+  // Keep labels from covering each other. The drawing is laid out at about
+  // 520 px wide on a desktop stage, so label boxes are estimated in metres
+  // from their character count (monospace), and a label that would overlap
+  // one already placed climbs on a longer leader until it is clear.
+  const perPx = width / 520;
+  const boxH = 18 * perPx;
+  const labels = data.groups
+    .map(({ group, anchor }) => {
+      const text = `${String(groups.indexOf(group) + 1).padStart(2, "0")} ${BLUEPRINT_LABELS[group]}`;
+      return { group, anchor, w: (text.length * 6.6 + 12) * perPx, lead: 10 * perPx };
+    })
+    .sort((a, b) => b.anchor[1] - a.anchor[1]);
+  const placed: { left: number; right: number; bottom: number; top: number }[] = [];
+  for (const label of labels) {
+    const left = label.anchor[0] - label.w / 2;
+    const right = label.anchor[0] + label.w / 2;
+    for (let guard = 0; guard < 12; guard += 1) {
+      const bottom = label.anchor[1] + label.lead;
+      const hit = placed.find(
+        (box) =>
+          left < box.right &&
+          right > box.left &&
+          bottom < box.top &&
+          bottom + boxH > box.bottom,
+      );
+      if (!hit) break;
+      label.lead = hit.top - label.anchor[1] + 2 * perPx;
+    }
+    const bottom = label.anchor[1] + label.lead;
+    placed.push({ left, right, bottom, top: bottom + boxH });
+  }
+
   return (
     <figure className="w-full max-w-3xl">
       <div className="relative" style={{ aspectRatio: `${width} / ${height}` }}>
@@ -137,22 +169,32 @@ export async function BlueprintDiagram({
                 {shapes.map((shape, index) => draw(shape, `${group}-${index}`, true))}
               </g>
             ))}
-          {data.groups.map(({ group, anchor }) => (
-            <circle
-              key={`dot-${group}`}
-              cx={sx(anchor[0])}
-              cy={sy(anchor[1])}
-              r={0.035}
-              className="fill-gold-400"
-            />
+          {labels.map(({ group, anchor, lead }) => (
+            <g key={`dot-${group}`}>
+              <line
+                x1={sx(anchor[0])}
+                x2={sx(anchor[0])}
+                y1={sy(anchor[1])}
+                y2={sy(anchor[1] + lead)}
+                className="stroke-gold-600"
+                strokeWidth={1}
+                vectorEffect="non-scaling-stroke"
+              />
+              <circle
+                cx={sx(anchor[0])}
+                cy={sy(anchor[1])}
+                r={0.035}
+                className="fill-gold-400"
+              />
+            </g>
           ))}
         </svg>
-        {data.groups.map(({ group, anchor }) => (
+        {labels.map(({ group, anchor, lead }) => (
           <span
             key={group}
             aria-hidden="true"
-            className="absolute -translate-x-1/2 -translate-y-[140%] border border-gold-700/60 bg-void/85 px-1 font-mono text-nano leading-4 tracking-hud whitespace-nowrap text-gold-200 uppercase"
-            style={pct(anchor[0], anchor[1])}
+            className="absolute -translate-x-1/2 -translate-y-full border border-gold-700/60 bg-void/85 px-1 font-mono text-nano leading-4 tracking-hud whitespace-nowrap text-gold-200 uppercase"
+            style={pct(anchor[0], anchor[1] + lead)}
           >
             <span className="text-gold-500">
               {String(groups.indexOf(group) + 1).padStart(2, "0")}

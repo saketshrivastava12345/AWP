@@ -730,6 +730,25 @@ then reviewed adversarially. The decisions worth keeping:
 9. In dev, every page streams, so the no-JavaScript experience can only be
    judged against a production build.
 
+**Phase 12 — the blueprint tour**
+
+- Chapter 03 of the car page is now a scroll-driven **blueprint**: the floor
+  becomes a gridded sheet, the shell a ghost outlined in gold panel lines, and
+  published dimensions get dimension lines (none for a missing figure). Each
+  further beat moves one subsystem out along its explode path — only groups
+  the car actually has, so an EV has no engine or exhaust — with a card of the
+  variant's real figures and parts; the finale is the labelled exploded car.
+- It reuses the tour's canvas and `StageDirector`: no second WebGL context,
+  every value is a pure function of scroll (`lib/blueprint.ts`, unit-tested),
+  so scrolling back reassembles the car. Line work is built on first reach
+  and disposed with the scene.
+- Reduced motion, no WebGL or a scene error show a server-rendered exploded
+  drawing (`BlueprintDiagram`) from the same layout. It is wrapped in
+  `"use cache"`: three.js objects draw random ids, which Cache Components
+  refuses during prerender otherwise.
+- The hatchback profile in `car-styles.ts` was lowered and raked; it read as
+  an SUV.
+
 **Open items**
 
 - Apply migrations 0006–0008 to the hosted database: `npm run db:push`, then
