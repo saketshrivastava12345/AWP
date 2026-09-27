@@ -52,7 +52,9 @@ export async function FeaturedShowcase({
       {cars.map((car, index) => (
         <li
           key={car.variant_id ?? String(index)}
-          className="w-[82%] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none"
+          // Wide enough on a phone for the card's three-figure row; the next
+          // card still peeks in at the edge.
+          className="w-[92%] max-w-sm shrink-0 snap-start sm:w-auto sm:max-w-none"
         >
           <TiltCard
             data-spotlight=""

@@ -50,6 +50,8 @@ export function AmountDemo() {
           currency={market}
           locale={locale}
           decimals={2}
+          minFontSize={20}
+          className="max-w-2xl"
           description={`Type up to twelve digits: the figure shrinks to fit the box instead of overflowing. Grouping follows the locale (${example}).`}
         />
       </form>
