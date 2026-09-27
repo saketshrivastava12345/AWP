@@ -177,7 +177,11 @@ export function startFxRuntime(): () => void {
     (entries) => {
       for (const entry of entries) {
         const el = entry.target as HTMLElement;
-        if (entry.isIntersecting) {
+        // An element already scrolled past (the runtime mounted late, or the
+        // page opened at an anchor) will never intersect again: show it at
+        // once rather than leave a hole above the visitor.
+        const passed = !entry.isIntersecting && entry.boundingClientRect.bottom < 0;
+        if (entry.isIntersecting || (passed && !el.hasAttribute("data-reveal-repeat"))) {
           show(el);
           if (!el.hasAttribute("data-reveal-repeat")) revealObserver.unobserve(el);
         } else if (

@@ -189,11 +189,14 @@ export function AutoScaleNumberInput({
     let needed = measureTextWidth(text, font, spacing);
     // The symbols sit in their own (text) font: Michroma has no rupee or
     // euro glyph, so they are measured with the span's real font.
-    for (const affix of [prefixRef.current, suffixRef.current]) {
-      if (!affix || !affix.textContent) continue;
+    const affixes: [HTMLSpanElement | null, string][] = [
+      [prefixRef.current, prefix],
+      [suffixRef.current, suffix],
+    ];
+    for (const [affix, text] of affixes) {
+      if (!affix || !text) continue;
       const affixFont = fontShorthand(getComputedStyle(affix), maxFontSize);
-      needed +=
-        measureTextWidth(affix.textContent, affixFont) + AFFIX_GAP_EM * maxFontSize;
+      needed += measureTextWidth(text, affixFont) + AFFIX_GAP_EM * maxFontSize;
     }
     const scale = needed > 0 ? Math.min(1, available / needed) : 1;
     const size = Math.max(minFontSize, Math.floor(maxFontSize * scale * 100) / 100);
