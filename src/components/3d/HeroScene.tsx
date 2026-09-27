@@ -290,6 +290,15 @@ function Rig({
   return null;
 }
 
+// DEBUG-W9B (temporary)
+function DebugW9b({ info }: { info: string }) {
+  const gl = useThree((state) => state.gl);
+  useEffect(() => {
+    gl.domElement.setAttribute("data-debug", info);
+  }, [gl, info]);
+  return null;
+}
+
 /** Calls back after the car has really been drawn twice (shaders compiled). */
 function FirstFrame({ armed, onFrame }: { armed: boolean; onFrame: () => void }) {
   const frames = useRef(0);
@@ -401,6 +410,9 @@ function Scene({
         progressRef={progressRef}
         motionRef={motionRef}
         running={running}
+      />
+      <DebugW9b
+        info={`a=${active} ghost=${shot?.ghost ?? "-"} hl=${shot?.highlight ?? "-"} ex=${exploded} built=${built} q=${quality.level}`}
       />
       <FirstFrame armed={built} onFrame={onReady} />
       <ContextWatch onLost={onContextLost} />

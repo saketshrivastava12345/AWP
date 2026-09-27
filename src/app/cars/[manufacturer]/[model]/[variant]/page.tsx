@@ -10,6 +10,7 @@ import { PowertrainVisualizer } from "@/components/cars/PowertrainVisualizer";
 import { FavoriteToggle } from "@/components/cars/FavoriteButton";
 import { RecordView } from "@/components/account/RecordView";
 import { CarShowcase } from "@/components/3d/CarShowcase";
+import { drawnGroups } from "@/components/3d/viewer-config";
 import { PricingSection } from "@/components/pricing/PricingSection";
 import { ChapterHeader, DetailChapter } from "@/components/cars/detail/DetailChapter";
 import { ChapterIndicator } from "@/components/cars/detail/ChapterIndicator";
@@ -111,11 +112,13 @@ export async function generateMetadata({
     ? [
         {
           url: absoluteUrl(photo.url, siteConfig.url),
-          alt: photo.alt?.trim() || carDisplayName(
-            detail.manufacturer.name,
-            detail.model.name,
-            detail.variant.name,
-          ),
+          alt:
+            photo.alt?.trim() ||
+            carDisplayName(
+              detail.manufacturer.name,
+              detail.model.name,
+              detail.variant.name,
+            ),
           ...(photo.width && photo.height
             ? { width: photo.width, height: photo.height }
             : {}),
@@ -257,10 +260,7 @@ export default async function VariantPage({
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLd }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       <RecordView variantId={variant.id} />
 
       {/* ============================================ 01 · The Machine */}
@@ -291,9 +291,7 @@ export default async function VariantPage({
                   detail={detail}
                   shareUrl={url}
                   price={
-                    listedPrice ? (
-                      <ListedPrice price={listedPrice} size="hero" />
-                    ) : null
+                    listedPrice ? <ListedPrice price={listedPrice} size="hero" /> : null
                   }
                   save={
                     <FavoriteToggle
@@ -361,7 +359,12 @@ export default async function VariantPage({
         {tour.length > 0 ? (
           // The tour brings its own stop rail; the chapter rail steps aside.
           <div data-chapter-rail="hide">
-            <CarShowcase build={build} stops={tour} label={carName} intro={engineeringHeader} />
+            <CarShowcase
+              build={build}
+              stops={tour}
+              label={carName}
+              intro={engineeringHeader}
+            />
           </div>
         ) : null}
 
@@ -397,7 +400,11 @@ export default async function VariantPage({
               driveType={variant.drive_type}
             />
             <FeatureGroup features={detail.features} group="chassis" />
-            <PartsShowcase parts={detail.parts} generalParts={tourParts(tour, allParts)} />
+            <PartsShowcase
+              parts={detail.parts}
+              generalParts={tourParts(tour, allParts)}
+              inspectable={drawnGroups(build)}
+            />
           </div>
         </Container>
       </DetailChapter>

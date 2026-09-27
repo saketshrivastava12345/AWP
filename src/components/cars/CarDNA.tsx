@@ -30,7 +30,11 @@ export function CarDNA({
   if (shown.length === 0) return null;
 
   return (
-    <section id="dna" aria-labelledby="dna-heading" className={cn("scroll-mt-24", className)}>
+    <section
+      id="dna"
+      aria-labelledby="dna-heading"
+      className={cn("scroll-mt-24", className)}
+    >
       <DetailHeading
         id="dna-heading"
         level={headingLevel}

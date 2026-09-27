@@ -48,6 +48,16 @@ const HeroScene = dynamic(() => import("./HeroScene").then((m) => m.HeroScene), 
   loading: () => null,
 });
 
+// DEBUG-W9B (temporary)
+function debugProfile<T extends object>(profile: T): T {
+  try {
+    const raw = window.localStorage.getItem("aurix-debug-profile");
+    return raw ? { ...profile, ...(JSON.parse(raw) as Partial<T>) } : profile;
+  } catch {
+    return profile;
+  }
+}
+
 /** Content blocks the scroll position is measured against: the hero, then each card. */
 const BEAT_SELECTOR = "[data-hero-beat]";
 
@@ -231,7 +241,7 @@ export function HeroStory({
                   progressRef={progress}
                   active={active}
                   running={canRender}
-                  quality={QUALITY_PROFILES[mode.level]}
+                  quality={debugProfile(QUALITY_PROFILES[mode.level])}
                   onReady={handleReady}
                   onContextLost={handleFailed}
                 />

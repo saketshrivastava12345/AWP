@@ -56,11 +56,9 @@ describe("detailDescription", () => {
     );
   });
 
-  it("still names the car when nothing is published", () => {
-    const text = detailDescription(
-      makeDetail({ performance: null, variant: { year_start: null } }),
-    );
-    expect(text.startsWith("Porsche 911 GT3. ")).toBe(true);
+  it("still names the car when no figure is published", () => {
+    const text = detailDescription(makeDetail({ performance: null }));
+    expect(text.startsWith("Porsche 911 GT3 (2021 – present). ")).toBe(true);
   });
 });
 
@@ -81,7 +79,9 @@ describe("paths", () => {
 
 describe("planChapters", () => {
   it("numbers every chapter in order by default", () => {
-    expect(planChapters({}).map((chapter) => `${chapter.number} ${chapter.label}`)).toEqual([
+    expect(
+      planChapters({}).map((chapter) => `${chapter.number} ${chapter.label}`),
+    ).toEqual([
       "01 The Machine",
       "02 Performance",
       "03 Engineering",

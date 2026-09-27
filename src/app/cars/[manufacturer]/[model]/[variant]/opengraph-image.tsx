@@ -50,7 +50,11 @@ export async function generateImageMetadata({
 }) {
   const detail = await load(await params);
   if (!detail || primaryPhoto(detail)) return [];
-  const name = [detail.manufacturer.name, detail.model.name, distinctVariantName(detail.model.name, detail.variant.name)]
+  const name = [
+    detail.manufacturer.name,
+    detail.model.name,
+    distinctVariantName(detail.model.name, detail.variant.name),
+  ]
     .filter(Boolean)
     .join(" ");
   return [
@@ -71,7 +75,10 @@ function figuresOf(detail: VariantDetail): { value: string; label: string }[] {
       : { value: `${formatFigure(toFinite(p?.power_hp) ?? 0)} HP`, label: "Power" },
     toFinite(p?.zero_to_100_s) === null
       ? null
-      : { value: `${formatFigure(toFinite(p?.zero_to_100_s) ?? 0, 1)} S`, label: "0-100 km/h" },
+      : {
+          value: `${formatFigure(toFinite(p?.zero_to_100_s) ?? 0, 1)} S`,
+          label: "0-100 km/h",
+        },
     toFinite(p?.top_speed_kmh) === null
       ? null
       : {
@@ -87,7 +94,9 @@ function figuresOf(detail: VariantDetail): { value: string; label: string }[] {
             : "Range",
         },
   ];
-  return entries.filter((entry): entry is { value: string; label: string } => entry !== null);
+  return entries.filter(
+    (entry): entry is { value: string; label: string } => entry !== null,
+  );
 }
 
 export default async function OpengraphImage({
@@ -192,7 +201,12 @@ export default async function OpengraphImage({
         <div style={{ width: 10, height: 10, backgroundColor: BRAND_COLORS.gold500 }} />
         <div style={{ marginLeft: 16 }}>AURIX</div>
         <div
-          style={{ width: 28, height: 1, margin: "0 16px", backgroundColor: BRAND_COLORS.gold700 }}
+          style={{
+            width: 28,
+            height: 1,
+            margin: "0 16px",
+            backgroundColor: BRAND_COLORS.gold700,
+          }}
         />
         <div>Specifications, performance and price</div>
       </div>
@@ -235,7 +249,13 @@ export default async function OpengraphImage({
       </div>
 
       {/* Published figures, and what the drawing is. */}
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+        }}
+      >
         <div style={{ display: "flex" }}>
           {figures.map((figure, index) => (
             <div

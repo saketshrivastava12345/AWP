@@ -74,7 +74,9 @@ export function SpecSection({
                 <dt className="flex min-w-0 items-center gap-1 text-sm text-ink-400">
                   <span>{row.label}</span>
                   {row.hint ? (
-                    <InfoHint label={`About ${row.label.toLowerCase()}`}>{row.hint}</InfoHint>
+                    <InfoHint label={`About ${row.label.toLowerCase()}`}>
+                      {row.hint}
+                    </InfoHint>
                   ) : null}
                 </dt>
                 <dd

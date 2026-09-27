@@ -45,7 +45,12 @@ function stop(components: string[]): TourStop {
     body: "",
     stats: [],
     features: [],
-    components: components.map((slug) => ({ name: slug, slug, summary: null, note: null })),
+    components: components.map((slug) => ({
+      name: slug,
+      slug,
+      summary: null,
+      note: null,
+    })),
     callouts: [],
   };
 }
@@ -162,7 +167,9 @@ describe("parts by group", () => {
         { part: spoiler, detail: "   " },
       ],
     });
-    expect(partDetailsFor(detail)).toEqual({ "double-wishbone": "Adapted from the RSR." });
+    expect(partDetailsFor(detail)).toEqual({
+      "double-wishbone": "Adapted from the RSR.",
+    });
   });
 
   it("collects the tour's components in order, once each", () => {
@@ -195,9 +202,9 @@ describe("groupNotesFor", () => {
   it("gives a group with nothing published no note", () => {
     const notes = groupNotesFor(
       makeDetail({
-        variant: { fuel_type: "electric", drive_type: null },
+        variant: { fuel_type: "electric" },
         engine: null,
-        transmission: { name: " ", gears: null },
+        transmission: null,
         dimensions: null,
         ev: { battery_kwh: 100, motor_count: 3, range_km: 600, range_standard: "epa" },
       }),
@@ -251,9 +258,9 @@ describe("hasCarbonCeramicBrakes", () => {
   });
 
   it("is true for the catalogued part or feature", () => {
-    expect(hasCarbonCeramicBrakes(makeDetail({ parts: [{ part: disc, detail: null }] }))).toBe(
-      true,
-    );
+    expect(
+      hasCarbonCeramicBrakes(makeDetail({ parts: [{ part: disc, detail: null }] })),
+    ).toBe(true);
     expect(
       hasCarbonCeramicBrakes(makeDetail({ features: [feature("Fitted as standard.")] })),
     ).toBe(true);

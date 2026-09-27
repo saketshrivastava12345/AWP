@@ -110,7 +110,9 @@ export function tourParts(tour: readonly TourStop[], allParts: readonly Part[]):
 }
 
 /** Part slug → the note catalogued for this variant. */
-export function partDetailsFor(detail: Pick<VariantDetail, "parts">): Record<string, string> {
+export function partDetailsFor(
+  detail: Pick<VariantDetail, "parts">,
+): Record<string, string> {
   const notes: Record<string, string> = {};
   for (const { part, detail: note } of detail.parts) {
     if (note?.trim()) notes[part.slug] = note.trim();
@@ -133,7 +135,8 @@ const withUnit = (
 ) => {
   const number = toFinite(value);
   if (number === null) return null;
-  const text = decimals === undefined ? formatNatural(number) : formatFigure(number, decimals);
+  const text =
+    decimals === undefined ? formatNatural(number) : formatFigure(number, decimals);
   return `${text} ${unit}`;
 };
 

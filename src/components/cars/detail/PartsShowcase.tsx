@@ -14,22 +14,27 @@ import { DetailHeading } from "./DetailHeading";
  *                 tour's picks for this layout), shown after and labelled as
  *                 typical of the layout rather than catalogued for the car
  *   limitGeneral  cap on general components (default 6)
+ *   inspectable   the subsystems the car's 3D view draws; "View in 3D" is
+ *                 offered only for those (omit to offer it for every group)
  *   headingLevel  default 3
  *
  * "View in 3D" is a plain link to #explore-3d carrying data-inspect with the
  * part's viewer group; the page wires that to open the subsystem. A part
- * without a viewer group gets no such link.
+ * without a viewer group — or whose group this car's 3D view does not draw
+ * (an engine whose position is not recorded) — gets no such link.
  */
 export function PartsShowcase({
   parts,
   generalParts = [],
   limitGeneral = 6,
+  inspectable,
   headingLevel = 3,
   className,
 }: {
   parts: readonly { part: Part; detail: string | null }[];
   generalParts?: readonly Part[];
   limitGeneral?: number;
+  inspectable?: readonly ViewerGroup[];
   headingLevel?: 2 | 3;
   className?: string;
 }) {
@@ -41,6 +46,10 @@ export function PartsShowcase({
     )
     .slice(0, limitGeneral);
   if (parts.length === 0 && general.length === 0) return null;
+
+  const canInspect = (part: Part) =>
+    part.viewer_group !== null &&
+    (inspectable === undefined || inspectable.includes(part.viewer_group));
 
   const headingId = "parts-showcase-heading";
   return (
@@ -57,10 +66,22 @@ export function PartsShowcase({
           short last row simply ends. */}
       <ul className="mt-6 grid pt-px pl-px sm:grid-cols-2 xl:grid-cols-3">
         {parts.map(({ part, detail }) => (
-          <PartCard key={part.id} part={part} note={detail} catalogued />
+          <PartCard
+            key={part.id}
+            part={part}
+            note={detail}
+            catalogued
+            inspect={canInspect(part)}
+          />
         ))}
         {general.map((part) => (
-          <PartCard key={part.id} part={part} note={null} catalogued={false} />
+          <PartCard
+            key={part.id}
+            part={part}
+            note={null}
+            catalogued={false}
+            inspect={canInspect(part)}
+          />
         ))}
       </ul>
 
@@ -97,10 +118,13 @@ function PartCard({
   part,
   note,
   catalogued,
+  inspect,
 }: {
   part: Part;
   note: string | null;
   catalogued: boolean;
+  /** Offer "View in 3D" (the car's 3D view draws this part's group). */
+  inspect: boolean;
 }) {
   const summary =
     note?.trim() || firstSentence(part.function) || firstSentence(part.description);
@@ -142,7 +166,7 @@ function PartCard({
           Encyclopedia
           <ArrowUpRight className="size-3" aria-hidden="true" />
         </span>
-        {part.viewer_group ? (
+        {inspect && part.viewer_group ? (
           <a
             href="#explore-3d"
             data-inspect={part.viewer_group}

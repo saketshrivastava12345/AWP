@@ -24,7 +24,10 @@ export function detailTitle(
  * with none published the sentence simply names the car.
  */
 export function detailDescription(
-  detail: Pick<VariantDetail, "manufacturer" | "model" | "variant" | "performance" | "ev">,
+  detail: Pick<
+    VariantDetail,
+    "manufacturer" | "model" | "variant" | "performance" | "ev"
+  >,
 ): string {
   const name = carDisplayName(
     detail.manufacturer.name,
@@ -50,7 +53,8 @@ export function detailDescription(
   const years = detail.variant.year_start
     ? ` (${formatYearRange(detail.variant.year_start, detail.variant.year_end)})`
     : "";
-  const lead = figures.length > 0 ? `${name}${years}: ${figures.join(", ")}.` : `${name}${years}.`;
+  const lead =
+    figures.length > 0 ? `${name}${years}: ${figures.join(", ")}.` : `${name}${years}.`;
   return `${lead} Specifications, performance, dimensions, engineering and sourced prices on AURIX.`;
 }
 
@@ -110,7 +114,9 @@ const CHAPTER_ORDER: readonly ChapterId[] = [
  * nothing in it is left out and the rest close up, so the headings, the
  * indicator and "03 / 06" always agree.
  */
-export function planChapters(present: Partial<Record<ChapterId, boolean>>): ChapterPlan[] {
+export function planChapters(
+  present: Partial<Record<ChapterId, boolean>>,
+): ChapterPlan[] {
   return CHAPTER_ORDER.filter((id) => present[id] !== false).map((id, index) => ({
     id,
     number: String(index + 1).padStart(2, "0"),
@@ -137,7 +143,12 @@ export type ListedPriceRow = {
  * ("base_price") has no recorded source, and an estimate is not an offer, so
  * neither ever becomes a schema.org Offer.
  */
-const OFFER_TYPES = ["manufacturer_list", "dealer_list", "ex_showroom", "on_road"] as const;
+const OFFER_TYPES = [
+  "manufacturer_list",
+  "dealer_list",
+  "ex_showroom",
+  "on_road",
+] as const;
 type OfferType = (typeof OFFER_TYPES)[number];
 
 function isOfferType(value: string | null): value is OfferType {

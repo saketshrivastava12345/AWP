@@ -93,9 +93,7 @@ export function ChapterIndicator({
   // it scrolls in, and two rails at the same edge would overlap.
   const [railYields, setRailYields] = useState(false);
   useEffect(() => {
-    const targets = document.querySelectorAll<HTMLElement>(
-      '[data-chapter-rail="hide"]',
-    );
+    const targets = document.querySelectorAll<HTMLElement>('[data-chapter-rail="hide"]');
     if (targets.length === 0) return;
     const covering = new Set<Element>();
     const observer = new IntersectionObserver(
