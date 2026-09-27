@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
@@ -18,7 +18,7 @@
     "db:push": "node scripts/db-push.mjs",
     "db:seed": "node scripts/run-sql.mjs supabase/seed.sql",
     "db:verify": "node scripts/run-sql.mjs supabase/verify.sql",
-    "verify": "npm run lint && npm run build && npm run typecheck"
+    "verify": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
     "@react-three/drei": "10.7.8",

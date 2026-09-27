@@ -2012,3 +2012,44 @@ begin
   end if;
 end;
 $do$;
+
+-- The eight photographs committed under public/images/cars/. Each was picked
+-- by scripts/fetch-images.mjs from Wikimedia Commons and then checked by eye
+-- (wrong picks are listed in scripts/image-skip.txt instead). Author and
+-- licence come from public/images/CREDITS.md; the Commons file-page URL was
+-- not recorded when they were downloaded, so source_url stays NULL rather
+-- than being guessed — re-running fetch-images on a networked machine fills
+-- it in for new picks.
+--
+-- A row is added only when the variant has no image at all, so this never
+-- duplicates or overrides a photograph registered some other way.
+do $do$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'car_media'
+               and column_name = 'license') then
+    insert into public.car_media (variant_id, type, url, alt, is_primary, display_order,
+                                  credit, shot, source, license, author, width, height,
+                                  file_size_bytes)
+    select v.id, 'image', p.url, p.alt, true, 0,
+           'Photo: ' || p.author || ' / Wikimedia Commons (' || p.license || ')',
+           'hero'::public.media_shot, 'Wikimedia Commons', p.license, p.author,
+           p.width, p.height, p.bytes
+    from (values
+      ('porsche', '911',     'carrera-s',               '/images/cars/porsche-911-carrera-s.jpg',              'Porsche 911 Carrera S',                  'MrWalkr',      'CC BY-SA 4.0',    1280, 665, 181166),
+      ('porsche', '911',     'gt3',                     '/images/cars/porsche-911-gt3.jpg',                    'Porsche 911 GT3',                        'MrWalkr',      'CC BY-SA 4.0',    1280, 636, 238331),
+      ('porsche', '911',     'turbo-s',                 '/images/cars/porsche-911-turbo-s.jpg',                'Porsche 911 Turbo S',                    'Alexander-93', 'CC BY-SA 4.0',    1280, 620, 174456),
+      ('tata',    'altroz',  '1-2-petrol',              '/images/cars/tata-altroz-1-2-petrol.jpg',             'Tata Altroz 1.2 Petrol',                 'Dairokkan9',   'CC BY-SA 4.0',    1280, 720, 236705),
+      ('tesla',   'model-s', 'plaid',                   '/images/cars/tesla-model-s-plaid.jpg',                'Tesla Model S Plaid',                    'Alexander-93', 'CC BY-SA 4.0',    1280, 692, 262854),
+      ('toyota',  'corolla', '1-8-hybrid',              '/images/cars/toyota-corolla-1-8-hybrid.jpg',          'Toyota Corolla 1.8 Hybrid',              'Alexander-93', 'CC BY-SA 4.0',    1280, 662, 270835),
+      ('volvo',   'ex30',    'twin-motor-performance',  '/images/cars/volvo-ex30-twin-motor-performance.jpg',  'Volvo EX30 Twin Motor Performance',      'Alexander-93', 'CC BY-SA 4.0',    1280, 926, 351018),
+      ('volvo',   'xc90',    't8-recharge',             '/images/cars/volvo-xc90-t8-recharge.jpg',             'Volvo XC90 T8 Recharge',                 '© M 93',       'CC BY-SA 3.0 de', 1280, 706, 262837)
+    ) as p (manufacturer, model, variant, url, alt, author, license, width, height, bytes)
+    join public.manufacturers mf on mf.slug = p.manufacturer
+    join public.car_models m on m.manufacturer_id = mf.id and m.slug = p.model
+    join public.car_variants v on v.model_id = m.id and v.slug = p.variant
+    where not exists (select 1 from public.car_media cm
+                      where cm.variant_id = v.id and cm.type = 'image');
+  end if;
+end;
+$do$;
