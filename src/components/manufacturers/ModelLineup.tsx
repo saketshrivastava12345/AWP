@@ -41,12 +41,15 @@ export function ModelLineup({
         ].filter(Boolean);
 
         return (
-          <li key={model.id} className="relative flex flex-col rounded-card p-6 hud-panel sm:p-8">
+          <li
+            key={model.id}
+            className="relative flex flex-col rounded-card p-6 hud-panel sm:p-8"
+          >
             <span aria-hidden="true" className="hud-brackets -m-px" />
             <h3 className="text-h3">
               <Link
                 href={`/cars/${manufacturerSlug}/${model.slug}`}
-                className="fx-link rounded-xs transition-colors duration-(--duration-fast) hover:text-cyan-100"
+                className="rounded-xs fx-link transition-colors duration-(--duration-fast) hover:text-cyan-100"
               >
                 {model.name}
               </Link>

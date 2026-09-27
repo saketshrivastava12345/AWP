@@ -108,7 +108,7 @@ export function CountryLocator({
         <circle cx={x} cy={y} r={4.5} className="fill-cyan-200" />
       </svg>
       <figcaption className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 font-mono text-[11px] tracking-hud text-ink-400 uppercase">
-        <span className="tabular-nums text-cyan-200">
+        <span className="text-cyan-200 tabular-nums">
           {formatCoordinates(marker.lat, marker.lon)}
         </span>
         <span>Approximate centroid</span>

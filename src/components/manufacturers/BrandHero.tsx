@@ -106,7 +106,10 @@ export function BrandHero({
       {/* Decorative ground: orbs, a drifting grid and scan lines. The beam
           is left out — the section is only clipped sideways. */}
       <GlowOrbs tone="cyan" />
-      <GridBackground size={56} className="[mask-image:linear-gradient(to_bottom,black_30%,transparent)]" />
+      <GridBackground
+        size={56}
+        className="[mask-image:linear-gradient(to_bottom,black_30%,transparent)]"
+      />
       <Scanlines />
       <Container className="relative pt-6 lg:pt-8">
         <Breadcrumbs items={crumbs} />

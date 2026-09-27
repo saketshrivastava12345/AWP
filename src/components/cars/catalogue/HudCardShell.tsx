@@ -37,22 +37,22 @@ export function HudCardShell({
       <div
         aria-hidden="true"
         className={cn(
-          "absolute inset-0 chamfer [--chamfer:14px] transition-opacity duration-(--duration-base) ease-standard",
+          "absolute inset-0 transition-opacity duration-(--duration-base) ease-standard chamfer [--chamfer:14px]",
           "bg-[linear-gradient(135deg,oklch(0.83_0.13_210/60%),oklch(0.9_0.03_230/18%)_38%,oklch(0.9_0.03_230/14%)_62%,oklch(0.7_0.17_290/45%))]",
           interactive
-            ? "opacity-60 group-hover/card:opacity-100 group-focus-within/card:opacity-100"
+            ? "opacity-60 group-focus-within/card:opacity-100 group-hover/card:opacity-100"
             : "opacity-40",
         )}
       />
       {/* The plate. */}
       <div
         aria-hidden="true"
-        className="absolute inset-px chamfer [--chamfer:13px] bg-surface-1 transition-colors duration-(--duration-base) ease-standard group-hover/card:bg-surface-2 group-focus-within/card:bg-surface-2"
+        className="absolute inset-px bg-surface-1 transition-colors duration-(--duration-base) ease-standard chamfer [--chamfer:13px] group-focus-within/card:bg-surface-2 group-hover/card:bg-surface-2"
       />
       {/* Content, clipped to the plate. */}
       <div
         className={cn(
-          "relative m-px flex flex-1 flex-col chamfer [--chamfer:13px] overflow-hidden",
+          "relative m-px flex flex-1 flex-col overflow-hidden chamfer [--chamfer:13px]",
           contentClassName,
         )}
       >
@@ -71,9 +71,9 @@ export function HudCardShell({
       <span
         aria-hidden="true"
         className={cn(
-          "hud-brackets [--hud-l:14px] transition-opacity duration-(--duration-base) ease-standard",
+          "hud-brackets transition-opacity duration-(--duration-base) ease-standard [--hud-l:14px]",
           interactive
-            ? "opacity-50 group-hover/card:opacity-100 group-focus-within/card:opacity-100"
+            ? "opacity-50 group-focus-within/card:opacity-100 group-hover/card:opacity-100"
             : "opacity-35",
         )}
       />

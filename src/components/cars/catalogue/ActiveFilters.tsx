@@ -76,7 +76,7 @@ export function ActiveFilters({
         <Link
           href={clearHref}
           scroll={false}
-          className="fx-link inline-flex min-h-11 items-center px-2 font-mono text-[11px] tracking-hud text-ink-200 uppercase transition-colors hover:text-cyan-100"
+          className="inline-flex min-h-11 items-center fx-link px-2 font-mono text-[11px] tracking-hud text-ink-200 uppercase transition-colors hover:text-cyan-100"
         >
           Clear all
         </Link>

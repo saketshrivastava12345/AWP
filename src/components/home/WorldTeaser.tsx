@@ -265,11 +265,13 @@ function Brands({ manufacturers }: { manufacturers: ManufacturerListItem[] }) {
                     aria-hidden="true"
                     className="hud-brackets opacity-0 transition-opacity duration-(--duration-base) group-hover/brand:opacity-100 group-focus-visible/brand:opacity-100"
                   />
-                  <span className="flex items-start justify-between gap-3">
-                    <span className="font-hud text-[13px] tracking-hud text-ink-50 uppercase transition-colors duration-(--duration-fast) group-hover/brand:text-cyan-200">
+                  <span className="flex min-w-0 items-start justify-between gap-3">
+                    {/* Michroma is wide: a long name may break mid-word on a phone
+                        rather than push the code out of the plate. */}
+                    <span className="min-w-0 font-hud text-xs [overflow-wrap:anywhere] tracking-hud text-ink-50 uppercase transition-colors duration-(--duration-fast) group-hover/brand:text-cyan-200 sm:text-[13px]">
                       <ScrambleText text={maker.name} trigger="hover" />
                     </span>
-                    <span aria-hidden="true" className="hud-label text-ink-600">
+                    <span aria-hidden="true" className="shrink-0 hud-label text-ink-600">
                       {pad(index + 1)}
                     </span>
                   </span>

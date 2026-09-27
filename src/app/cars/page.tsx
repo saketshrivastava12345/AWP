@@ -96,7 +96,10 @@ export async function generateMetadata({
  */
 function CatalogueBackdrop() {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+    >
       <GridBackground
         size={56}
         className="[mask-image:linear-gradient(to_bottom,black,black_35%,transparent_85%)]"
@@ -109,7 +112,7 @@ function CatalogueBackdrop() {
         <div className="absolute inset-x-0 top-1/2 h-px bg-cyan-400/10" />
         <div className="absolute inset-y-0 left-1/2 w-px bg-cyan-400/10" />
         <div className="absolute inset-0 animate-spin-slow rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,oklch(0.83_0.13_210/24%)_40deg,transparent_62deg)]" />
-        <div className="absolute top-1/2 left-1/2 size-2 -translate-1/2 rounded-full bg-cyan-300 shadow-[0_0_12px_var(--color-cyan-400)] animate-pulse-glow" />
+        <div className="absolute top-1/2 left-1/2 size-2 -translate-1/2 animate-pulse-glow rounded-full bg-cyan-300 shadow-[0_0_12px_var(--color-cyan-400)]" />
       </div>
     </div>
   );
@@ -341,7 +344,7 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
               >
                 <span
                   aria-hidden="true"
-                  className="size-1.5 rounded-full bg-cyan-300 shadow-[0_0_8px_var(--color-cyan-400)] animate-pulse-glow"
+                  className="size-1.5 animate-pulse-glow rounded-full bg-cyan-300 shadow-[0_0_8px_var(--color-cyan-400)]"
                 />
                 Filters
                 {activeCount > 0 ? (
@@ -354,7 +357,7 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
                 <Link
                   href={clearHref}
                   scroll={false}
-                  className="fx-link inline-flex min-h-11 items-center font-mono text-[11px] tracking-hud text-ink-200 uppercase transition-colors hover:text-cyan-100"
+                  className="inline-flex min-h-11 items-center fx-link font-mono text-[11px] tracking-hud text-ink-200 uppercase transition-colors hover:text-cyan-100"
                 >
                   Clear all
                 </Link>

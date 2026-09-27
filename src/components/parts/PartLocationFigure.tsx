@@ -1,11 +1,14 @@
 import { GROUP_LABELS } from "@/components/3d/viewer-config";
+import { Scanlines } from "@/components/fx/Backgrounds";
 import { cn } from "@/lib/utils";
 import { ZONE_NOTES, locationFigure, type ZoneShape } from "./part-location";
 import type { ViewerGroup } from "@/types/domain";
 
 /**
  * "Typical location": a technical side elevation of a generic saloon with the
- * zone a system usually occupies hatched in gold. Server-rendered SVG.
+ * zone a system usually occupies hatched in cyan, its outline a running dash,
+ * on a HUD panel a scan beam sweeps down. Server-rendered SVG; the motion is
+ * CSS (stroke-dashoffset and a translate) and stops under reduced motion.
  *
  * It is deliberately labelled as typical: a part in the encyclopedia is not
  * tied to one car, and the note under the drawing says where the answer
@@ -49,7 +52,7 @@ export function PartLocationFigure({
               y={shape.y}
               width={shape.width}
               height={shape.height}
-              className="fill-gold-500/15"
+              className="fill-cyan-400/12"
             />
             <rect
               x={shape.x}
@@ -57,8 +60,9 @@ export function PartLocationFigure({
               width={shape.width}
               height={shape.height}
               fill={`url(#${ids.hatch})`}
-              className="stroke-gold-400"
+              className="animate-hud-dash stroke-cyan-300"
               strokeWidth={1.5}
+              strokeDasharray="6 4"
             />
           </g>
         );
@@ -70,8 +74,9 @@ export function PartLocationFigure({
             cy={shape.cy}
             r={shape.r}
             fill={`url(#${ids.hatch})`}
-            className="stroke-gold-400"
+            className="animate-hud-dash stroke-cyan-300"
             strokeWidth={2}
+            strokeDasharray="6 4"
           />
         );
       case "line":
@@ -80,7 +85,7 @@ export function PartLocationFigure({
             key={key}
             d={shape.d}
             fill="none"
-            className="stroke-gold-300"
+            className={cn("stroke-cyan-200", shape.dashed && "animate-hud-dash")}
             strokeWidth={shape.dashed ? 2 : 2.4}
             strokeDasharray={shape.dashed ? "7 5" : undefined}
             strokeLinejoin="round"
@@ -93,8 +98,9 @@ export function PartLocationFigure({
             key={key}
             d={silhouette.body}
             fill={`url(#${ids.hatch})`}
-            className="stroke-gold-400"
+            className="animate-hud-dash stroke-cyan-300"
             strokeWidth={2.5}
+            strokeDasharray="8 5"
           />
         );
     }
@@ -102,11 +108,25 @@ export function PartLocationFigure({
 
   return (
     <figure
-      className={cn("relative min-w-0 rounded-card bg-surface-1 p-5 sm:p-8", className)}
+      className={cn(
+        "relative min-w-0 overflow-hidden rounded-card p-5 hud-panel sm:p-8",
+        className,
+      )}
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="text-h4">Typical location</p>
-        <p className="text-caption">Side elevation · generic saloon</p>
+      <span aria-hidden="true" className="hud-brackets -m-px" />
+      <Scanlines beam />
+      <div className="relative flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="flex items-center gap-2.5 font-hud text-xs tracking-hud text-ink-50 uppercase">
+          <span
+            aria-hidden="true"
+            className="size-1.5 animate-pulse-glow rounded-full bg-cyan-300 shadow-[0_0_8px_var(--color-cyan-400)]"
+          />
+          Typical location
+        </p>
+        <p className="hud-label" aria-hidden="true">
+          Side elevation // generic saloon
+        </p>
+        <p className="sr-only">Side elevation of a generic saloon</p>
       </div>
 
       <svg
@@ -115,7 +135,7 @@ export function PartLocationFigure({
           padTop +
           padBottom
         ).toFixed(1)}`}
-        className="mt-4 block h-auto w-full"
+        className="relative mt-4 block h-auto w-full"
         role="img"
         aria-labelledby={`${ids.title} ${ids.desc}`}
       >
@@ -139,12 +159,34 @@ export function PartLocationFigure({
               y1="0"
               x2="0"
               y2="7"
-              stroke="var(--color-gold-400)"
+              stroke="var(--color-cyan-300)"
               strokeWidth="1.3"
-              strokeOpacity="0.55"
+              strokeOpacity="0.5"
+            />
+          </pattern>
+          <pattern
+            id={`${ids.hatch}-grid`}
+            width="40"
+            height="40"
+            patternUnits="userSpaceOnUse"
+          >
+            <path
+              d="M40 0H0V40"
+              fill="none"
+              stroke="oklch(0.83 0.13 210 / 9%)"
+              strokeWidth="1"
             />
           </pattern>
         </defs>
+
+        {/* Engineering grid behind the drawing. */}
+        <rect
+          x={-padX}
+          y={-padTop}
+          width={W + padX * 2}
+          height={H + padTop}
+          fill={`url(#${ids.hatch}-grid)`}
+        />
 
         {/* Ground line with axle stations, like a general-arrangement drawing. */}
         <line
@@ -152,7 +194,7 @@ export function PartLocationFigure({
           y1={H}
           x2={W + padX}
           y2={H}
-          stroke="var(--color-line-strong)"
+          stroke="oklch(0.83 0.13 210 / 45%)"
           strokeWidth="1.2"
         />
         {[figure.rearAxleX, figure.frontAxleX].map((x) => (
@@ -162,14 +204,14 @@ export function PartLocationFigure({
             y1={H + 4}
             x2={x}
             y2={H + padBottom * 0.28}
-            stroke="var(--color-ink-600)"
+            stroke="oklch(0.83 0.13 210 / 40%)"
             strokeWidth="1.2"
           />
         ))}
 
         <path
           d={silhouette.body}
-          className="fill-surface-3 stroke-ink-600"
+          className="fill-surface-3 stroke-ink-500"
           strokeWidth={2}
         />
         {silhouette.glass ? <path d={silhouette.glass} className="fill-void/70" /> : null}
@@ -213,22 +255,22 @@ export function PartLocationFigure({
           ),
         )}
 
-        <g className="font-sans" fontSize="16">
-          <text x={-padX * 0.2} y={labelY} className="fill-ink-400">
-            ← Rear
+        <g className="font-mono" fontSize="14" letterSpacing="2">
+          <text x={-padX * 0.2} y={labelY} className="fill-cyan-200">
+            ← REAR
           </text>
-          <text x={W + padX * 0.2} y={labelY} textAnchor="end" className="fill-ink-400">
-            Front →
+          <text x={W + padX * 0.2} y={labelY} textAnchor="end" className="fill-cyan-200">
+            FRONT →
           </text>
         </g>
       </svg>
 
-      <figcaption className="mt-5 space-y-3 border-t border-line-subtle pt-5">
+      <figcaption className="relative mt-5 space-y-3 border-t border-line-subtle pt-5">
         {unique.map((group) => (
           <p key={group} className="flex items-start gap-3 text-body-s text-ink-300">
             <span
               aria-hidden="true"
-              className="mt-1.5 size-2.5 shrink-0 rounded-[2px] border border-gold-400 bg-gold-500/30"
+              className="mt-1.5 size-2.5 shrink-0 rounded-[2px] border border-cyan-300 bg-cyan-400/25 shadow-[0_0_6px_var(--color-cyan-400)]"
             />
             <span>
               <span className="text-ink-100">{GROUP_LABELS[group]}.</span>{" "}

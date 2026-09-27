@@ -6,6 +6,7 @@ import { ArrowRight, Search, SearchX, X } from "lucide-react";
 import { Input } from "@/components/ui/Field";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button, buttonClasses } from "@/components/ui/Button";
+import { ScrambleText } from "@/components/fx/ScrambleText";
 import { cn } from "@/lib/utils";
 import { CategoryChips } from "./CategoryChips";
 import { PartList, type PartCardData } from "./PartCard";
@@ -139,10 +140,17 @@ export function PartsExplorer({ categories }: { categories: ExplorerCategory[] }
       </div>
 
       <div className="mt-6 flex min-h-11 flex-wrap items-center justify-between gap-3">
-        <p id={countId} className="text-body-s text-ink-400" aria-live="polite">
+        <p
+          id={countId}
+          className="font-mono text-xs tracking-hud text-ink-400 uppercase"
+          aria-live="polite"
+        >
+          <span className="text-cyan-100 glow-text-cyan">
+            {filtering ? shown : total}
+          </span>{" "}
           {filtering
-            ? `${shown} of ${total} components match`
-            : `${total} components in ${categories.length} categories`}
+            ? `of ${total} components match`
+            : `components in ${categories.length} categories`}
         </p>
         {filtering ? (
           <Button variant="link" size="sm" arrow={false} onClick={reset}>
@@ -152,9 +160,10 @@ export function PartsExplorer({ categories }: { categories: ExplorerCategory[] }
       </div>
 
       {results.length === 0 ? (
-        <div className="mt-8 flex flex-col items-center rounded-card bg-surface-1 px-6 py-16 text-center">
+        <div className="relative mt-8 flex flex-col items-center rounded-card px-6 py-16 text-center hud-panel">
+          <span aria-hidden="true" className="hud-brackets -m-px" />
           <SearchX
-            className="size-6 text-ink-400"
+            className="size-6 text-cyan-300 drop-shadow-[0_0_10px_oklch(0.8_0.14_210/50%)]"
             strokeWidth={1.25}
             aria-hidden="true"
           />
@@ -174,9 +183,16 @@ export function PartsExplorer({ categories }: { categories: ExplorerCategory[] }
             <section key={entry.id} aria-labelledby={`parts-${entry.slug}`}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
                 <div className="min-w-0">
-                  <h2 id={`parts-${entry.slug}`} className="text-h3">
-                    {entry.name}
-                    <span className="ml-3 align-middle text-caption font-normal tracking-normal">
+                  <h2
+                    id={`parts-${entry.slug}`}
+                    className="flex items-center gap-3 text-h3"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="h-px w-6 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+                    />
+                    <ScrambleText text={entry.name} />
+                    <span className="font-mono text-xs font-normal tracking-hud text-cyan-200 tabular-nums">
                       {entry.parts.length}
                     </span>
                   </h2>

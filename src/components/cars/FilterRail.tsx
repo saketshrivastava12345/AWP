@@ -229,7 +229,7 @@ function Group({ defaultOpen, children }: { defaultOpen: boolean; children: Reac
     >
       {/* Children of <details> other than the summary show only while it is
           open — exactly when the brackets should. */}
-      <span aria-hidden="true" className="hud-brackets -m-px [--hud-l:9px] opacity-70" />
+      <span aria-hidden="true" className="hud-brackets -m-px opacity-70 [--hud-l:9px]" />
       {children}
     </details>
   );

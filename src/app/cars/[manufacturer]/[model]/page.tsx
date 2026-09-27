@@ -375,7 +375,9 @@ export default async function ModelPage({
             </span>
           </p>
           <h2 id="generation-heading" className="text-h2">
-            <ScrambleText text={generations.length === 1 ? "Generation" : "Generations"} />
+            <ScrambleText
+              text={generations.length === 1 ? "Generation" : "Generations"}
+            />
           </h2>
           <Reveal
             as="ol"

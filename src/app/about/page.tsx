@@ -7,6 +7,9 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { SubNav } from "@/components/ui/SubNav";
 import { IndexHero } from "@/components/manufacturers/IndexHero";
+import { HudFrame } from "@/components/fx/HudFrame";
+import { Reveal } from "@/components/fx/Reveal";
+import { ScrambleText } from "@/components/fx/ScrambleText";
 import { getCatalogueCounts } from "@/lib/queries/cars";
 import { listMediaCredits, type MediaCreditEntry } from "@/lib/queries/credits";
 import {
@@ -222,12 +225,15 @@ function Chapter({
   id,
   title,
   lead,
+  code,
   first = false,
   children,
 }: {
   id: string;
   title: string;
   lead?: ReactNode;
+  /** Decorative chapter index, e.g. "01" (aria-hidden). */
+  code?: string;
   first?: boolean;
   children: ReactNode;
 }) {
@@ -240,12 +246,27 @@ function Chapter({
     >
       <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
         <div className="lg:col-span-4">
+          {code ? (
+            <p className="mb-4 flex items-center gap-3 text-eyebrow">
+              <span
+                aria-hidden="true"
+                className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+              />
+              Chapter
+              <span aria-hidden="true" className="hud-label text-ink-600">
+                {"// "}
+                {code}
+              </span>
+            </p>
+          ) : null}
           <h2 id={`${id}-heading`} className="text-h2">
-            {title}
+            <ScrambleText text={title} />
           </h2>
           {lead ? <p className="mt-4 max-w-[48ch] text-body">{lead}</p> : null}
         </div>
-        <div className="min-w-0 lg:col-span-8">{children}</div>
+        <Reveal variant="fade" className="min-w-0 lg:col-span-8">
+          {children}
+        </Reveal>
       </div>
     </Container>
   );
@@ -416,31 +437,41 @@ export default async function AboutPage() {
       {/* ---------------------------------------------------- Principles */}
       <Chapter
         id="principles"
+        code="01"
         first
         title="Principles"
         lead="A car encyclopedia is only useful if it can be trusted, so these rules win over completeness every time."
       >
-        <ol className={rowList}>
+        <Reveal as="ol" stagger className="grid gap-4 sm:gap-5">
           {PRINCIPLES.map((principle, index) => (
-            <li
+            <HudFrame
               key={principle.title}
-              className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-4 border-b border-line-subtle py-7"
+              as="li"
+              label={`RULE // ${String(index + 1).padStart(2, "0")}`}
+              className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-4"
             >
-              <span className="pt-0.5 text-body-s text-ink-400 tabular-nums">
-                {index + 1}
+              <span
+                aria-hidden="true"
+                className="pt-1 font-hud text-sm text-cyan-300 tabular-nums glow-text-cyan"
+              >
+                {String(index + 1).padStart(2, "0")}
               </span>
               <div>
-                <h3 className="text-h4">{principle.title}</h3>
+                <h3 className="text-h4">
+                  <span className="sr-only">Principle {index + 1}: </span>
+                  {principle.title}
+                </h3>
                 <p className="mt-2 max-w-[68ch] text-body">{principle.body}</p>
               </div>
-            </li>
+            </HudFrame>
           ))}
-        </ol>
+        </Reveal>
       </Chapter>
 
       {/* -------------------------------------------------------- Data */}
       <Chapter
         id="data"
+        code="02"
         title="Data & sources"
         lead="Where the figures and prices come from, how they are checked, and the conventions they follow."
       >
@@ -530,6 +561,7 @@ export default async function AboutPage() {
       {/* ----------------------------------------------------- Credits */}
       <Chapter
         id="credits"
+        code="03"
         title="Credits"
         lead="Creative Commons licences require attribution. It is given here for every photograph and model, and beside each photograph on its car's page."
       >
@@ -586,17 +618,27 @@ export default async function AboutPage() {
       {/* ------------------------------------------------------- Stack */}
       <Chapter
         id="stack"
+        code="04"
         title="Technology"
         lead="What AURIX is built with, and why each piece is there."
       >
-        <dl className={rowList}>
-          {STACK.map((item) => (
-            <div key={item.name} className={row}>
-              <dt className={term}>{item.name}</dt>
-              <dd className={detail}>{item.detail}</dd>
+        <Reveal as="dl" stagger className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+          {STACK.map((item, index) => (
+            <div key={item.name} className="relative rounded-card p-5 hud-panel sm:p-6">
+              <span aria-hidden="true" className="hud-brackets -m-px [--hud-l:10px]" />
+              <span
+                aria-hidden="true"
+                className="absolute top-3 right-4 hud-label text-ink-600"
+              >
+                {`SYS.${String(index + 1).padStart(2, "0")}`}
+              </span>
+              <dt className="pr-14 font-hud text-[13px] leading-snug text-ink-50">
+                {item.name}
+              </dt>
+              <dd className="mt-3 text-body-s text-ink-300">{item.detail}</dd>
             </div>
           ))}
-        </dl>
+        </Reveal>
         <p className="mt-6 text-body-s text-ink-300">
           The source code is public:{" "}
           <ExternalLink href={siteConfig.repository}>GitHub repository</ExternalLink>.

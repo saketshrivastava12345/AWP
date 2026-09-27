@@ -229,7 +229,9 @@ export function HomeHero({ car, counts }: { car: HeroCar | null; counts: HomeCou
               className="flex animate-rise-in items-center gap-3 hud-label"
             >
               <span className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]" />
-              SYS.01 // Global automotive intelligence
+              <span className="min-w-0 truncate">
+                SYS.01 // Global automotive intelligence
+              </span>
             </p>
             {/* The headline is the page's largest paint: the real text is in
                 the HTML from the first byte and only decodes over itself. */}

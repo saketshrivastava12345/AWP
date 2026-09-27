@@ -32,7 +32,7 @@ export function CountryCard({
       onFocus={() => onActiveChange?.(country.slug)}
       onBlur={() => onActiveChange?.(null)}
       className={cn(
-        "group/card relative flex h-full flex-col rounded-card border p-6 fx-card sm:p-7",
+        "group/card fx-card relative flex h-full flex-col rounded-card border p-6 sm:p-7",
         active
           ? "border-cyan-400/45 bg-surface-2 shadow-[0_0_32px_-12px_oklch(0.8_0.14_210/40%)]"
           : "border-line bg-surface-1/85",
@@ -41,7 +41,7 @@ export function CountryCard({
       <span
         aria-hidden="true"
         className={cn(
-          "hud-brackets -m-px [--hud-l:12px] transition-opacity duration-(--duration-base) group-hover/card:opacity-100",
+          "hud-brackets -m-px transition-opacity duration-(--duration-base) [--hud-l:12px] group-hover/card:opacity-100",
           active ? "opacity-100" : "opacity-45",
         )}
       />
@@ -72,13 +72,17 @@ export function CountryCard({
           <dt className="font-mono text-[10px] tracking-hud text-ink-400 uppercase">
             {brands === 1 ? "Brand" : "Brands"}
           </dt>
-          <dd className="font-hud text-base text-ink-50 tabular-nums glow-text">{brands}</dd>
+          <dd className="font-hud text-base text-ink-50 tabular-nums glow-text">
+            {brands}
+          </dd>
         </div>
         <div className="flex flex-col-reverse gap-1">
           <dt className="font-mono text-[10px] tracking-hud text-ink-400 uppercase">
             {cars === 1 ? "Car" : "Cars"}
           </dt>
-          <dd className="font-hud text-base text-ink-50 tabular-nums glow-text">{cars}</dd>
+          <dd className="font-hud text-base text-ink-50 tabular-nums glow-text">
+            {cars}
+          </dd>
         </div>
       </dl>
     </Link>

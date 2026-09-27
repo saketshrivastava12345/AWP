@@ -60,13 +60,13 @@ export function ManufacturerCard({
       data-spotlight=""
       suppressHydrationWarning
       className={cn(
-        "group/card relative flex h-full flex-col rounded-card border border-line bg-surface-1/85 p-6 fx-card sm:p-7",
+        "group/card fx-card relative flex h-full flex-col rounded-card border border-line bg-surface-1/85 p-6 sm:p-7",
         className,
       )}
     >
       <span
         aria-hidden="true"
-        className="hud-brackets -m-px [--hud-l:12px] opacity-45 transition-opacity duration-(--duration-base) group-hover/card:opacity-100"
+        className="hud-brackets -m-px opacity-45 transition-opacity duration-(--duration-base) [--hud-l:12px] group-hover/card:opacity-100"
       />
       <Heading className="text-h3 transition-colors duration-(--duration-fast) group-hover/card:text-cyan-100">
         {maker.name}

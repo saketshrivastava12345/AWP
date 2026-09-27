@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { PartList } from "./PartCard";
 import { chipClasses } from "@/components/manufacturers/brand";
 import { PartLocationFigure } from "./PartLocationFigure";
+import { ScrambleText } from "@/components/fx/ScrambleText";
+import { GlowOrbs, GridBackground, Scanlines } from "@/components/fx/Backgrounds";
 import { firstSentence } from "./parts-helpers";
 import { breadcrumbJsonLd, serializeJsonLd, type JsonLd } from "@/lib/json-ld";
 import { siteConfig } from "@/lib/site-config";
@@ -54,8 +56,11 @@ export function PartCategoryView({ data }: { data: PartCategoryPageData }) {
         dangerouslySetInnerHTML={{ __html: serializeJsonLd([termSet, breadcrumbs]) }}
       />
 
-      <section className="border-b border-line-subtle">
-        <Container className="pt-6 pb-12 lg:pt-8 lg:pb-16">
+      <section className="relative isolate overflow-hidden border-b border-line-subtle">
+        <GlowOrbs tone="cyan" />
+        <GridBackground size={56} />
+        <Scanlines beam />
+        <Container className="relative pt-6 pb-12 lg:pt-8 lg:pb-16">
           <Breadcrumbs
             items={[{ label: "Parts", href: "/parts" }, { label: category.name }]}
           />
@@ -69,11 +74,17 @@ export function PartCategoryView({ data }: { data: PartCategoryPageData }) {
             <div
               className={cn("min-w-0", groups.length > 0 ? "lg:col-span-6" : "max-w-3xl")}
             >
-              <p className="text-eyebrow">
+              <p className="flex items-center gap-3 text-eyebrow">
+                <span
+                  aria-hidden="true"
+                  className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+                />
                 {category.parts.length}{" "}
                 {category.parts.length === 1 ? "component" : "components"}
               </p>
-              <h1 className="mt-4 text-display-l hyphens-auto">{category.name}</h1>
+              <h1 className="mt-4 text-display-l hyphens-auto">
+                <ScrambleText text={category.name} />
+              </h1>
               {category.description ? (
                 <p className="mt-6 max-w-[60ch] text-lead">{category.description}</p>
               ) : null}

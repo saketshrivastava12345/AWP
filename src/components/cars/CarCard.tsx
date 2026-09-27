@@ -52,7 +52,10 @@ function Figure({
       <dd className="flex min-w-0 items-baseline gap-1 whitespace-nowrap">
         {value === null ? (
           <>
-            <span aria-hidden="true" className="font-hud text-lg leading-tight text-ink-500">
+            <span
+              aria-hidden="true"
+              className="font-hud text-lg leading-tight text-ink-500"
+            >
               —
             </span>
             <span className="sr-only">Not available</span>

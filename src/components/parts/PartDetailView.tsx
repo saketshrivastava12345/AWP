@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils";
 import { PartList } from "./PartCard";
 import { PartApplications } from "./PartApplications";
 import { PartLocationFigure } from "./PartLocationFigure";
+import { ScrambleText } from "@/components/fx/ScrambleText";
+import { Reveal } from "@/components/fx/Reveal";
+import { GlowOrbs, GridBackground, Scanlines } from "@/components/fx/Backgrounds";
 import { firstSentence } from "./parts-helpers";
 import { breadcrumbJsonLd, serializeJsonLd, type JsonLd } from "@/lib/json-ld";
 import { carDisplayName } from "@/lib/format";
@@ -91,8 +94,11 @@ export function PartDetailView({ data }: { data: PartPageData }) {
         dangerouslySetInnerHTML={{ __html: serializeJsonLd([term, breadcrumbs]) }}
       />
 
-      <section className="border-b border-line-subtle">
-        <Container className="pt-6 pb-12 lg:pt-8 lg:pb-16">
+      <section className="relative isolate overflow-hidden border-b border-line-subtle">
+        <GlowOrbs tone="cyan" />
+        <GridBackground size={56} />
+        <Scanlines beam />
+        <Container className="relative pt-6 pb-12 lg:pt-8 lg:pb-16">
           <Breadcrumbs
             items={[
               { label: "Parts", href: "/parts" },
@@ -108,15 +114,26 @@ export function PartDetailView({ data }: { data: PartPageData }) {
             )}
           >
             <div className={cn("min-w-0", group ? "lg:col-span-6" : "max-w-3xl")}>
-              <p className="text-eyebrow">
+              <p className="flex items-center gap-3 text-eyebrow">
+                <span
+                  aria-hidden="true"
+                  className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+                />
                 <Link
                   href={`/parts/${category.slug}`}
-                  className="inline-flex min-h-6 items-center transition-colors duration-(--duration-fast) hover:text-ink-50"
+                  className="inline-flex min-h-6 items-center fx-link transition-colors duration-(--duration-fast) hover:text-cyan-100"
                 >
                   {category.name}
                 </Link>
+                {systemLabel ? (
+                  <span aria-hidden="true" className="hud-label text-ink-600">
+                    {`// ${systemLabel}`}
+                  </span>
+                ) : null}
               </p>
-              <h1 className="mt-4 text-display-l hyphens-auto">{part.name}</h1>
+              <h1 className="mt-4 text-display-l hyphens-auto">
+                <ScrambleText text={part.name} />
+              </h1>
 
               {part.description ? (
                 <p className="mt-6 max-w-[60ch] text-lead">{part.description}</p>
@@ -158,6 +175,7 @@ export function PartDetailView({ data }: { data: PartPageData }) {
                 value={fact.value}
                 hint={fact.hint}
                 size="sm"
+                countUp={/^\d/.test(fact.value)}
               />
             ))}
           </StatRow>
@@ -169,18 +187,40 @@ export function PartDetailView({ data }: { data: PartPageData }) {
         aria-labelledby="engineering-heading"
         className="py-16 lg:py-24"
       >
+        <p className="mb-4 flex items-center gap-3 text-eyebrow">
+          <span
+            aria-hidden="true"
+            className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+          />
+          Engineering
+          <span aria-hidden="true" className="hud-label text-ink-600">
+            {"// 01"}
+          </span>
+        </p>
         <h2 id="engineering-heading" className="text-h2">
-          Engineering notes
+          <ScrambleText text="Engineering notes" />
         </h2>
         {aspects.length > 0 ? (
-          <dl className="mt-10 grid gap-x-16 gap-y-10 border-t border-line-subtle pt-10 lg:grid-cols-2">
-            {aspects.map((aspect) => (
+          <Reveal
+            as="dl"
+            stagger
+            className="mt-10 grid gap-x-16 gap-y-10 border-t border-line-subtle pt-10 lg:grid-cols-2"
+          >
+            {aspects.map((aspect, index) => (
               <div key={aspect.key} className="min-w-0">
-                <dt className="text-h4">{aspect.label}</dt>
+                <dt className="flex items-baseline gap-3 text-h4">
+                  <span
+                    aria-hidden="true"
+                    className="font-mono text-[11px] tracking-hud text-cyan-300/70 tabular-nums"
+                  >
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  {aspect.label}
+                </dt>
                 <dd className="mt-3 max-w-[68ch] text-body">{aspect.body}</dd>
               </div>
             ))}
-          </dl>
+          </Reveal>
         ) : (
           <p className="mt-6 text-body text-ink-400">
             No engineering notes are recorded for this part yet.
@@ -196,6 +236,9 @@ export function PartDetailView({ data }: { data: PartPageData }) {
         >
           <SectionHeading
             id="related-heading"
+            overline="Works with"
+            code="02"
+            scramble
             title="Related components"
             description="Parts that work directly with this one."
           />
@@ -220,6 +263,9 @@ export function PartDetailView({ data }: { data: PartPageData }) {
         >
           <SectionHeading
             id="applications-heading"
+            overline="Applications"
+            code="03"
+            scramble
             title="Cars that record this part"
             description="Each with the detail that is specific to that car. Open one to see the part in its 3D viewer."
           />
