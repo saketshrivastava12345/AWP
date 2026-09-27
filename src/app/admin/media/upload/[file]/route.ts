@@ -3,7 +3,7 @@ import { revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import type { TablesInsert } from "@/types/database";
 import { requireAdmin, type AdminSupabase } from "@/lib/admin/auth";
-import { describeDbError } from "@/lib/admin/errors";
+import { describeDbError, describeStorageError } from "@/lib/admin/errors";
 import {
   GLB_MAX_BYTES,
   IMAGE_MAX_BYTES,
@@ -179,7 +179,8 @@ export async function POST(request: NextRequest) {
     cacheControl: "31536000",
   });
   if (upload.error) {
-    return refused(`Storage refused the file: ${upload.error.message}`, {}, 502);
+    console.error("[admin] storage upload failed", upload.error);
+    return refused(`${describeStorageError(upload.error)} Nothing was saved.`, {}, 502);
   }
   const url = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
   const removeUploaded = () => supabase.storage.from(bucket).remove([path]);

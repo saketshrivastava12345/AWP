@@ -22,6 +22,18 @@ export const metadata: Metadata = { title: "Prices" };
 
 const SORT_KEYS: PriceSortKey[] = ["effective", "market", "type", "verified", "amount"];
 
+/** How the source row of an "Add newer price" save was treated. */
+const PREVIOUS_NOTES: Record<string, string> = {
+  closed: "The previous price was closed the day before this one takes effect.",
+  "other-market":
+    "The previous price was left open because it is for another market or price type.",
+  "already-closed": "The previous price was already closed, so it was left as it was.",
+  "starts-later":
+    "The previous price starts after this one, so it was left open. Check the dates.",
+  missing: "The previous price no longer exists, so nothing was closed.",
+  failed: "The previous price could not be closed. Close it by hand.",
+};
+
 export default async function VehiclePricesPage({
   params,
   searchParams,
@@ -56,6 +68,7 @@ export default async function VehiclePricesPage({
   );
   const history = sortPrices(rows, sort, dir);
   const saved = param(search, "saved");
+  const previousNote = PREVIOUS_NOTES[param(search, "previous") ?? ""];
   const initial = sourcePrice && sourcePrice.variant_id === id ? sourcePrice : null;
   const mode = initial ? (isUuid(editId) ? "edit" : "copy") : "add";
   const today = todayIso();
@@ -65,7 +78,7 @@ export default async function VehiclePricesPage({
       {saved ? (
         <Notice tone="success" title="Price saved">
           It is highlighted below. The public page shows it on the next load (the price
-          cache was cleared).
+          cache was cleared).{previousNote ? ` ${previousNote}` : null}
         </Notice>
       ) : null}
       {geography.countries.length === 0 ? (

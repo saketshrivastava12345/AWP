@@ -10,6 +10,7 @@ import {
   TH,
 } from "@/components/admin/AdminChrome";
 import { adminPage } from "@/lib/admin/page";
+import { EM_DASH } from "@/lib/format";
 import { SECTION_SCHEMAS } from "@/lib/admin/sections";
 import { getProvenanceOverview } from "@/lib/queries/admin";
 import type { ProvenanceSection } from "@/lib/admin/provenance";
@@ -82,7 +83,7 @@ export default async function AdminSourcesPage() {
               </thead>
               <tbody>
                 {overview.map((entry) => {
-                  const share = entry.summary.verifiedShare ?? 0;
+                  const share = entry.summary.verifiedShare;
                   return (
                     <tr key={entry.id} className="hover:bg-surface-2/40">
                       <td className={TD}>
@@ -98,21 +99,31 @@ export default async function AdminSourcesPage() {
                       </td>
                       <td className={TD_NUM}>{entry.summary.total}</td>
                       <td className={TD}>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="h-1 w-24 overflow-hidden rounded-full bg-surface-3"
-                            role="img"
-                            aria-label={`${Math.round(share * 100)}% verified`}
+                        {share === null ? (
+                          <span
+                            className="font-mono text-xs text-ink-400"
+                            aria-label="No figures recorded"
+                            title="No figures recorded"
                           >
-                            <div
-                              className="h-full bg-signal-positive"
-                              style={{ width: `${share * 100}%` }}
-                            />
-                          </div>
-                          <span className="tabular font-mono text-xs text-ink-300">
-                            {entry.summary.verified} · {Math.round(share * 100)}%
+                            {EM_DASH}
                           </span>
-                        </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="h-1 w-24 overflow-hidden rounded-full bg-surface-3"
+                              role="img"
+                              aria-label={`${Math.round(share * 100)}% verified`}
+                            >
+                              <div
+                                className="h-full bg-signal-positive"
+                                style={{ width: `${share * 100}%` }}
+                              />
+                            </div>
+                            <span className="tabular font-mono text-xs text-ink-300">
+                              {entry.summary.verified} · {Math.round(share * 100)}%
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td className={TD_NUM}>{entry.summary.sourced}</td>
                       <td

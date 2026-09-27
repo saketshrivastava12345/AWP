@@ -15,6 +15,13 @@ export async function GET(request: NextRequest) {
   if (!q) return NextResponse.json({ results: [] });
 
   const results = await searchCatalogue(q, 6);
+  if (results === null) {
+    // An outage is not "no results": never let a cache hold it as one.
+    return NextResponse.json(
+      { error: "Search is unavailable right now." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   return NextResponse.json(
     { results },
     {

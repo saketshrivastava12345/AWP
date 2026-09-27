@@ -80,7 +80,6 @@ describe("validatePriceCsv", () => {
     expect(result.rows).toEqual([]);
   });
 
-
   it("resolves paths and validates each row with the form's rules", () => {
     const csv = [
       header,

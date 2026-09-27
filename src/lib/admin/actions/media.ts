@@ -5,6 +5,7 @@ import { adminAction, dbFailed } from "../action-helpers";
 import { CHECK_FIELDS, failed, succeeded, type ActionState } from "../action-state";
 import { readMediaMeta, readModelMeta } from "../media-input";
 import { afterWrite, CACHE_TAGS } from "../revalidate";
+import { describeStorageError } from "../errors";
 
 /**
  * Photograph and 3D-model records: edit provenance, choose the primary image
@@ -127,8 +128,9 @@ export async function deleteMedia(
       const bucket = media.type === "glb" ? "models-3d" : "cars";
       const removed = await supabase.storage.from(bucket).remove([media.storage_path]);
       if (removed.error) {
+        console.error("[admin] storage remove failed", removed.error);
         return succeeded(
-          `Record deleted, but the stored file could not be removed (${removed.error.message}). Remove ${bucket}/${media.storage_path} from Storage.`,
+          `Record deleted, but the stored file could not be removed (${describeStorageError(removed.error)}). Remove ${bucket}/${media.storage_path} from Storage.`,
         );
       }
       return succeeded(

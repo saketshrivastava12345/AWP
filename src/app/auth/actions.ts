@@ -2,7 +2,7 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { isAuthRetryableFetchError } from "@supabase/supabase-js";
+import { isAuthApiError, isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { createServerSupabaseClient, isConfigured } from "@/lib/supabase/server";
 import { siteConfig } from "@/lib/site-config";
 import { rotateAuthEpoch } from "./epoch";
@@ -138,7 +138,18 @@ export async function signUp(
 
     if (error) {
       const { kind, code } = classifyAuthError(error);
-      if (kind === "rate_limited")
+      // GoTrue sends mail only for new or unconfirmed addresses, so the email
+      // send limit and mail-delivery failures happen only when the address has
+      // no confirmed account. Reporting them would leak that; they get the
+      // same answer as success and are logged for the owner. Per-IP limits and
+      // network failures say nothing about the account and are reported.
+      const mailFailure =
+        code === "over_email_send_rate_limit" ||
+        (isAuthApiError(error) && (error.status ?? 0) >= 500);
+      if (mailFailure) {
+        console.error("signUp mail:", error.status, code ?? error.message);
+        result = formSuccess(AUTH_MESSAGES.checkEmail, values);
+      } else if (kind === "rate_limited")
         result = formError(AUTH_MESSAGES.rateLimited, { values });
       else if (kind === "unavailable")
         result = formError(AUTH_MESSAGES.unavailable, { values });
@@ -197,7 +208,9 @@ export async function signOut(): Promise<void> {
   if (isConfigured()) {
     try {
       const supabase = await createServerSupabaseClient();
-      const { error } = await supabase.auth.signOut();
+      // "local": only this browser's session. The default ("global") would
+      // revoke every refresh token and sign the user out on all devices.
+      const { error } = await supabase.auth.signOut({ scope: "local" });
       if (error) {
         console.error("signOut failed:", error.message);
         await clearSessionCookies();

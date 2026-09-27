@@ -103,6 +103,10 @@ export function FavoriteToggle({
     });
   };
 
+  // The name states the action and so changes with the state; aria-pressed is
+  // deliberately absent, or the state would be announced twice and contradict
+  // itself ("Remove X from favourites, pressed"). APG: a toggle's name must
+  // not change, so it is one or the other.
   const label = saved ? `Remove ${carName} from favourites` : `Save ${carName}`;
 
   if (appearance === "icon") {
@@ -110,7 +114,6 @@ export function FavoriteToggle({
       <button
         type="button"
         onClick={onClick}
-        aria-pressed={saved}
         aria-label={label}
         data-favorite-toggle=""
         className={cn(
@@ -138,7 +141,6 @@ export function FavoriteToggle({
     <button
       type="button"
       onClick={onClick}
-      aria-pressed={saved}
       data-favorite-toggle=""
       className={cn(
         "inline-flex h-11 min-w-11 items-center justify-center gap-2.5 rounded-xs border px-4",

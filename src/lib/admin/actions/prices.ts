@@ -58,6 +58,10 @@ async function checkMarket(
   return { currency: country.currency_code };
 }
 
+/** What happened to the source row of an "Add newer price" save. */
+type PreviousOutcome =
+  "closed" | "other-market" | "already-closed" | "starts-later" | "missing" | "failed";
+
 export async function savePrice(
   _prev: ActionState,
   formData: FormData,
@@ -95,6 +99,7 @@ export async function savePrice(
     };
 
     let savedId: string;
+    let previousOutcome: PreviousOutcome | null = null;
     if (priceId) {
       const { data, error } = await supabase
         .from("market_prices")
@@ -116,25 +121,47 @@ export async function savePrice(
 
       // "Add newer price": optionally end the previous observation the day
       // before the new one takes effect, so the history reads as a sequence.
+      // Only a row for the same market and price type is superseded: a Delhi
+      // or on-road price recorded from a Mumbai ex-showroom row leaves the
+      // Mumbai price open, because it is still valid.
       if (previousId && closePrevious) {
         const { data: previous } = await supabase
           .from("market_prices")
-          .select("id, effective_from, effective_to")
+          .select(
+            "id, effective_from, effective_to, country_id, region_id, city_id, price_type",
+          )
           .eq("id", previousId)
           .eq("variant_id", variantId)
           .maybeSingle();
         const closeOn = addDays(fields.effective_from, -1);
-        if (previous && previous.effective_from <= closeOn && !previous.effective_to) {
-          await supabase
+        if (!previous) {
+          previousOutcome = "missing";
+        } else if (
+          previous.country_id !== row.country_id ||
+          (previous.region_id ?? null) !== (row.region_id ?? null) ||
+          (previous.city_id ?? null) !== (row.city_id ?? null) ||
+          previous.price_type !== row.price_type
+        ) {
+          previousOutcome = "other-market";
+        } else if (previous.effective_to) {
+          previousOutcome = "already-closed";
+        } else if (previous.effective_from > closeOn) {
+          previousOutcome = "starts-later";
+        } else {
+          const { error: closeError } = await supabase
             .from("market_prices")
             .update({ effective_to: closeOn })
             .eq("id", previous.id);
+          previousOutcome = closeError ? "failed" : "closed";
+          if (closeError)
+            console.error("[admin] closing previous price failed", closeError);
         }
       }
     }
 
     afterWrite(CACHE_TAGS.prices, CACHE_TAGS.catalogue);
-    redirect(`/admin/vehicles/${variantId}/prices?saved=${savedId}`);
+    const previousParam = previousOutcome ? `&previous=${previousOutcome}` : "";
+    redirect(`/admin/vehicles/${variantId}/prices?saved=${savedId}${previousParam}`);
   });
 }
 

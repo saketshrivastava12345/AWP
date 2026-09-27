@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeDbError } from "./errors";
+import { describeDbError, describeStorageError } from "./errors";
 
 describe("describeDbError", () => {
   it("names the duplicate a unique index caught", () => {
@@ -98,6 +98,22 @@ describe("describeDbError", () => {
     expect(describeDbError(null)).toMatch(/Nothing was saved/);
     expect(describeDbError({ code: "XX000", message: "boom" })).toMatch(
       /Nothing was saved/,
+    );
+  });
+});
+
+describe("describeStorageError", () => {
+  it("never echoes the raw storage message", () => {
+    expect(
+      describeStorageError({
+        message: 'new row violates row-level security policy for table "objects"',
+      }),
+    ).toBe("You do not have permission to change this file in Storage.");
+    expect(
+      describeStorageError({ message: "Payload too large", statusCode: "413" }),
+    ).toBe("The file exceeds the storage bucket's size limit.");
+    expect(describeStorageError({ message: "internal bucket xyz exploded" })).toBe(
+      "Storage refused the request.",
     );
   });
 });

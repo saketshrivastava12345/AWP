@@ -47,7 +47,10 @@ export function validateNewPassword(raw: string): Validated<string> {
     };
   }
   if (utf8Length(raw) > PASSWORD_MAX) {
-    return { ok: false, error: `Use at most ${PASSWORD_MAX} characters.` };
+    return {
+      ok: false,
+      error: `That password is too long. Use at most ${PASSWORD_MAX} bytes (fewer characters if it uses accented letters, emoji or non-Latin scripts).`,
+    };
   }
   return { ok: true, value: raw };
 }

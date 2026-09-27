@@ -224,3 +224,37 @@ export function describeDbError(error: DbErrorLike | null | undefined): string {
   }
   return "The database refused this change. Nothing was saved.";
 }
+
+export type StorageErrorLike = {
+  message?: string | null;
+  statusCode?: string | number | null;
+  status?: string | number | null;
+};
+
+/**
+ * Maps a Supabase Storage refusal to a sentence for the editor. The raw text
+ * (policy names, bucket internals) is logged by the caller, never shown.
+ */
+export function describeStorageError(error: StorageErrorLike | null | undefined): string {
+  const message = (error?.message ?? "").toLowerCase();
+  const status = String(error?.statusCode ?? error?.status ?? "");
+  if (
+    status === "413" ||
+    /payload too large|exceeded the maximum|too large/.test(message)
+  ) {
+    return "The file exceeds the storage bucket's size limit.";
+  }
+  if (
+    status === "403" ||
+    /row-level security|row level security|policy|unauthorized|permission/.test(message)
+  ) {
+    return "You do not have permission to change this file in Storage.";
+  }
+  if (status === "409" || /already exists|duplicate/.test(message)) {
+    return "A file already exists at that location in Storage.";
+  }
+  if (status === "404" || /not found/.test(message)) {
+    return "The file or its storage bucket could not be found.";
+  }
+  return "Storage refused the request.";
+}

@@ -246,7 +246,7 @@ export function PriceTable({
                         action={priceRowAction}
                         fields={{ price_id: row.id, operation: "verify" }}
                         variant="ghost"
-                        label={`Mark verified today: ${title}`}
+                        label={`Verify ${title} (mark verified today)`}
                       >
                         Verify
                       </InlineAction>

@@ -76,7 +76,10 @@ export function PriceForm({
   const [currency, setCurrency] = useState(initial?.currency ?? "");
   const [currencyTouched, setCurrencyTouched] = useState(Boolean(initial));
   const [amounts, setAmounts] = useState<Amounts>(() => amountsFrom(initial));
-  const [verified, setVerified] = useState(initial?.last_verified_at ?? today);
+  // A newer observation is verified when it is recorded, not when its source row was.
+  const [verified, setVerified] = useState(
+    mode === "edit" ? (initial?.last_verified_at ?? today) : today,
+  );
   const [isVerified, setIsVerified] = useState(
     mode === "edit" ? (initial?.is_verified ?? false) : false,
   );

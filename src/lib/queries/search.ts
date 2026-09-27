@@ -26,12 +26,20 @@ type SearchRow = {
  * RPC is issued as a GET so Next's fetch cache can hold each distinct query
  * under the catalogue tag. RLS still applies (SECURITY INVOKER), so drafts
  * never appear.
+ *
+ * Returns null when the search could not run, so a caller can tell an outage
+ * from "nothing matches" (and must not cache the former).
  */
 export async function searchCatalogue(
   query: string,
   perKind = 6,
-): Promise<SearchResult[]> {
-  const q = query.trim().slice(0, MAX_SEARCH_LENGTH);
+): Promise<SearchResult[] | null> {
+  // Control characters are never part of a search and PostgREST rejects some
+  // (a NUL is an "unsupported Unicode escape").
+  const q = query
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .trim()
+    .slice(0, MAX_SEARCH_LENGTH);
   if (!q || !isConfigured()) return [];
 
   try {
@@ -42,7 +50,7 @@ export async function searchCatalogue(
 
     if (error) {
       console.error("searchCatalogue failed:", error.message);
-      return [];
+      return null;
     }
 
     return (data ?? [])
@@ -60,6 +68,6 @@ export async function searchCatalogue(
       }));
   } catch (error) {
     console.error("searchCatalogue threw:", error);
-    return [];
+    return null;
   }
 }
