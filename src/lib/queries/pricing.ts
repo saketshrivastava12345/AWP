@@ -84,7 +84,7 @@ export async function getMarketGeography(): Promise<MarketGeography> {
 }
 
 /** Every public column; created_by is deliberately left out (see MarketPrice). */
-const PRICE_COLUMNS =
+export const PRICE_COLUMNS =
   "id, variant_id, country_id, region_id, city_id, currency, price_type, ex_showroom_price, rto_tax, registration_fee, insurance_estimate, handling_charges, fastag, other_charges, on_road_price, source, source_url, effective_from, effective_to, last_verified_at, is_verified, notes, created_at, updated_at";
 
 /**

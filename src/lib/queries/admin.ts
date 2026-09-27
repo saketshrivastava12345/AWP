@@ -1,5 +1,7 @@
 import "server-only";
 
+import { PRICE_COLUMNS } from "@/lib/queries/pricing";
+
 import { cache } from "react";
 import type { AdminSupabase } from "@/lib/admin/auth";
 import { localFileMissing } from "@/lib/admin/local-files";
@@ -1141,7 +1143,7 @@ export async function getVehiclePrices(
   const [history, current] = await Promise.all([
     supabase
       .from("market_prices")
-      .select("*")
+      .select(PRICE_COLUMNS)
       .eq("variant_id", variantId)
       .order("effective_from", { ascending: false })
       .limit(2000),
@@ -1173,7 +1175,7 @@ export async function getPriceOverview(
   labels: Map<string, VariantLabel>,
 ): Promise<{ rows: PriceOverviewRow[]; error: boolean }> {
   const staleBefore = addDays(todayIso(), -STALE_AFTER_DAYS);
-  let query = supabase.from("current_market_prices").select("*");
+  let query = supabase.from("current_market_prices").select(PRICE_COLUMNS);
   if (filter === "unverified") query = query.eq("is_verified", false);
   if (filter === "stale") query = query.lt("last_verified_at", staleBefore);
   const { data, error } = await query
@@ -1194,7 +1196,7 @@ export async function getPriceById(
 ): Promise<MarketPrice | null> {
   const { data, error } = await supabase
     .from("market_prices")
-    .select("*")
+    .select(PRICE_COLUMNS)
     .eq("id", id)
     .maybeSingle();
   report("getPriceById", error);

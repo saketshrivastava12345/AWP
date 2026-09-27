@@ -821,16 +821,16 @@ revoke all on public.recently_viewed from anon;
 
 grant select on public.current_market_prices to anon, authenticated;
 
--- market_prices.created_by is the admin's auth id; anon must not read it.
--- (Signed-in users keep table-wide SELECT for now because the admin queries
--- select "*"; see the pricing report.)
-revoke select on public.market_prices from anon;
+-- market_prices.created_by is the admin's auth id; nobody reads it through
+-- the API (knowing it would reveal which accounts are admins), so SELECT is
+-- granted column by column without it.
+revoke select on public.market_prices from anon, authenticated;
 grant select (id, variant_id, country_id, region_id, city_id, currency, price_type,
               ex_showroom_price, rto_tax, registration_fee, insurance_estimate,
               handling_charges, fastag, other_charges, on_road_price, source, source_url,
               effective_from, effective_to, last_verified_at, is_verified, notes,
               created_at, updated_at)
-  on public.market_prices to anon;
+  on public.market_prices to anon, authenticated;
 grant select on public.car_catalog to anon, authenticated;
 
 -- profiles_delete_admin relied on default privileges; make it explicit.
