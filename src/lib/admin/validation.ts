@@ -85,21 +85,40 @@ export function slugify(input: string): string {
     .replace(/-+$/g, "");
 }
 
+/** Characters accepted as thousands / lakh grouping separators. */
+const GROUP_SEP = "[\\s,_\\u00a0\\u202f]";
 /**
- * Parses a number typed by a person. Grouping separators are tolerated
- * ("2,80,00,000", "1 250", "1_250") because prices are routinely pasted that
- * way; anything else that is not a plain decimal is refused rather than
- * guessed at ("12abc" is an error, not 12).
+ * Plain digits, or digits grouped in the Western (1,250,000) or Indian
+ * (2,80,00,000) style, where the last group is always three digits. A
+ * separator followed by one, two or four-plus digits ("3,2", "82,5",
+ * "45000,50", "12 34") is not grouping, so it is refused rather than guessed.
+ */
+const NUMBER_PATTERN = new RegExp(
+  `^-?(?:(?:\\d+|\\d{1,3}(?:${GROUP_SEP}\\d{2,3})*${GROUP_SEP}\\d{3})(?:\\.\\d*)?|\\.\\d+)$`,
+);
+const STRIP_SEPARATORS = new RegExp(GROUP_SEP, "g");
+
+/** True when a separator looks like a decimal comma or space ("3,2", "45000,50"). */
+export function looksLikeDecimalComma(raw: string): boolean {
+  return /^-?\d+[,\s]\d{1,2}$/.test(raw.trim()) || /,\d{1,2}(?:\.|$)/.test(raw);
+}
+
+/**
+ * Parses a number typed by a person. Genuine grouping separators are
+ * tolerated ("2,80,00,000", "1 250", "1_250") because prices are routinely
+ * pasted that way; anything else that is not a plain decimal is refused
+ * rather than guessed at ("12abc" is an error, not 12; "3,2" is an error,
+ * not 32).
  */
 export function parseNumber(raw: string): number | null {
-  const cleaned = raw.replace(/[\s,_  ]/g, "");
-  if (!/^-?(?:\d+\.?\d*|\.\d+)$/.test(cleaned)) return null;
-  const value = Number(cleaned);
+  const trimmed = raw.trim();
+  if (!NUMBER_PATTERN.test(trimmed)) return null;
+  const value = Number(trimmed.replace(STRIP_SEPARATORS, ""));
   return Number.isFinite(value) ? value : null;
 }
 
 function decimalPlaces(raw: string): number {
-  const cleaned = raw.replace(/[\s,_  ]/g, "");
+  const cleaned = raw.trim().replace(STRIP_SEPARATORS, "");
   const dot = cleaned.indexOf(".");
   return dot === -1 ? 0 : cleaned.length - dot - 1;
 }
@@ -186,7 +205,14 @@ export class FieldReader {
     const raw = this.raw(name);
     if (!raw) return rule.required ? this.fail(name, `${label} is required.`) : null;
     const value = parseNumber(raw);
-    if (value === null) return this.fail(name, `${label} must be a number.`);
+    if (value === null) {
+      return this.fail(
+        name,
+        looksLikeDecimalComma(raw)
+          ? `${label} must be a number. Use a dot for decimals.`
+          : `${label} must be a number.`,
+      );
+    }
     const scale = rule.scale ?? 0;
     if (decimalPlaces(raw) > scale) {
       return this.fail(

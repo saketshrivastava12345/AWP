@@ -29,6 +29,23 @@ describe("parseNumber", () => {
     expect(parseNumber("₹100")).toBeNull();
     expect(parseNumber("1.2.3")).toBeNull();
   });
+
+  it("refuses decimal commas and malformed grouping instead of dropping the separator", () => {
+    expect(parseNumber("3,2")).toBeNull();
+    expect(parseNumber("82,5")).toBeNull();
+    expect(parseNumber("1,5")).toBeNull();
+    expect(parseNumber("12 34")).toBeNull();
+    expect(parseNumber("45000,50")).toBeNull();
+    expect(parseNumber("1,2345")).toBeNull();
+    expect(parseNumber("1_250")).toBe(1250);
+    expect(parseNumber("1,250,000.75")).toBe(1_250_000.75);
+  });
+
+  it("tells the editor to use a dot for decimals", () => {
+    const r = reader({ t: "3,2" });
+    expect(r.number("t", "0-100", { above: 0, max: 99.99, scale: 2 })).toBeNull();
+    expect(r.errors.t).toMatch(/Use a dot for decimals/);
+  });
 });
 
 describe("FieldReader.number", () => {

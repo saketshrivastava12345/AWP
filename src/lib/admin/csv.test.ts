@@ -16,6 +16,14 @@ describe("parseCsv", () => {
     ]);
   });
 
+  it("refuses an unclosed quote instead of swallowing the rest of the file", () => {
+    expect(() =>
+      parseCsv(
+        'variant,notes\nporsche/911/turbo-s,"Launch price\nporsche/911/gt3,ok\nporsche/911/carrera,ok\n',
+      ),
+    ).toThrow(/Unclosed quote starting on line 2/);
+  });
+
   it("strips a BOM and ignores blank lines", () => {
     expect(parseCsv("﻿a,b\n\n1,2\n  \n")).toEqual([
       ["a", "b"],
@@ -62,6 +70,17 @@ const header =
   "variant,market,price_type,currency,ex_showroom_price,rto_tax,insurance_estimate,on_road_price,effective_from,source,source_url,last_verified_at,is_verified";
 
 describe("validatePriceCsv", () => {
+  it("imports nothing when a quote is never closed", () => {
+    const csv = `${header}\nporsche/911/turbo-s,india,ex_showroom,INR,"1000\nporsche/911/turbo-s,india,ex_showroom,INR,2000`;
+    const result = validatePriceCsv(csv, lookups);
+    expect(result.headerErrors).toEqual([
+      "Unclosed quote starting on line 2. Nothing was imported.",
+    ]);
+    expect(result.validCount).toBe(0);
+    expect(result.rows).toEqual([]);
+  });
+
+
   it("resolves paths and validates each row with the form's rules", () => {
     const csv = [
       header,

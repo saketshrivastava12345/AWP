@@ -52,16 +52,22 @@ export function priceCsvTemplate(): string {
   return `${PRICE_CSV_COLUMNS.join(",")}\r\n`;
 }
 
+/** Thrown by `parseCsv` when a quoted field is never closed. */
+export class CsvSyntaxError extends Error {}
+
 export function parseCsv(text: string): string[][] {
   const input = text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
   let quoted = false;
+  let quoteLine = 1;
+  let line = 1;
   let i = 0;
 
   while (i < input.length) {
     const char = input[i]!;
+    if (char === "\n") line += 1;
     if (quoted) {
       if (char === '"') {
         if (input[i + 1] === '"') {
@@ -79,6 +85,7 @@ export function parseCsv(text: string): string[][] {
     }
     if (char === '"' && field === "") {
       quoted = true;
+      quoteLine = line;
       i += 1;
       continue;
     }
@@ -98,6 +105,13 @@ export function parseCsv(text: string): string[][] {
     }
     field += char;
     i += 1;
+  }
+  if (quoted) {
+    // Everything after the opening quote would otherwise become one field,
+    // silently swallowing the rest of the file.
+    throw new CsvSyntaxError(
+      `Unclosed quote starting on line ${quoteLine}. Nothing was imported.`,
+    );
   }
   if (field !== "" || row.length > 0) {
     row.push(field);
@@ -164,7 +178,15 @@ const IS_VERIFIED_VALUES = new Set([
 ]);
 
 export function validatePriceCsv(text: string, lookups: CsvLookups): CsvValidation {
-  const table = parseCsv(text);
+  let table: string[][];
+  try {
+    table = parseCsv(text);
+  } catch (error) {
+    if (error instanceof CsvSyntaxError) {
+      return { headerErrors: [error.message], rows: [], validCount: 0 };
+    }
+    throw error;
+  }
   const header = table[0];
   if (!header) {
     return { headerErrors: ["The file is empty."], rows: [], validCount: 0 };
