@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/format";
 
 export const STATUS_TONES: Record<ProvenanceStatus, BadgeTone> = {
   verified: "positive",
-  sourced: "gold",
+  sourced: "hybrid",
   unsourced: "negative",
 };
 
@@ -50,7 +50,7 @@ export function ProvenanceLine({
           href={sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs break-all text-gold-300 hover:text-gold-200"
+          className="inline-flex items-center gap-1.5 text-xs break-all text-ink-50 underline-offset-4 hover:underline"
         >
           {hostOf(sourceUrl)}
           <ExternalLink className="size-3 shrink-0" aria-hidden="true" />

@@ -30,14 +30,14 @@ export function AdminPagination({
     .sort((a, b) => a - b);
 
   const cell =
-    "inline-flex min-h-10 min-w-10 items-center justify-center rounded-sm px-2 font-mono text-xs tabular transition-colors";
+    "inline-flex min-h-11 min-w-11 items-center justify-center rounded-pill px-2 text-body-s tabular-nums transition-colors duration-(--duration-fast)";
 
   return (
     <nav
       aria-label="Pagination"
       className="mt-6 flex flex-wrap items-center justify-between gap-3"
     >
-      <p className="text-xs text-ink-500">
+      <p className="text-caption">
         Page {page} of {pageCount}
       </p>
       <ul className="flex flex-wrap items-center gap-1">
@@ -70,7 +70,7 @@ export function AdminPagination({
               className={cn(
                 cell,
                 value === page
-                  ? "border border-gold-600 text-gold-300"
+                  ? "border border-line-strong bg-surface-2 text-ink-50"
                   : "text-ink-300 hover:bg-surface-2",
               )}
             >

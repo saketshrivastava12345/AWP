@@ -30,6 +30,9 @@ const FILTERS: { value: PriceOverviewFilter; label: string }[] = [
 ];
 const SORT_KEYS: PriceSortKey[] = ["effective", "market", "type", "verified", "amount"];
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function AdminPricesPage({
   searchParams,
 }: {
@@ -86,7 +89,10 @@ export default async function AdminPricesPage({
           <noscript>
             <p className="mt-3 text-xs text-ink-500">
               Without JavaScript, find the vehicle under{" "}
-              <Link href="/admin/vehicles" className="text-gold-300">
+              <Link
+                href="/admin/vehicles"
+                className="text-ink-50 underline-offset-4 hover:underline"
+              >
                 Vehicles
               </Link>{" "}
               and open its Prices tab.
@@ -96,10 +102,7 @@ export default async function AdminPricesPage({
 
         <section aria-labelledby="in-force" className="min-w-0">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-            <h2
-              id="in-force"
-              className="font-display text-micro tracking-hud text-ink-100 uppercase"
-            >
+            <h2 id="in-force" className="text-h4">
               Prices in force ({rows.length})
             </h2>
             <nav aria-label="Price filters">
@@ -114,10 +117,10 @@ export default async function AdminPricesPage({
                       }
                       aria-current={filter === entry.value ? "page" : undefined}
                       className={cn(
-                        "inline-flex min-h-9 items-center rounded-sm border px-3 text-xs transition-colors",
+                        "inline-flex min-h-11 items-center rounded-pill border px-4 text-body-s transition-colors duration-(--duration-fast)",
                         filter === entry.value
-                          ? "border-gold-600 text-gold-300"
-                          : "border-line text-ink-400 hover:text-ink-100",
+                          ? "border-line-strong bg-surface-2 text-ink-50"
+                          : "border-line-subtle text-ink-300 hover:text-ink-50",
                       )}
                     >
                       {entry.label}
@@ -130,7 +133,7 @@ export default async function AdminPricesPage({
           {error ? (
             <Notice tone="error">Prices could not be loaded.</Notice>
           ) : sorted.length === 0 ? (
-            <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+            <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
               {filter === "all"
                 ? "No prices are in force yet. Choose a vehicle to add its first sourced price, or import a CSV."
                 : "Nothing needs attention here."}

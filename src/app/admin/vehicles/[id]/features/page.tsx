@@ -10,6 +10,9 @@ import { getVehicleFeatures } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "Features" };
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function VehicleFeaturesPage({
   params,
 }: {
@@ -36,14 +39,11 @@ export default async function VehicleFeaturesPage({
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
       <section aria-labelledby="attached-features">
-        <h2
-          id="attached-features"
-          className="mb-3 font-display text-micro tracking-hud text-ink-100 uppercase"
-        >
+        <h2 id="attached-features" className="mb-3 text-h4">
           Features of this vehicle ({attached.length})
         </h2>
         {attached.length === 0 ? (
-          <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+          <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
             No features recorded. The public page lists none rather than guessing.
           </p>
         ) : (

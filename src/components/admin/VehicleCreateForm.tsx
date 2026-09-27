@@ -42,7 +42,7 @@ function ModeSwitch({
 }) {
   return (
     <div className="flex flex-col gap-1.5 sm:col-span-2">
-      <span className="text-label" id={`${name}-label`}>
+      <span className="text-body-s text-ink-200" id={`${name}-label`}>
         {label}
       </span>
       <SegmentedControl

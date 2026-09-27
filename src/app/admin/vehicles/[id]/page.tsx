@@ -24,6 +24,9 @@ import {
 import { adminPage, param, routeId } from "@/lib/admin/page";
 import { getAdminVehicle, getVehicleFormOptions } from "@/lib/queries/admin";
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function VehicleCorePage({
   params,
   searchParams,
@@ -233,7 +236,7 @@ export default async function VehicleCorePage({
             actions={
               <Link
                 href={`/admin/models/${model.id}`}
-                className="text-xs text-gold-300 hover:text-gold-200"
+                className="text-xs text-ink-50 underline-offset-4 hover:underline"
               >
                 Edit model
               </Link>

@@ -52,6 +52,9 @@ const COLUMNS: [string, string, string][] = [
   ["notes", "Optional", "Free text"],
 ];
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function PriceImportPage() {
   await adminPage();
   return (

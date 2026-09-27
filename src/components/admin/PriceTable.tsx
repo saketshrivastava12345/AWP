@@ -62,7 +62,7 @@ function SortHeader({
         href={hrefFor(sortKey, next)}
         className={cn(
           "inline-flex items-center gap-1 hover:text-ink-100",
-          active && "text-gold-300",
+          active && "text-ink-50",
         )}
         scroll={false}
       >
@@ -142,12 +142,15 @@ export function PriceTable({
                 id={`price-${row.id}`}
                 className={cn(
                   "transition-colors hover:bg-surface-2/40",
-                  highlight === row.id && "bg-gold-500/[0.06]",
+                  highlight === row.id && "bg-surface-2",
                 )}
               >
                 {showVehicle ? (
                   <td className={cn(TD, "min-w-44")}>
-                    <Link href={editBase} className="text-ink-50 hover:text-gold-300">
+                    <Link
+                      href={editBase}
+                      className="text-ink-50 underline-offset-4 hover:underline"
+                    >
                       {row.vehicleTitle}
                     </Link>
                   </td>
@@ -172,7 +175,7 @@ export function PriceTable({
                         In force
                       </Badge>
                     ) : row.isScheduled ? (
-                      <Badge tone="gold">Scheduled</Badge>
+                      <Badge tone="electric">Scheduled</Badge>
                     ) : (
                       <Badge>History</Badge>
                     )}
@@ -184,7 +187,7 @@ export function PriceTable({
                 <td className={TD_NUM}>
                   {formatPrice(row.on_road_price, row.currency, "—")}
                 </td>
-                <td className={cn(TD, "font-mono text-xs whitespace-nowrap")}>
+                <td className={cn(TD, "text-xs whitespace-nowrap tabular-nums")}>
                   {formatDate(row.effective_from)}
                   <span className="block text-ink-500">
                     {row.effective_to
@@ -193,12 +196,12 @@ export function PriceTable({
                   </span>
                 </td>
                 <td className={cn(TD, "text-xs whitespace-nowrap")}>
-                  <span className="font-mono">{formatDate(row.last_verified_at)}</span>
+                  <span className="tabular-nums">{formatDate(row.last_verified_at)}</span>
                   <span className="mt-1 flex flex-wrap gap-1">
                     {row.is_verified ? (
                       <Badge tone="positive">Verified</Badge>
                     ) : (
-                      <Badge tone="gold">Unverified</Badge>
+                      <Badge tone="hybrid">Unverified</Badge>
                     )}
                     {row.isStale ? <Badge tone="negative">Stale</Badge> : null}
                   </span>
@@ -211,7 +214,7 @@ export function PriceTable({
                     href={row.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-gold-300 hover:text-gold-200"
+                    className="inline-flex items-center gap-1 text-ink-50 underline-offset-4 hover:underline"
                   >
                     {hostOf(row.source_url)}
                     <ExternalLink className="size-3" aria-hidden="true" />

@@ -36,6 +36,9 @@ function missingProvenance(row: MediaOverviewRow): string[] {
   ].filter((value): value is string => Boolean(value));
 }
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function AdminMediaPage({
   searchParams,
 }: {
@@ -92,7 +95,10 @@ export default async function AdminMediaPage({
             />
             <p className="mt-3 text-xs text-ink-500">
               Model-wide photographs live on each{" "}
-              <Link href="/admin/models" className="text-ink-50 underline-offset-4 hover:underline">
+              <Link
+                href="/admin/models"
+                className="text-ink-50 underline-offset-4 hover:underline"
+              >
                 model
               </Link>
               .
@@ -278,7 +284,9 @@ export default async function AdminMediaPage({
                             {formatBytes(row.file_size_bytes)}
                           </span>
                         </td>
-                        <td className={`${TD} text-xs whitespace-nowrap text-ink-400 tabular-nums`}>
+                        <td
+                          className={`${TD} text-xs whitespace-nowrap text-ink-400 tabular-nums`}
+                        >
                           {formatDate(row.updated_at)}
                         </td>
                       </tr>

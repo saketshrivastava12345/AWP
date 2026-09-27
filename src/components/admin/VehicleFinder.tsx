@@ -72,7 +72,7 @@ export function VehicleFinder({
 
   return (
     <div role="search" className="flex flex-col gap-2">
-      <label htmlFor={inputId} className="text-label">
+      <label htmlFor={inputId} className="text-body-s text-ink-200">
         {label}
       </label>
       <div className="relative">

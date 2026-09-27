@@ -26,10 +26,13 @@ export const metadata: Metadata = { title: "Availability" };
 
 const STATUS_TONES: Record<MarketStatus, BadgeTone> = {
   available: "positive",
-  upcoming: "gold",
+  upcoming: "electric",
   discontinued: "neutral",
   not_available: "negative",
 };
+
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
 
 export default async function VehicleAvailabilityPage({
   params,
@@ -49,10 +52,7 @@ export default async function VehicleAvailabilityPage({
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
       <section aria-labelledby="availability">
-        <h2
-          id="availability"
-          className="mb-1 font-display text-micro tracking-hud text-ink-100 uppercase"
-        >
+        <h2 id="availability" className="mb-1 text-h4">
           Where it is sold ({rows.length})
         </h2>
         <p className="mb-4 text-xs text-ink-500">
@@ -62,7 +62,7 @@ export default async function VehicleAvailabilityPage({
         {error ? (
           <Notice tone="error">Availability could not be loaded.</Notice>
         ) : rows.length === 0 ? (
-          <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+          <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
             No availability recorded.
           </p>
         ) : (
@@ -113,7 +113,7 @@ export default async function VehicleAvailabilityPage({
                           href={row.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-gold-300 hover:text-gold-200"
+                          className="text-ink-50 underline-offset-4 hover:underline"
                         >
                           {hostOf(row.source_url)}
                           <span className="sr-only"> (opens in a new tab)</span>

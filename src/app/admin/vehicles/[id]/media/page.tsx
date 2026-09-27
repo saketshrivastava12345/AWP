@@ -7,6 +7,9 @@ import { getAdminVehicle, getOwnerMedia } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "Media" };
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function VehicleMediaPage({
   params,
 }: {

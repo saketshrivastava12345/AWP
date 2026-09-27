@@ -339,7 +339,7 @@ export function CarShowcase({
       {/* ------------------------------------------------ Sticky 3D stage */}
       <div
         ref={stageRef}
-        className="sticky top-16 z-20 h-[46svh] overflow-hidden border-b border-line-subtle bg-void md:top-0 md:z-auto md:h-[100svh] md:border-b-0"
+        className="sticky top-[calc(var(--nav-offset)+var(--subnav-offset))] z-20 h-[46svh] overflow-hidden border-b border-line-subtle bg-void md:z-auto md:h-[calc(100svh-var(--nav-h)-var(--subnav-offset))] md:border-b-0"
         aria-hidden="true"
       >
         {/* Poster until the first frame: a pool of light where the car will be. */}
@@ -488,7 +488,7 @@ export function CarShowcase({
         {/* A viewport-tall sticky column with the list centred in it: the
             rail stays inside the section at both ends instead of hanging
             half its height over the section above (a translated list did). */}
-        <ol className="sticky top-0 mr-6 flex h-[100svh] flex-col justify-center gap-3 py-20 xl:mr-10">
+        <ol className="sticky top-[calc(var(--nav-offset)+var(--subnav-offset))] mr-6 flex h-[calc(100svh-var(--nav-h)-var(--subnav-offset))] flex-col justify-center gap-3 py-10 xl:mr-10">
           {railNames.map((name, index) => (
             <li key={`${index}-${name}`} className="pointer-events-auto">
               <button
@@ -522,7 +522,10 @@ export function CarShowcase({
       </nav>
 
       {/* ------------------------------------------------ Cards */}
-      <div ref={stepsRef} className="relative z-10 md:-mt-[100svh]">
+      <div
+        ref={stepsRef}
+        className="relative z-10 md:-mt-[calc(100svh-var(--nav-h)-var(--subnav-offset))]"
+      >
         <div
           ref={(node) => {
             stepRefs.current[0] = node;

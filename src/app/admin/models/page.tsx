@@ -20,6 +20,9 @@ import { formatYearRange } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Models" };
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function AdminModelsPage({
   searchParams,
 }: {
@@ -65,7 +68,10 @@ export default async function AdminModelsPage({
         <Notice className="mb-6" title="Combustion models without an engine position">
           The 3D viewer draws no engine for these rather than guessing where it sits.
           Record the position from the maker&apos;s documentation.{" "}
-          <Link href="/admin/models" className="text-gold-300 hover:underline">
+          <Link
+            href="/admin/models"
+            className="text-ink-50 underline-offset-4 hover:underline"
+          >
             Show all models
           </Link>
         </Notice>
@@ -75,7 +81,7 @@ export default async function AdminModelsPage({
         method="get"
         role="search"
         aria-label="Filter models"
-        className="mb-6 grid gap-3 rounded-md border border-line bg-surface-1/60 p-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]"
+        className="mb-6 grid gap-3 rounded-card border border-line-subtle bg-surface-1 p-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]"
       >
         <TextField
           name="q"
@@ -146,7 +152,7 @@ export default async function AdminModelsPage({
                   <td className={TD}>
                     <Link
                       href={`/admin/models/${row.id}`}
-                      className="block text-ink-50 hover:text-gold-300"
+                      className="block text-ink-50 underline-offset-4 hover:underline"
                     >
                       {row.manufacturerName} {row.name}
                     </Link>
@@ -163,12 +169,14 @@ export default async function AdminModelsPage({
                     {row.enginePosition ? (
                       ENGINE_POSITION_LABELS[row.enginePosition].split(" (")[0]
                     ) : row.combustion ? (
-                      <Badge tone="gold">Not recorded</Badge>
+                      <Badge tone="hybrid">Not recorded</Badge>
                     ) : (
                       <span className="text-ink-500">No engine (electric)</span>
                     )}
                   </td>
-                  <td className={`${TD} font-mono text-xs whitespace-nowrap`}>
+                  <td
+                    className={`${TD} text-xs whitespace-nowrap text-ink-400 tabular-nums`}
+                  >
                     {row.productionStart
                       ? formatYearRange(row.productionStart, row.productionEnd)
                       : "—"}

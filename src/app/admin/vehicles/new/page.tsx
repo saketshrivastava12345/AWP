@@ -7,6 +7,9 @@ import { getVehicleFormOptions } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "New vehicle" };
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function NewVehiclePage({
   searchParams,
 }: {

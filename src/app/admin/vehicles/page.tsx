@@ -69,6 +69,9 @@ function readFilters(search: Search): VehicleListFilters {
   };
 }
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function AdminVehiclesPage({
   searchParams,
 }: {
@@ -119,7 +122,7 @@ export default async function AdminVehiclesPage({
         >
           <Link
             href="/admin/vehicles"
-            className="text-gold-300 underline-offset-4 hover:underline"
+            className="text-ink-50 underline-offset-4 hover:underline"
           >
             Show all vehicles
           </Link>
@@ -131,7 +134,7 @@ export default async function AdminVehiclesPage({
         action="/admin/vehicles"
         role="search"
         aria-label="Filter vehicles"
-        className="mb-6 grid grid-cols-2 gap-3 rounded-md border border-line bg-surface-1/60 p-4 lg:grid-cols-4 2xl:grid-cols-8 [&>*]:min-w-0"
+        className="mb-6 grid grid-cols-2 gap-3 rounded-card border border-line-subtle bg-surface-1 p-4 lg:grid-cols-4 2xl:grid-cols-8 [&>*]:min-w-0"
       >
         <TextField
           name="q"
@@ -273,7 +276,7 @@ export default async function AdminVehiclesPage({
                         <div className="min-w-0">
                           <Link
                             href={`/admin/vehicles/${row.id}`}
-                            className="block text-ink-50 transition-colors hover:text-gold-300"
+                            className="block text-ink-50 underline-offset-4 hover:underline"
                           >
                             {row.manufacturerName} {row.modelName}
                           </Link>
@@ -286,7 +289,9 @@ export default async function AdminVehiclesPage({
                         </div>
                       </div>
                     </td>
-                    <td className={`${TD} font-mono text-xs whitespace-nowrap`}>
+                    <td
+                      className={`${TD} text-xs whitespace-nowrap text-ink-400 tabular-nums`}
+                    >
                       {formatYearRange(row.yearStart, row.yearEnd)}
                     </td>
                     <td className={TD}>

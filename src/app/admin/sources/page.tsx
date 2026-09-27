@@ -20,6 +20,9 @@ export const metadata: Metadata = { title: "Data sources" };
 const sectionTitle = (section: ProvenanceSection) =>
   section === "variant" ? "Vehicle" : SECTION_SCHEMAS[section].title;
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function AdminSourcesPage() {
   const { supabase } = await adminPage();
   const overview = await getProvenanceOverview(supabase);
@@ -89,7 +92,7 @@ export default async function AdminSourcesPage() {
                       <td className={TD}>
                         <Link
                           href={`/admin/vehicles/${entry.id}/sources`}
-                          className="text-ink-50 hover:text-gold-300"
+                          className="text-ink-50 underline-offset-4 hover:underline"
                         >
                           {entry.title}
                         </Link>
@@ -119,7 +122,7 @@ export default async function AdminSourcesPage() {
                                 style={{ width: `${share * 100}%` }}
                               />
                             </div>
-                            <span className="tabular font-mono text-xs text-ink-300">
+                            <span className="text-xs text-ink-300 tabular-nums">
                               {entry.summary.verified} · {Math.round(share * 100)}%
                             </span>
                           </div>
@@ -141,7 +144,7 @@ export default async function AdminSourcesPage() {
                       <td className={`${TD} text-right`}>
                         <Link
                           href={`/admin/vehicles/${entry.id}/sources`}
-                          className="text-xs whitespace-nowrap text-gold-300 hover:text-gold-200"
+                          className="text-xs whitespace-nowrap text-ink-50 underline-offset-4 hover:underline"
                         >
                           Provenance
                         </Link>

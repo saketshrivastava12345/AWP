@@ -11,7 +11,7 @@ import {
 } from "react";
 import { CircleAlert, CircleCheck, Download } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -106,7 +106,13 @@ export function CsvImport() {
         aria-label="Check a CSV file"
       >
         <div className="flex flex-wrap items-center gap-3">
-          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xs border border-line-strong px-4 font-display text-micro tracking-button text-ink-100 uppercase focus-within:border-gold-500 hover:border-gold-500 hover:text-gold-300">
+          <label
+            className={buttonClasses(
+              "secondary",
+              "md",
+              "cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-gold-500",
+            )}
+          >
             Choose CSV file
             <input
               ref={fileRef}
@@ -123,14 +129,14 @@ export function CsvImport() {
           <a
             href={TEMPLATE_HREF}
             download="aurix-prices-template.csv"
-            className="ml-auto inline-flex items-center gap-1.5 text-xs text-gold-300 hover:text-gold-200"
+            className="ml-auto inline-flex items-center gap-1.5 text-xs text-ink-50 underline-offset-4 hover:underline"
           >
             <Download className="size-3.5" aria-hidden="true" />
             Download the template (header row only)
           </a>
         </div>
         <label className="flex flex-col gap-1.5">
-          <span className="text-label">CSV contents</span>
+          <span className="text-caption">CSV contents</span>
           <Textarea
             name="csv"
             value={text}
@@ -154,10 +160,7 @@ export function CsvImport() {
       {!showResult && preview.status !== "idle" ? (
         <section aria-labelledby="csv-preview" className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2
-              id="csv-preview"
-              className="font-display text-micro tracking-hud text-ink-100 uppercase"
-            >
+            <h2 id="csv-preview" className="text-h4">
               Preview
             </h2>
             <p
@@ -170,7 +173,7 @@ export function CsvImport() {
             </p>
           </div>
           {preview.headerErrors.length ? (
-            <ul className="list-inside list-disc rounded-sm border border-signal-negative/40 px-4 py-3 text-sm text-ink-200">
+            <ul className="list-inside list-disc rounded-card border-l-2 border-signal-negative bg-surface-1 px-4 py-3 text-sm text-ink-200">
               {preview.headerErrors.map((message) => (
                 <li key={message}>{message}</li>
               ))}
@@ -278,7 +281,7 @@ export function CsvImport() {
               Import {preview.validCount} valid row{preview.validCount === 1 ? "" : "s"}
             </Button>
             {!sameText(preview.csv, text) ? (
-              <span className="text-xs text-gold-300">
+              <span className="text-xs text-signal-hybrid">
                 The text changed since it was checked. Check it again first.
               </span>
             ) : preview.validCount < preview.rows.length ? (
@@ -293,12 +296,9 @@ export function CsvImport() {
       {showResult && result.status !== "idle" ? (
         <section
           aria-labelledby="csv-result"
-          className="flex flex-col gap-3 rounded-md border border-line bg-surface-1/60 p-5"
+          className="flex flex-col gap-3 rounded-card border border-line-subtle bg-surface-1 p-5"
         >
-          <h2
-            id="csv-result"
-            className="flex items-center gap-2 font-display text-micro tracking-hud text-ink-100 uppercase"
-          >
+          <h2 id="csv-result" className="flex items-center gap-2 text-h4">
             {result.status === "success" ? (
               <CircleCheck className="size-4 text-signal-positive" aria-hidden="true" />
             ) : (
@@ -311,7 +311,7 @@ export function CsvImport() {
             <ul className="flex flex-col gap-1 text-xs text-ink-300">
               {result.committed.failed.map((failure) => (
                 <li key={`${failure.line}-${failure.message}`}>
-                  <span className="font-mono text-ink-500">Line {failure.line}:</span>{" "}
+                  <span className="text-ink-500 tabular-nums">Line {failure.line}:</span>{" "}
                   {failure.message}
                 </li>
               ))}

@@ -3,6 +3,9 @@ import { ComponentSection } from "@/components/admin/ComponentSection";
 
 export const metadata: Metadata = { title: "Engine" };
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default function EngineSectionPage({
   params,
 }: {

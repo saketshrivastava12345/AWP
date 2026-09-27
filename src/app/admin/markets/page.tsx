@@ -146,6 +146,9 @@ function RegionBlock({ region, countryId }: { region: AdminRegion; countryId: st
   );
 }
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function MarketsPage() {
   const { supabase } = await adminPage();
   const geography = await getAdminGeography(supabase);
@@ -169,10 +172,7 @@ export default async function MarketsPage() {
           >
             <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line-subtle px-4 py-4 sm:px-5">
               <div>
-                <h2
-                  id={`country-${country.slug}`}
-                  className="text-h4"
-                >
+                <h2 id={`country-${country.slug}`} className="text-h4">
                   {country.flag_emoji ? `${country.flag_emoji} ` : ""}
                   {country.name}
                 </h2>

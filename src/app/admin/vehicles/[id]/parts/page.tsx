@@ -14,6 +14,9 @@ import { getVehicleParts } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "Parts" };
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function VehiclePartsPage({
   params,
 }: {
@@ -39,10 +42,7 @@ export default async function VehiclePartsPage({
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
       <section aria-labelledby="attached-parts">
-        <h2
-          id="attached-parts"
-          className="mb-2 font-display text-micro tracking-hud text-ink-100 uppercase"
-        >
+        <h2 id="attached-parts" className="mb-2 text-h4">
           Parts recorded for this vehicle ({attached.length})
         </h2>
         <p className="mb-4 max-w-2xl text-xs leading-relaxed text-ink-500">
@@ -51,7 +51,7 @@ export default async function VehiclePartsPage({
           The 3D viewer lists these under the matching subsystem.
         </p>
         {attached.length === 0 ? (
-          <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+          <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
             No parts recorded for this vehicle.
           </p>
         ) : (
@@ -76,7 +76,7 @@ export default async function VehiclePartsPage({
                     <td className={TD}>
                       <Link
                         href={`/parts/${entry.slug}`}
-                        className="block text-ink-50 hover:text-gold-300"
+                        className="block text-ink-50 underline-offset-4 hover:underline"
                       >
                         {entry.name}
                       </Link>

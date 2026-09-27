@@ -17,6 +17,9 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Data sources" };
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function VehicleSourcesPage({
   params,
 }: {
@@ -40,18 +43,26 @@ export default async function VehicleSourcesPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line-subtle bg-line-subtle sm:grid-cols-4">
         {(
           [
-            ["Figures recorded", summary.total, "text-ink-50"],
-            [STATUS_LABELS.verified, summary.verified, "text-signal-positive"],
-            [STATUS_LABELS.sourced, summary.sourced, "text-gold-300"],
-            [STATUS_LABELS.unsourced, summary.unsourced, "text-signal-negative"],
+            ["Figures recorded", summary.total, null],
+            [STATUS_LABELS.verified, summary.verified, "bg-signal-positive"],
+            [STATUS_LABELS.sourced, summary.sourced, "bg-signal-hybrid"],
+            [STATUS_LABELS.unsourced, summary.unsourced, "bg-signal-negative"],
           ] as const
         ).map(([label, value, tone]) => (
           <div key={label} className="bg-surface-1 px-4 py-4">
-            <dt className="text-label">{label}</dt>
-            <dd className={cn("tabular mt-2 font-display text-xl", tone)}>{value}</dd>
+            <dt className="flex items-center gap-2 text-caption">
+              {tone ? (
+                <span
+                  aria-hidden="true"
+                  className={cn("size-1.5 shrink-0 rounded-full", tone)}
+                />
+              ) : null}
+              {label}
+            </dt>
+            <dd className="mt-2 text-figure text-ink-50">{value}</dd>
           </div>
         ))}
       </dl>
@@ -63,7 +74,7 @@ export default async function VehicleSourcesPage({
       </p>
 
       {rows.length === 0 ? (
-        <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+        <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
           No figures recorded yet.
         </p>
       ) : (
@@ -117,7 +128,7 @@ export default async function VehicleSourcesPage({
                           href={row.sourceUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-gold-300 hover:text-gold-200"
+                          className="inline-flex items-center gap-1 text-ink-50 underline-offset-4 hover:underline"
                         >
                           {hostOf(row.sourceUrl)}
                           <ExternalLink className="size-3" aria-hidden="true" />
@@ -127,7 +138,9 @@ export default async function VehicleSourcesPage({
                         <span className="text-ink-500">—</span>
                       )}
                     </td>
-                    <td className={`${TD} font-mono text-xs whitespace-nowrap`}>
+                    <td
+                      className={`${TD} text-xs whitespace-nowrap text-ink-400 tabular-nums`}
+                    >
                       {formatDate(row.lastVerified, "Never")}
                     </td>
                     <td className={TD}>
@@ -137,7 +150,7 @@ export default async function VehicleSourcesPage({
                       {firstOfSection ? (
                         <Link
                           href={sectionHref(id, row.section)}
-                          className="text-xs whitespace-nowrap text-gold-300 hover:text-gold-200"
+                          className="text-xs whitespace-nowrap text-ink-50 underline-offset-4 hover:underline"
                         >
                           Edit {row.sectionTitle.toLowerCase()}
                         </Link>

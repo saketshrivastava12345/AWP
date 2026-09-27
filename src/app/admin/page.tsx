@@ -26,24 +26,20 @@ function Stat({
 }) {
   const body = (
     <>
-      <dt className="text-caption">
-        {label}
-      </dt>
-      <dd className="mt-2 text-figure text-ink-50">
-        {value}
-      </dd>
+      <dt className="text-caption">{label}</dt>
+      <dd className="mt-2 text-figure text-ink-50">{value}</dd>
       {detail ? <dd className="mt-2 text-xs text-ink-500">{detail}</dd> : null}
     </>
   );
   return href ? (
     <Link
       href={href}
-      className="group edge-light block bg-surface-1 px-4 py-4 transition-colors hover:bg-surface-2 sm:px-5"
+      className="group block bg-surface-1 px-4 py-4 transition-colors hover:bg-surface-2 sm:px-5"
     >
       <dl>{body}</dl>
     </Link>
   ) : (
-    <div className="edge-light bg-surface-1 px-4 py-4 sm:px-5">
+    <div className="bg-surface-1 px-4 py-4 sm:px-5">
       <dl>{body}</dl>
     </div>
   );
@@ -111,7 +107,7 @@ function Counts({ counts }: { counts: DashboardData["counts"] }) {
       ? null
       : counts.variantsPublished + counts.variantsDraft;
   return (
-    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line lg:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line-subtle bg-line-subtle lg:grid-cols-4">
       <Stat
         label="Vehicles"
         value={n(vehicles)}
@@ -148,6 +144,9 @@ function Counts({ counts }: { counts: DashboardData["counts"] }) {
   );
 }
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function AdminDashboardPage() {
   const { supabase, user } = await adminPage();
   const data = await getDashboard(supabase);
@@ -176,7 +175,7 @@ export default async function AdminDashboardPage() {
       {failures > 0 ? (
         <p
           role="alert"
-          className="mb-6 rounded-sm border border-signal-negative/40 px-4 py-3 text-sm text-ink-200"
+          className="mb-6 rounded-card border-l-2 border-signal-negative bg-surface-1 px-4 py-3 text-sm text-ink-200"
         >
           {failures} figure{failures === 1 ? "" : "s"} could not be read from the database
           and {failures === 1 ? "is" : "are"} shown as “—”. Nothing is assumed to be zero.

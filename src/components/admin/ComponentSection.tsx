@@ -115,11 +115,11 @@ export async function ComponentSection({
           </ActionForm>
         </Panel>
 
-        <details className="group rounded-md border border-line bg-surface-1/60">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-5 font-display text-micro tracking-hud text-ink-100 uppercase">
+        <details className="group rounded-card border border-line-subtle bg-surface-1">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-5 text-body-s text-ink-50 hover:underline hover:underline-offset-4">
             <span
               aria-hidden="true"
-              className="text-base leading-none text-gold-400 transition-transform group-open:rotate-45"
+              className="text-base leading-none text-ink-400 transition-transform group-open:rotate-45"
             >
               +
             </span>

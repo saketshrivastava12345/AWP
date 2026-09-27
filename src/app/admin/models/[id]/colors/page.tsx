@@ -78,6 +78,9 @@ function ColorFields({
   );
 }
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function ModelColorsPage({
   params,
 }: {
@@ -90,10 +93,7 @@ export default async function ModelColorsPage({
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
       <section aria-labelledby="colours">
-        <h2
-          id="colours"
-          className="mb-1 font-display text-micro tracking-hud text-ink-100 uppercase"
-        >
+        <h2 id="colours" className="mb-1 text-h4">
           Catalogued paints ({rows.length})
         </h2>
         <p className="mb-4 max-w-2xl text-xs leading-relaxed text-ink-500">
@@ -104,7 +104,7 @@ export default async function ModelColorsPage({
         {error ? (
           <Notice tone="error">Colours could not be loaded.</Notice>
         ) : rows.length === 0 ? (
-          <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+          <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
             No paints recorded.
           </p>
         ) : (
@@ -151,7 +151,7 @@ export default async function ModelColorsPage({
                           href={color.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-gold-300 hover:text-gold-200"
+                          className="text-ink-50 underline-offset-4 hover:underline"
                         >
                           {hostOf(color.source_url)}
                           <span className="sr-only"> (opens in a new tab)</span>

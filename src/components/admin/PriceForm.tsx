@@ -200,7 +200,10 @@ export function PriceForm({
           />
           <p className="self-end pb-3 text-xs text-ink-500">
             Missing a state or city?{" "}
-            <Link href="/admin/markets" className="text-gold-300 hover:text-gold-200">
+            <Link
+              href="/admin/markets"
+              className="text-ink-50 underline-offset-4 hover:underline"
+            >
               Manage markets
             </Link>
           </p>
@@ -369,10 +372,10 @@ export function PriceForm({
         aria-labelledby="price-preview-title"
         className="xl:sticky xl:top-24 xl:self-start"
       >
-        <div className="rounded-md border border-line bg-surface-1/80">
+        <div className="rounded-card border border-line-subtle bg-surface-1">
           <h3
             id="price-preview-title"
-            className="border-b border-line-subtle px-4 py-3 font-display text-micro tracking-hud text-ink-100 uppercase"
+            className="border-b border-line-subtle px-4 py-3 text-h4"
           >
             Public preview
           </h3>
@@ -423,10 +426,8 @@ function PreviewBody({
       <p className="text-xs text-ink-400">{marketLabel}</p>
       {total ? (
         <div>
-          <p className="tabular font-display text-xl text-ink-50">
-            {money(total.amount)}
-          </p>
-          <p className="mt-1 text-xs text-gold-300">
+          <p className="text-figure text-ink-50">{money(total.amount)}</p>
+          <p className="mt-1 text-caption">
             {PRICE_TYPE_LABELS[total.type]}
             {total.kind === "calculated"
               ? " · sum of the components below, not a quotation"
@@ -435,12 +436,8 @@ function PreviewBody({
         </div>
       ) : breakdown.listed ? (
         <div>
-          <p className="tabular font-display text-xl text-ink-50">
-            {money(breakdown.listed.amount)}
-          </p>
-          <p className="mt-1 text-xs text-gold-300">
-            {PRICE_TYPE_LABELS[breakdown.listed.type]}
-          </p>
+          <p className="text-figure text-ink-50">{money(breakdown.listed.amount)}</p>
+          <p className="mt-1 text-caption">{PRICE_TYPE_LABELS[breakdown.listed.type]}</p>
         </div>
       ) : (
         <p className="text-ink-500">No amount entered yet.</p>
@@ -450,7 +447,7 @@ function PreviewBody({
           {breakdown.listed ? (
             <>
               <dt className="text-ink-400">{PRICE_TYPE_LABELS[breakdown.listed.type]}</dt>
-              <dd className="tabular text-right font-mono text-ink-100">
+              <dd className="text-right text-ink-100 tabular-nums">
                 {money(breakdown.listed.amount)}
               </dd>
             </>
@@ -458,7 +455,7 @@ function PreviewBody({
           {breakdown.components.map((line) => (
             <div key={line.key} className="contents">
               <dt className="text-ink-400">{line.label}</dt>
-              <dd className="tabular text-right font-mono text-ink-100">
+              <dd className="text-right text-ink-100 tabular-nums">
                 {money(line.amount)}
               </dd>
             </div>

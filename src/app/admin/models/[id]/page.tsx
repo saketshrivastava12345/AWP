@@ -22,6 +22,9 @@ import { adminPage, routeId } from "@/lib/admin/page";
 import { getAdminModel, getVehicleFormOptions } from "@/lib/queries/admin";
 import { formatYearRange } from "@/lib/format";
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function ModelPage({ params }: { params: Promise<{ id: string }> }) {
   const { supabase } = await adminPage();
   const id = routeId((await params).id);
@@ -182,7 +185,7 @@ export default async function ModelPage({ params }: { params: Promise<{ id: stri
             </ul>
           )}
           <details className="group border-t border-line-subtle">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-5 text-sm text-gold-300">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-5 text-body-s text-ink-50 hover:underline hover:underline-offset-4">
               <span
                 aria-hidden="true"
                 className="leading-none transition-transform group-open:rotate-45"
@@ -239,7 +242,7 @@ export default async function ModelPage({ params }: { params: Promise<{ id: stri
                       <td className={TD}>
                         <Link
                           href={`/admin/vehicles/${variant.id}`}
-                          className="text-ink-50 hover:text-gold-300"
+                          className="text-ink-50 underline-offset-4 hover:underline"
                         >
                           {variant.name}
                         </Link>
@@ -247,7 +250,9 @@ export default async function ModelPage({ params }: { params: Promise<{ id: stri
                           <Badge className="ml-2">Draft</Badge>
                         ) : null}
                       </td>
-                      <td className={`${TD} font-mono text-xs whitespace-nowrap`}>
+                      <td
+                        className={`${TD} text-xs whitespace-nowrap text-ink-400 tabular-nums`}
+                      >
                         {formatYearRange(variant.year_start, variant.year_end)}
                       </td>
                       <td className={TD}>

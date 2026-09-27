@@ -34,6 +34,9 @@ const PREVIOUS_NOTES: Record<string, string> = {
   failed: "The previous price could not be closed. Close it by hand.",
 };
 
+// Blocks on the admin role check, like the layout (see admin/layout.tsx).
+export const instant = false;
+
 export default async function VehiclePricesPage({
   params,
   searchParams,
@@ -90,10 +93,7 @@ export default async function VehiclePricesPage({
       <section aria-labelledby="current-prices">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2
-              id="current-prices"
-              className="font-display text-micro tracking-hud text-ink-100 uppercase"
-            >
+            <h2 id="current-prices" className="text-h4">
               In force today ({current.length})
             </h2>
             <p className="mt-1 text-xs text-ink-500">
@@ -108,7 +108,7 @@ export default async function VehiclePricesPage({
         {error ? (
           <Notice tone="error">Prices could not be loaded. Reload to try again.</Notice>
         ) : current.length === 0 ? (
-          <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+          <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
             No price is in force for this vehicle. The public page says so rather than
             showing an estimate.
           </p>
@@ -126,10 +126,7 @@ export default async function VehiclePricesPage({
       </section>
 
       <section id="history" aria-labelledby="price-history">
-        <h2
-          id="price-history"
-          className="mb-1 font-display text-micro tracking-hud text-ink-100 uppercase"
-        >
+        <h2 id="price-history" className="mb-1 text-h4">
           Full history ({history.length})
         </h2>
         <p className="mb-3 text-xs text-ink-500">
@@ -137,7 +134,7 @@ export default async function VehiclePricesPage({
           column.
         </p>
         {history.length === 0 ? (
-          <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+          <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
             No prices recorded yet.
           </p>
         ) : (

@@ -129,10 +129,7 @@ export function MediaManager({
   return (
     <div className="flex flex-col gap-10">
       <section aria-labelledby="photographs">
-        <h2
-          id="photographs"
-          className="mb-1 font-display text-micro tracking-hud text-ink-100 uppercase"
-        >
+        <h2 id="photographs" className="mb-1 text-h4">
           Photographs ({images.length})
         </h2>
         <p className="mb-4 text-xs text-ink-500">
@@ -141,7 +138,7 @@ export function MediaManager({
             : "The primary image leads the gallery and the catalogue card."}
         </p>
         {images.length === 0 ? (
-          <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+          <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
             No photographs. The public card shows a labelled silhouette instead of a
             stand-in picture.
           </p>
@@ -152,14 +149,14 @@ export function MediaManager({
               return (
                 <li
                   key={media.id}
-                  className="flex flex-col rounded-md border border-line bg-surface-1/60"
+                  className="flex flex-col rounded-card border border-line-subtle bg-surface-1"
                 >
                   <div className="flex gap-4 p-4">
                     <VehicleThumb url={media.url} missing={missing} size="md" />
                     <div className="min-w-0 flex-1 text-xs">
                       <div className="flex flex-wrap gap-1">
                         {media.is_primary ? (
-                          <Badge tone="gold">
+                          <Badge>
                             <Star className="mr-1 size-2.5" aria-hidden="true" />
                             Primary
                           </Badge>
@@ -170,7 +167,7 @@ export function MediaManager({
                       <p className="mt-2 line-clamp-2 text-sm text-ink-100">
                         {media.alt ?? "No alt text"}
                       </p>
-                      <p className="mt-1 font-mono text-ink-500">
+                      <p className="mt-1 text-ink-500 tabular-nums">
                         {media.width && media.height
                           ? `${media.width} × ${media.height} px`
                           : "Size not recorded"}
@@ -192,7 +189,7 @@ export function MediaManager({
                           href={media.source_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-gold-300 hover:text-gold-200"
+                          className="text-ink-50 underline-offset-4 hover:underline"
                         >
                           {media.source ?? hostOf(media.source_url)}
                           <span className="sr-only"> (opens in a new tab)</span>
@@ -262,50 +259,47 @@ export function MediaManager({
 
       {owner === "variant" ? (
         <section aria-labelledby="model-3d" className="flex flex-col gap-4">
-          <h2
-            id="model-3d"
-            className="font-display text-micro tracking-hud text-ink-100 uppercase"
-          >
+          <h2 id="model-3d" className="text-h4">
             3D model
           </h2>
           {glb ? (
-            <div className="rounded-md border border-line bg-surface-1/60">
+            <div className="rounded-card border border-line-subtle bg-surface-1">
               <dl className="grid gap-x-6 gap-y-3 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div>
-                  <dt className="text-label">Fidelity</dt>
+                  <dt className="text-caption">Fidelity</dt>
                   <dd className="mt-1">
                     {glb.is_exact_model ? (
-                      <Badge tone="positive">Exact vehicle</Badge>
+                      <Badge tone="gold">Exact vehicle</Badge>
                     ) : (
-                      <Badge tone="gold">Representation</Badge>
+                      <Badge>Representation</Badge>
                     )}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-label">Size and format</dt>
+                  <dt className="text-caption">Size and format</dt>
                   <dd className="mt-1 font-mono text-ink-100">
                     {formatBytes(glb.file_size_bytes)} ·{" "}
                     {(glb.model_format ?? "glb").toUpperCase()}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-label">Compression</dt>
+                  <dt className="text-caption">Compression</dt>
                   <dd className="mt-1 font-mono text-ink-100">
                     {glb.compression.length ? glb.compression.join(", ") : "None"}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-label">Version</dt>
+                  <dt className="text-caption">Version</dt>
                   <dd className="mt-1 text-ink-100">{glb.model_version ?? "—"}</dd>
                 </div>
                 <div className="sm:col-span-2">
-                  <dt className="text-label">Credit</dt>
+                  <dt className="text-caption">Credit</dt>
                   <dd className="mt-1 text-ink-200">
                     {glb.credit ?? "—"} <MissingProvenance media={glb} />
                   </dd>
                 </div>
                 <div className="sm:col-span-2">
-                  <dt className="text-label">Updated</dt>
+                  <dt className="text-caption">Updated</dt>
                   <dd className="mt-1 text-ink-200">{formatDate(glb.updated_at)}</dd>
                 </div>
               </dl>
