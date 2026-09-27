@@ -96,7 +96,7 @@ const SCRATCH = {
 const IDLE_FPS = 30;
 
 const BASE_FOV = 32;
-const PORTRAIT_FOV = 32;
+const PORTRAIT_FOV = 44;
 const toRadians = Math.PI / 180;
 
 /**
@@ -111,7 +111,7 @@ function framing(width: number, height: number): { fov: number; fit: number } {
   if (aspect >= 1.2) return { fov: BASE_FOV, fit: 1 };
   const fov = aspect < 1 ? PORTRAIT_FOV : BASE_FOV;
   const widen = Math.tan((BASE_FOV / 2) * toRadians) / Math.tan((fov / 2) * toRadians);
-  return { fov, fit: Math.min(3.4, Math.max(1, (1.55 / aspect) * widen)) };
+  return { fov, fit: Math.min(3, Math.max(1, (1.2 / aspect) * widen)) };
 }
 
 /**
@@ -271,11 +271,6 @@ function Rig({
     camera.setViewOffset(width, height, x, y, width, height);
 
     motionRef.current.distance = drive(shown.current);
-    // DEBUG-W9B (temporary)
-    const debugCanvas = state.gl.domElement;
-    debugCanvas.dataset.beat = shown.current.toFixed(3);
-    debugCanvas.dataset.frames = String(Number(debugCanvas.dataset.frames ?? 0) + 1);
-    debugCanvas.dataset.fov = String(lens.fov);
 
     if (shown.current !== goal || pointerMoving) {
       invalidate();
@@ -287,15 +282,6 @@ function Rig({
     }
   });
 
-  return null;
-}
-
-// DEBUG-W9B (temporary)
-function DebugW9b({ info }: { info: string }) {
-  const gl = useThree((state) => state.gl);
-  useEffect(() => {
-    gl.domElement.setAttribute("data-debug", info);
-  }, [gl, info]);
   return null;
 }
 
@@ -385,7 +371,7 @@ function Scene({
         epoch={epoch}
         contactFrames={quality.liveContactShadows && moving ? Infinity : 1}
         extent={extent + 1}
-        size={140}
+        size={140 * fit}
       />
       {/* The lane markings belong to the drive: the car stands still at the
           hero, so the road appears only once the story begins. */}
@@ -410,9 +396,6 @@ function Scene({
         progressRef={progressRef}
         motionRef={motionRef}
         running={running}
-      />
-      <DebugW9b
-        info={`a=${active} ghost=${shot?.ghost ?? "-"} hl=${shot?.highlight ?? "-"} ex=${exploded} built=${built} q=${quality.level}`}
       />
       <FirstFrame armed={built} onFrame={onReady} />
       <ContextWatch onLost={onContextLost} />
@@ -446,9 +429,8 @@ export function HeroScene(props: HeroSceneProps) {
       // PCF: three r186 dropped PCFSoft (R3F's default) and warns about it.
       shadows={quality.shadows ? "percentage" : false}
       gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
-      camera={{ position: [6.2, 1.2, 5.4], fov: BASE_FOV, near: 0.05, far: 160 }}
+      camera={{ position: [6.2, 1.2, 5.4], fov: BASE_FOV, near: 0.05, far: 400 }}
       aria-hidden="true"
-      data-scene-active={props.active}
       // Scenery: the page scrolls through it and the parallax is read from
       // the window, so the canvas never takes a pointer event.
       style={{ pointerEvents: "none" }}

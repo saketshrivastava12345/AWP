@@ -15,7 +15,7 @@ import type { CarBuild } from "@/lib/car-build";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useGpuTier } from "@/hooks/useGpuTier";
-import { QUALITY_PROFILES } from "@/lib/viewer-quality";
+import { heroProfile } from "@/components/home/hero-mode";
 import { beatAt, type HeroBeatId } from "@/components/home/hero-beats";
 import { POSTER_NOTES, heroMode } from "@/components/home/hero-mode";
 import { HeroStageContext, type HeroStageState } from "@/components/home/HeroStageStatus";
@@ -47,16 +47,6 @@ const HeroScene = dynamic(() => import("./HeroScene").then((m) => m.HeroScene), 
   ssr: false,
   loading: () => null,
 });
-
-// DEBUG-W9B (temporary)
-function debugProfile<T extends object>(profile: T): T {
-  try {
-    const raw = window.localStorage.getItem("aurix-debug-profile");
-    return raw ? { ...profile, ...(JSON.parse(raw) as Partial<T>) } : profile;
-  } catch {
-    return profile;
-  }
-}
 
 /** Content blocks the scroll position is measured against: the hero, then each card. */
 const BEAT_SELECTOR = "[data-hero-beat]";
@@ -197,6 +187,7 @@ export function HeroStory({
         : null;
   const total = railLabels.length;
   const canOptIn = mode.kind === "poster" && mode.canOptIn;
+  const quality = mode.kind === "scene" ? heroProfile(mode.level) : null;
   const optIn = useCallback(() => setOptedIn(true), []);
   const stageState = useMemo<HeroStageState>(
     () => ({ note, canOptIn, optIn }),
@@ -227,7 +218,7 @@ export function HeroStory({
             {poster}
           </div>
 
-          {showScene ? (
+          {showScene && quality ? (
             <div
               className={cn(
                 "absolute inset-0 transition-opacity duration-(--duration-cinematic)",
@@ -241,7 +232,7 @@ export function HeroStory({
                   progressRef={progress}
                   active={active}
                   running={canRender}
-                  quality={debugProfile(QUALITY_PROFILES[mode.level])}
+                  quality={quality}
                   onReady={handleReady}
                   onContextLost={handleFailed}
                 />

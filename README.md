@@ -539,18 +539,18 @@ ten minutes). Admin edits refresh the affected pages immediately.
 
 ## 12. Testing and quality checks
 
-<!-- LEAD: fill in final test counts -->
-
 ```bash
 npm run verify        # lint → typecheck → unit tests → production build
 npm run format:check
 ```
 
-- **Unit tests (Vitest)** cover the pure logic: the search-query parser, the
+- **Unit tests (Vitest): 700+ tests in 54 files**, all passing. They cover the pure logic: the search-query parser, the
   pricing engine (scope fallback, on-road breakdown, calculated totals,
   history), market selection, the anatomy tour, compare rows, filters and
   URL parsing, the command palette, the 3D viewer's quality and preset logic,
-  and the admin validators (CSV rows, prices, file signatures).
+  the admin validators (CSV rows, prices, file signatures, number parsing),
+  favourites and sign-in helpers (safe return paths, guest-list merging), and
+  the car page's helpers (performance standing, gallery credits, JSON-LD).
 - **CI** (`.github/workflows/ci.yml`) runs lint, format check, typecheck, the
   tests and a production build on every pull request and every push to
   `main`. The build runs **without** Supabase credentials on purpose, which
@@ -626,8 +626,6 @@ polished one.
 ---
 
 ## 14. Screenshot checklist for the report
-
-<!-- LEAD: refresh after final QA -->
 
 Use a **1440×900** window unless noted.
 

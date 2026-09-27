@@ -1,4 +1,9 @@
-import type { QualityLevel, QualitySetting } from "@/lib/viewer-quality";
+import {
+  QUALITY_PROFILES,
+  type QualityLevel,
+  type QualityProfile,
+  type QualitySetting,
+} from "@/lib/viewer-quality";
 
 /**
  * Whether the home hero draws its 3D scene or shows the still composition,
@@ -68,3 +73,29 @@ export const POSTER_NOTES: Record<HeroPosterReason, string | null> = {
   "low-power": "Still drawing — 3D is off on this device to save power",
   failed: "Still drawing — the 3D scene could not start",
 };
+
+/**
+ * The render recipe for the hero at a level. HIGH and MEDIUM are the
+ * viewer's own. The light recipe (phones, and LOW devices that asked for the
+ * scene) is the viewer's MEDIUM with everything expensive switched off — no
+ * mirrored floor, no shadow maps, a pixel ratio near 1, smaller environment
+ * and contact-shadow targets — but it keeps the surface textures: with the
+ * viewer's LOW recipe the story's ghosted body and highlighted subsystem did
+ * not take effect in testing (reported for W1), and the story depends on
+ * both.
+ */
+export const HERO_LIGHT_PROFILE: QualityProfile = {
+  ...QUALITY_PROFILES.medium,
+  level: "low",
+  dpr: [1, 1.25],
+  shadows: false,
+  reflector: false,
+  envResolution: 128,
+  contactShadowResolution: 256,
+  liveContactShadows: false,
+  glassTransmission: false,
+};
+
+export function heroProfile(level: QualityLevel): QualityProfile {
+  return level === "low" ? HERO_LIGHT_PROFILE : QUALITY_PROFILES[level];
+}

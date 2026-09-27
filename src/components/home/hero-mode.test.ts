@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { POSTER_NOTES, heroMode, type HeroModeInput } from "./hero-mode";
+import { QUALITY_PROFILES } from "@/lib/viewer-quality";
+import {
+  HERO_LIGHT_PROFILE,
+  POSTER_NOTES,
+  heroMode,
+  heroProfile,
+  type HeroModeInput,
+} from "./hero-mode";
 
 const base: HeroModeInput = {
   reducedMotion: false,
@@ -87,5 +94,24 @@ describe("heroMode", () => {
     for (const reason of ["reduced-motion", "no-webgl", "low-power", "failed"] as const) {
       expect(POSTER_NOTES[reason]).toMatch(/still drawing/i);
     }
+  });
+});
+
+describe("heroProfile", () => {
+  it("uses the viewer's own recipes above LOW", () => {
+    expect(heroProfile("high")).toBe(QUALITY_PROFILES.high);
+    expect(heroProfile("medium")).toBe(QUALITY_PROFILES.medium);
+  });
+
+  it("gives LOW a light recipe that still carries the surface textures", () => {
+    const light = heroProfile("low");
+    expect(light).toBe(HERO_LIGHT_PROFILE);
+    expect(light).toMatchObject({
+      reflector: false,
+      shadows: false,
+      surfaceDetail: true,
+      glassTransmission: false,
+    });
+    expect(light.dpr[1]).toBeLessThanOrEqual(1.25);
   });
 });
