@@ -43,7 +43,7 @@ function DimensionLine({
         y1={y1}
         x2={x2}
         y2={y2}
-        className="stroke-gold-600"
+        className="stroke-ink-500"
         strokeWidth={1}
         {...HAIR}
       />
@@ -54,7 +54,7 @@ function DimensionLine({
             y1={y1}
             x2={x1 + TICK / 2}
             y2={y1}
-            className="stroke-gold-600"
+            className="stroke-ink-500"
             strokeWidth={1}
             {...HAIR}
           />
@@ -63,7 +63,7 @@ function DimensionLine({
             y1={y2}
             x2={x2 + TICK / 2}
             y2={y2}
-            className="stroke-gold-600"
+            className="stroke-ink-500"
             strokeWidth={1}
             {...HAIR}
           />
@@ -75,7 +75,7 @@ function DimensionLine({
             y1={y1 - TICK / 2}
             x2={x1}
             y2={y1 + TICK / 2}
-            className="stroke-gold-600"
+            className="stroke-ink-500"
             strokeWidth={1}
             {...HAIR}
           />
@@ -84,7 +84,7 @@ function DimensionLine({
             y1={y2 - TICK / 2}
             x2={x2}
             y2={y2 + TICK / 2}
-            className="stroke-gold-600"
+            className="stroke-ink-500"
             strokeWidth={1}
             {...HAIR}
           />
@@ -96,8 +96,8 @@ function DimensionLine({
         textAnchor={vertical ? "start" : "middle"}
         dominantBaseline={vertical ? "middle" : "auto"}
         className="fill-ink-300 font-mono transition-opacity duration-500 group-data-[story=true]/stage:opacity-0 max-lg:hidden"
-        fontSize={104}
-        letterSpacing={6}
+        fontSize={96}
+        letterSpacing={2}
       >
         {label}
       </text>
@@ -138,13 +138,12 @@ export function HeroPoster({
   const glass = pathFrom(side.glass, toSheet);
   const wheelbaseY = ground + 110;
   const lengthY = ground + 390;
-  const mm = (value: number) => `${formatNumber(Math.round(value))} MM`;
+  const mm = (value: number) => `${formatNumber(Math.round(value))} mm`;
 
   return (
     <div className={cn("absolute inset-0 overflow-hidden", className)}>
-      {/* The key light's pool on the studio floor. */}
-      <div className="absolute top-[66%] left-1/2 h-[36%] w-[90%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] bg-gold-800/20 blur-[90px] lg:top-[52%] lg:left-[72%] lg:h-[50%] lg:w-[52%]" />
-      <div className="absolute inset-0 tech-grid opacity-40" />
+      {/* The key light's pool on the studio floor: neutral, not a glow. */}
+      <div className="absolute top-[66%] left-1/2 h-[36%] w-[90%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] bg-surface-4/50 blur-[90px] lg:top-[52%] lg:left-[72%] lg:h-[50%] lg:w-[52%]" />
 
       <svg
         viewBox={`0 0 ${width} ${height}`}
@@ -200,7 +199,7 @@ export function HeroPoster({
                 cx={cx}
                 cy={cy}
                 r={wheel.rim}
-                className="fill-surface-2 stroke-gold-700"
+                className="fill-surface-2 stroke-ink-600"
                 strokeWidth={1}
                 {...HAIR}
               />

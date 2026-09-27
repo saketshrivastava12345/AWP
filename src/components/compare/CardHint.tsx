@@ -24,7 +24,7 @@ export function CardHint({ label, parts }: { label: string; parts: string[] }) {
       <button
         type="button"
         aria-label={`About ${label}`}
-        className="grid size-11 place-items-center rounded-sm text-ink-500 transition-colors hover:text-gold-300"
+        className="grid size-11 place-items-center rounded-pill text-ink-400 transition-colors hover:text-ink-50"
       >
         <Info className="size-4" aria-hidden="true" />
       </button>

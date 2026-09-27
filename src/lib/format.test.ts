@@ -7,7 +7,10 @@ import {
   formatDate,
   formatPrice,
   formatPriceCompact,
+  formatNumberRange,
   formatYearRange,
+  formatYearSpan,
+  modelVariantName,
 } from "./format";
 
 describe("carDisplayName", () => {
@@ -85,5 +88,37 @@ describe("formatDate and formatYearRange", () => {
     expect(formatYearRange(2019, null)).toBe("2019 – present");
     expect(formatYearRange(2019, 2019)).toBe("2019");
     expect(formatYearRange(null, 2020)).toBe(NOT_AVAILABLE);
+  });
+});
+
+describe("modelVariantName", () => {
+  it("joins a distinct variant to the model", () => {
+    expect(modelVariantName("911", "GT3")).toBe("911 GT3");
+  });
+  it("drops a variant that repeats or is contained in the model", () => {
+    expect(modelVariantName("SF90 Stradale", "SF90 Stradale")).toBe("SF90 Stradale");
+    expect(modelVariantName("Civic Type R", "Type R")).toBe("Civic Type R");
+  });
+  it("shows a variant that already names the model on its own", () => {
+    expect(modelVariantName("M3", "M3 Competition")).toBe("M3 Competition");
+  });
+  it("copes with missing parts", () => {
+    expect(modelVariantName("Model S", null)).toBe("Model S");
+    expect(modelVariantName(null, "Plaid")).toBe("Plaid");
+  });
+});
+
+describe("formatYearSpan and formatNumberRange", () => {
+  it("uses an en dash without spaces", () => {
+    expect(formatYearSpan(2021, null)).toBe("2021–present");
+    expect(formatYearSpan(2019, 2024)).toBe("2019–2024");
+    expect(formatYearSpan(2020, 2020)).toBe("2020");
+    expect(formatYearSpan(null, 2020)).toBe(NOT_AVAILABLE);
+  });
+  it("formats ranges, collapsing equal ends", () => {
+    expect(formatNumberRange(450, 761)).toBe("450–761");
+    expect(formatNumberRange(2.7, 3.7, 1)).toBe("2.7–3.7");
+    expect(formatNumberRange(510, 510)).toBe("510");
+    expect(formatNumberRange(null, 5, 0, EM_DASH)).toBe(EM_DASH);
   });
 });

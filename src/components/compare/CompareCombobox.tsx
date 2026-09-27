@@ -12,6 +12,7 @@ import {
 } from "react";
 import { LoaderCircle, Plus, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { buttonClasses } from "@/components/ui/Button";
 import { formatNumber } from "@/lib/format";
 import { MAX_COMPARE, parseCompareSlug, withCar } from "@/lib/compare-slug";
 import { shortCarName } from "@/lib/compare-rows";
@@ -95,6 +96,7 @@ export function CompareCombobox({
   anchor,
   variant,
   label,
+  hideLabel = false,
   autoFocus = false,
   className,
 }: {
@@ -104,6 +106,8 @@ export function CompareCombobox({
   anchor: ComparePickerOption | null;
   variant: "hero" | "compact";
   label: string;
+  /** Keep the label for assistive technology only (a visible heading names the picker). */
+  hideLabel?: boolean;
   autoFocus?: boolean;
   className?: string;
 }) {
@@ -291,26 +295,33 @@ export function CompareCombobox({
           setOpen(false);
       }}
     >
-      <label htmlFor={inputId} className="mb-3 block text-label">
+      <label
+        htmlFor={inputId}
+        className={cn(
+          "mb-2 block text-body-s text-ink-200",
+          hideLabel && !full && "sr-only",
+        )}
+      >
         {full ? `${MAX_COMPARE} of ${MAX_COMPARE} cars selected` : label}
       </label>
 
       <div
         className={cn(
-          "flex items-center gap-3 rounded-sm border bg-surface-1/80 transition-colors duration-(--duration-fast)",
-          "focus-within:border-gold-600",
-          expanded ? "border-gold-700" : "border-line-strong",
-          hero ? "h-14 px-5" : "h-11 px-4",
+          "flex items-center gap-3 rounded-control border bg-surface-1 transition-colors duration-(--duration-fast)",
+          // The field's focus indicator (the input itself draws no outline).
+          "focus-within:border-gold-500",
+          expanded ? "border-ink-400" : "border-line-strong hover:border-ink-500",
+          hero ? "h-14 pr-2 pl-5" : "h-12 px-4",
           full && "opacity-60",
         )}
       >
         {isPending ? (
           <LoaderCircle
-            className="size-4 shrink-0 animate-spin text-gold-400"
+            className="size-[18px] shrink-0 animate-spin text-ink-300"
             aria-hidden="true"
           />
         ) : (
-          <Search className="size-4 shrink-0 text-ink-500" aria-hidden="true" />
+          <Search className="size-[18px] shrink-0 text-ink-400" aria-hidden="true" />
         )}
         <input
           ref={inputRef}
@@ -343,9 +354,9 @@ export function CompareCombobox({
           onClick={() => setOpen(true)}
           onKeyDown={onKeyDown}
           className={cn(
-            "h-full w-full min-w-0 bg-transparent text-ink-100 outline-none placeholder:text-ink-500",
+            "h-full w-full min-w-0 bg-transparent text-ink-50 outline-none placeholder:text-ink-400",
             "disabled:cursor-not-allowed",
-            hero ? "text-base" : "text-sm",
+            hero ? "text-base" : "text-[15px]",
           )}
         />
         {query ? (
@@ -356,9 +367,31 @@ export function CompareCombobox({
               inputRef.current?.focus();
             }}
             aria-label="Clear search"
-            className="-mr-2 grid size-9 shrink-0 place-items-center rounded-sm text-ink-500 hover:text-ink-100"
+            className={cn(
+              "grid size-10 shrink-0 place-items-center rounded-pill text-ink-400 transition-colors hover:bg-white/6 hover:text-ink-50",
+              !hero && "-mr-2",
+            )}
           >
             <X className="size-4" aria-hidden="true" />
+          </button>
+        ) : hero && !full ? (
+          // The pointer route into the list; keyboard users open it with the
+          // arrow keys, so (as the APG combobox pattern allows) it is not a
+          // second tab stop.
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label="Browse the catalogue"
+            aria-controls={listboxId}
+            aria-expanded={expanded}
+            onClick={() => {
+              inputRef.current?.focus();
+              setOpen(true);
+              setActive(0);
+            }}
+            className={buttonClasses("primary", "sm", "shrink-0")}
+          >
+            Browse
           </button>
         ) : null}
       </div>
@@ -374,12 +407,12 @@ export function CompareCombobox({
         aria-label="Cars to add"
         hidden={!expanded}
         className={cn(
-          "absolute inset-x-0 top-full z-(--z-overlay) mt-2 max-h-[min(26rem,60vh)] overflow-y-auto overscroll-contain",
-          "rounded-sm border border-line-strong bg-surface-1/98 shadow-[0_24px_60px_-24px_rgb(0_0_0/0.95)] backdrop-blur-md",
+          "absolute inset-x-0 top-full z-(--z-overlay) mt-2 max-h-[min(28rem,60vh)] overflow-y-auto overscroll-contain",
+          "rounded-card border border-line bg-surface-1 shadow-overlay",
         )}
       >
         {items.length === 0 ? (
-          <li role="presentation" className="px-4 py-6 text-sm text-ink-400">
+          <li role="presentation" className="px-4 py-6 text-body-s text-ink-300">
             {term
               ? `No cars match “${term}”.`
               : "Every catalogued car is already selected."}
@@ -395,7 +428,7 @@ export function CompareCombobox({
                 {section.title ? (
                   <li
                     role="presentation"
-                    className="sticky top-0 z-10 bg-surface-2/95 px-4 py-2 font-display text-micro tracking-hud text-ink-400 uppercase backdrop-blur-sm"
+                    className="sticky top-0 z-10 bg-surface-2 px-4 py-2 text-caption"
                   >
                     {section.title}
                   </li>
@@ -415,8 +448,8 @@ export function CompareCombobox({
                       }}
                       onClick={() => choose(item)}
                       className={cn(
-                        "flex min-h-14 cursor-pointer items-center gap-3 px-3 py-2 transition-colors",
-                        isActive ? "bg-surface-3/80" : "hover:bg-surface-2/70",
+                        "flex min-h-16 cursor-pointer items-center gap-4 px-3 py-2 transition-colors",
+                        isActive ? "bg-surface-3" : "hover:bg-surface-2",
                       )}
                     >
                       <CarThumb
@@ -426,30 +459,27 @@ export function CompareCombobox({
                         powertrain={powertrainKind(item.fuelType)}
                         sizes="72px"
                         className="shrink-0"
-                        frameClassName="h-10 w-16 rounded-xs"
+                        frameClassName="aspect-[16/10] w-[4.5rem] rounded-control"
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm text-ink-100">
-                          {item.flag ? (
-                            <span aria-hidden="true">{item.flag} </span>
-                          ) : null}
+                        <span className="block truncate text-body-s text-ink-50">
                           {item.title}
                         </span>
                         {item.subtitle ? (
-                          <span className="block truncate text-xs text-ink-500">
+                          <span className="block truncate text-caption">
                             {item.subtitle}
                           </span>
                         ) : null}
                       </span>
                       {item.powerHp !== null ? (
-                        <span className="tabular hidden shrink-0 font-mono text-xs text-ink-400 sm:block">
+                        <span className="hidden shrink-0 text-caption tabular-nums sm:block">
                           {formatNumber(item.powerHp)} hp
                         </span>
                       ) : null}
                       <Plus
                         className={cn(
                           "size-4 shrink-0 transition-colors",
-                          isActive ? "text-gold-300" : "text-gold-600",
+                          isActive ? "text-ink-50" : "text-ink-400",
                         )}
                         aria-hidden="true"
                       />
@@ -461,7 +491,7 @@ export function CompareCombobox({
           ))
         )}
         {unlisted > 0 ? (
-          <li role="presentation" className="px-4 py-3 text-xs text-ink-500">
+          <li role="presentation" className="px-4 py-3 text-caption">
             {unlisted} more {unlisted === 1 ? "car" : "cars"} — type to search the whole
             catalogue.
           </li>

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { ListedPrice } from "@/components/cars/ListedPrice";
+import { ButtonLink } from "@/components/ui/Button";
+import { SubNav } from "@/components/ui/SubNav";
 import { SpecSection } from "@/components/cars/SpecSection";
 import { SectionNav } from "@/components/cars/SectionNav";
 import { CarDNA } from "@/components/cars/CarDNA";
@@ -13,7 +14,6 @@ import { CarShowcase } from "@/components/3d/CarShowcase";
 import { drawnGroups } from "@/components/3d/viewer-config";
 import { PricingSection } from "@/components/pricing/PricingSection";
 import { ChapterHeader, DetailChapter } from "@/components/cars/detail/DetailChapter";
-import { ChapterIndicator } from "@/components/cars/detail/ChapterIndicator";
 import { VehicleHeader } from "@/components/cars/detail/VehicleHeader";
 import { DetailViewer } from "@/components/cars/detail/DetailViewer";
 import { BlueprintDiagram } from "@/components/cars/detail/BlueprintDiagram";
@@ -52,9 +52,7 @@ import {
   detailDescription,
   detailPath,
   detailTitle,
-  planChapters,
   sourcedOffer,
-  type ChapterId,
 } from "@/lib/detail/metadata";
 import {
   groupNotesFor,
@@ -68,6 +66,9 @@ import {
   viewerModelFor,
 } from "@/lib/detail/viewer";
 import { carDisplayName, distinctVariantName } from "@/lib/format";
+import { detailSubNav } from "@/lib/detail/chapters";
+import { compareHref } from "@/lib/detail/vehicle";
+import { cn } from "@/lib/utils";
 import { siteConfig } from "@/lib/site-config";
 import { PLACEHOLDER_PARAM, withPlaceholder } from "@/lib/static-params";
 import { powertrainKind } from "@/types/domain";
@@ -215,15 +216,12 @@ export default async function VariantPage({
   );
   const features = groupFeatures(detail.features);
 
-  // ----------------------------------------------------------- Chapters
-  // A chapter with nothing in it is left out, and the rest close up.
-  const chapters = planChapters({
-    technology: features.technology.length + features.other.length > 0,
-  });
-  const chapter = (id: ChapterId) => {
-    const found = chapters.find((entry) => entry.id === id);
-    return found ?? { id, number: "", label: "" };
-  };
+  // ------------------------------------------------------------ Sections
+  // The sticky sub-nav lists the sections this car's page renders; one with
+  // nothing in it is left out of both.
+  const hasTour = tour.length > 0;
+  const subNav = detailSubNav();
+  const technologyFeatures = features.technology.length + features.other.length > 0;
 
   // ------------------------------------------------------ Structured data
   const jsonLd = serializeJsonLd([
@@ -246,21 +244,19 @@ export default async function VariantPage({
     ]),
   ]);
 
-  const machine = chapter("the-machine");
-  const performance = chapter("performance");
-  const engineering = chapter("engineering");
-  const technology = chapter("technology");
-  const design = chapter("design");
-  const pricingChapter = chapter("pricing");
-  const explore = chapter("explore");
+  const variantName = distinctVariantName(model.name, variant.name)
+    ? `${model.name} ${variant.name}`
+    : model.name;
+  // A base price recorded on the variant, without a market or source: the
+  // Price section says so rather than claiming there is no price at all.
+  const recordedBasePrice =
+    listedPrice?.listed_price_type === "base_price" ? listedPrice : null;
 
   const engineeringHeader = (
     <ChapterHeader
-      id={engineering.id}
-      number={engineering.number}
-      label={engineering.label}
+      id="engineering"
       title={`How the ${carName} is built`}
-      description="Scroll and it turns into a blueprint, then comes apart one system at a time, each with the figures published for it. The full specification follows."
+      description="Scroll and it turns into a blueprint, then comes apart one system at a time, each with the figures published for it."
     />
   );
 
@@ -269,82 +265,95 @@ export default async function VariantPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
       <RecordView variantId={variant.id} />
 
-      {/* ============================================ 01 · The Machine */}
+      {/* ======================================================= Hero */}
+      <Container>
+        <VehicleHeader
+          detail={detail}
+          shareUrl={url}
+          price={listedPrice}
+          breadcrumbs={
+            <Breadcrumbs
+              items={[
+                { label: "Cars", href: "/cars" },
+                { label: manufacturer.name, href: `/cars/${manufacturer.slug}` },
+                { label: model.name, href: `/cars/${manufacturer.slug}/${model.slug}` },
+                { label: variantLabel },
+              ]}
+            />
+          }
+          save={
+            <FavoriteToggle
+              variantId={variant.id}
+              carName={carName}
+              className={SAVE_BUTTON}
+            />
+          }
+          stage={
+            <DetailViewer
+              // Beside the name the stage is at least 560px tall, so the car
+              // is the largest thing on the first screen. (Not in
+              // fullscreen, where the root is fixed.)
+              className="lg:[&>div:not(.fixed)>[data-viewer-ready]]:aspect-auto lg:[&>div:not(.fixed)>[data-viewer-ready]]:min-h-[560px]"
+              title={carName}
+              build={build}
+              model={viewerModelFor(detail)}
+              posterUrl={photo?.url ?? null}
+              partsByGroup={partsByGroupFor(detail, tour, allParts)}
+              partDetails={partDetailsFor(detail)}
+              groupNotes={groupNotesFor(detail)}
+              hud={hudFor(detail)}
+              dimensions={viewerDimensionsFor(detail)}
+              colors={detail.colors}
+              carbonCeramic={hasCarbonCeramicBrakes(detail)}
+            />
+          }
+        />
+      </Container>
+
+      {/* A direct child of the page, so it stays pinned for the whole
+          length of it. */}
+      <SubNav
+        items={subNav.map(({ label, href }) => ({ label, href }))}
+        progress
+        action={
+          <ButtonLink href={compareHref(detail)} size="sm">
+            Compare
+          </ButtonLink>
+        }
+      />
+
+      {/* =================================================== Overview */}
       <Container>
         <DetailChapter
-          id={machine.id}
-          number={machine.number}
-          label={machine.label}
+          id="overview"
           title={`The ${model.name}`}
-          description={model.description}
-          className="pb-20 sm:pb-28"
-          lead={
-            <div id="car-hero" className="pt-6 pb-16 sm:pt-8 lg:pb-24">
-              <Breadcrumbs
-                items={[
-                  { label: "Cars", href: "/cars" },
-                  { label: manufacturer.name, href: `/cars/${manufacturer.slug}` },
-                  { label: model.name, href: `/cars/${manufacturer.slug}/${model.slug}` },
-                  { label: variantLabel },
-                ]}
-              />
-              {/* Phones: the 3D stage first, then the name, key figures and
-                  price. Desktop: the header beside the stage. The header comes
-                  first in the source either way, so the h1 and the actions
-                  lead the reading and tab order. */}
-              <div className="mt-6 flex flex-col gap-8 lg:mt-8 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-12">
-                <VehicleHeader
-                  detail={detail}
-                  shareUrl={url}
-                  price={
-                    listedPrice ? <ListedPrice price={listedPrice} size="hero" /> : null
-                  }
-                  save={
-                    <FavoriteToggle
-                      variantId={variant.id}
-                      carName={carName}
-                      className="w-full"
-                    />
-                  }
-                />
-                <DetailViewer
-                  className={
-                    // Beside the header the stage is taller than the viewer's
-                    // default 2:1, so the car is not dwarfed by the text
-                    // column. (Not in fullscreen, where the root is fixed.)
-                    "max-lg:order-first lg:[&>div:not(.fixed)>[data-viewer-ready]]:aspect-[16/10]"
-                  }
-                  title={carName}
-                  build={build}
-                  model={viewerModelFor(detail)}
-                  posterUrl={photo?.url ?? null}
-                  partsByGroup={partsByGroupFor(detail, tour, allParts)}
-                  partDetails={partDetailsFor(detail)}
-                  groupNotes={groupNotesFor(detail)}
-                  hud={hudFor(detail)}
-                  dimensions={viewerDimensionsFor(detail)}
-                  colors={detail.colors}
-                  carbonCeramic={hasCarbonCeramicBrakes(detail)}
-                />
-              </div>
-            </div>
-          }
+          header={false}
+          className={SECTION}
         >
-          <Gallery detail={detail} id="gallery" />
+          <div className="grid gap-10 lg:grid-cols-12 lg:items-center lg:gap-16">
+            <div className="lg:col-span-5">
+              <ChapterHeader
+                id="overview"
+                title={`The ${model.name}`}
+                description={model.description}
+              />
+            </div>
+            <div className="lg:col-span-7">
+              <Gallery detail={detail} id="gallery" />
+            </div>
+          </div>
         </DetailChapter>
       </Container>
 
-      {/* ============================================== 02 · Performance */}
+      {/* ================================================ Performance */}
       <Container>
         <DetailChapter
-          id={performance.id}
-          number={performance.number}
-          label={performance.label}
+          id="performance"
           title="Performance"
           description="Published figures only, each placed among every car in the AURIX catalogue that publishes the same figure."
-          className="border-t border-line-subtle py-20 sm:py-28"
+          className={cn(SECTION, RULE)}
         >
-          <div className="space-y-20">
+          <div className="space-y-20 lg:space-y-24">
             <PerformancePanel detail={detail} population={performancePopulation} />
             <EvPanel detail={detail} rangeSamples={rangeSamples} />
             <CarDNA metrics={dnaMetrics} populationSize={dnaPopulation.length} />
@@ -352,33 +361,68 @@ export default async function VariantPage({
         </DetailChapter>
       </Container>
 
-      {/* ============================================== 03 · Engineering */}
+      {/* ================================================ Engineering */}
+      {/* Full width: the blueprint's sticky stage needs the whole viewport,
+          and no ancestor here may clip or transform it. */}
       <DetailChapter
-        id={engineering.id}
-        number={engineering.number}
-        label={engineering.label}
-        header={tour.length === 0}
-        headerClassName="mx-auto max-w-7xl px-5 pt-20 sm:px-8 sm:pt-28"
+        id="engineering"
         title={`How the ${carName} is built`}
-        className="border-t border-line-subtle pb-20 sm:pb-28"
+        description="The powertrain, the chassis and the components behind them."
+        header={!hasTour}
+        headerClassName="mx-auto max-w-[1360px] px-5 pt-16 sm:px-8 lg:px-12 lg:pt-24 min-[1440px]:px-16"
+        className={cn(RULE, "pb-16 lg:pb-24")}
       >
-        {tour.length > 0 ? (
-          // The tour brings its own stop rail; the chapter rail steps aside.
-          <div data-chapter-rail="hide">
-            <CarShowcase
-              build={build}
-              steps={blueprint}
-              label={carName}
-              intro={engineeringHeader}
-              fallback={
-                <BlueprintDiagram build={build} groups={blueprintOrder} label={carName} />
-              }
-            />
-          </div>
+        {hasTour ? (
+          <CarShowcase
+            build={build}
+            steps={blueprint}
+            label={carName}
+            intro={engineeringHeader}
+            fallback={
+              <BlueprintDiagram build={build} groups={blueprintOrder} label={carName} />
+            }
+          />
         ) : null}
 
-        <Container className="pt-16 sm:pt-24">
-          <div className="lg:grid lg:grid-cols-[minmax(0,12rem)_minmax(0,1fr)] lg:gap-12">
+        <Container className="space-y-20 pt-16 lg:space-y-24 lg:pt-24">
+          <PowertrainVisualizer
+            fuelType={variant.fuel_type}
+            driveType={variant.drive_type}
+          />
+          <FeatureGroup features={detail.features} group="chassis" />
+          <PartsShowcase
+            parts={detail.parts}
+            generalParts={tourParts(tour, allParts)}
+            inspectable={drawnGroups(build)}
+          />
+        </Container>
+      </DetailChapter>
+
+      {/* ===================================================== Design */}
+      <Container>
+        <DetailChapter
+          id="design"
+          title="Design and dimensions"
+          description="Drawn from the published dimensions where they exist, and to typical proportions for the body style where they do not."
+          className={cn(SECTION, RULE)}
+        >
+          <div className="space-y-20 lg:space-y-24">
+            <DimensionDrawing detail={detail} />
+            <FeatureGroup features={detail.features} group="aerodynamics" />
+            <FeatureGroup features={detail.features} group="interior" />
+          </div>
+        </DetailChapter>
+      </Container>
+
+      {/* ============================================= Technical data */}
+      <Container>
+        <DetailChapter
+          id="technical-data"
+          title="Technical data"
+          description="Every figure recorded for this car. A figure the manufacturer does not publish says so."
+          className={cn(SECTION, RULE)}
+        >
+          <div className="lg:grid lg:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] lg:gap-16">
             <aside className="hidden lg:block">
               <SectionNav
                 sections={navSections.map((section) => ({
@@ -388,105 +432,52 @@ export default async function VariantPage({
               />
             </aside>
             <div className="min-w-0">
-              <p className="text-hud text-gold-400">Full specification</p>
-              <div className="mt-6">
-                {sections.map((section) => (
-                  <SpecSection
-                    key={section.id}
-                    id={section.id}
-                    title={section.title}
-                    rows={section.rows}
-                    note={section.note}
-                  />
-                ))}
-              </div>
+              {sections.map((section) => (
+                <SpecSection
+                  key={section.id}
+                  id={section.id}
+                  title={section.title}
+                  rows={section.rows}
+                  note={section.note}
+                />
+              ))}
             </div>
           </div>
 
-          <div className="mt-20 space-y-20 sm:mt-24">
-            <PowertrainVisualizer
-              fuelType={variant.fuel_type}
-              driveType={variant.drive_type}
-            />
-            <FeatureGroup features={detail.features} group="chassis" />
-            <PartsShowcase
-              parts={detail.parts}
-              generalParts={tourParts(tour, allParts)}
-              inspectable={drawnGroups(build)}
-            />
-          </div>
-        </Container>
-      </DetailChapter>
-
-      {/* =============================================== 04 · Technology */}
-      {technology.number ? (
-        <Container>
-          <DetailChapter
-            id={technology.id}
-            number={technology.number}
-            label={technology.label}
-            title="Technology"
-            description="Features catalogued for this car, with the note recorded for it where there is one."
-            className="border-t border-line-subtle py-20 sm:py-28"
-          >
-            <div className="space-y-16">
+          {technologyFeatures ? (
+            <div className="mt-20 space-y-16 lg:mt-24">
               <FeatureGroup features={detail.features} group="technology" />
               <FeatureGroup features={detail.features} group="other" />
             </div>
-          </DetailChapter>
-        </Container>
-      ) : null}
-
-      {/* =================================================== 05 · Design */}
-      <Container>
-        <DetailChapter
-          id={design.id}
-          number={design.number}
-          label={design.label}
-          title="Design & dimensions"
-          description="Drawn from the published dimensions where they exist, and to typical proportions for the body style where they do not."
-          className="border-t border-line-subtle py-20 sm:py-28"
-        >
-          <div className="space-y-20">
-            <DimensionDrawing detail={detail} />
-            <FeatureGroup features={detail.features} group="aerodynamics" />
-            <FeatureGroup features={detail.features} group="interior" />
-          </div>
+          ) : null}
         </DetailChapter>
       </Container>
 
-      {/* ================================================== 06 · Pricing */}
+      {/* ====================================================== Price */}
       <Container>
         <DetailChapter
-          id={pricingChapter.id}
-          number={pricingChapter.number}
-          label={pricingChapter.label}
+          id="pricing"
           title="Price"
           description="Recorded prices by market, each with its type, source and verification date. Prices are never converted between currencies."
-          className="border-t border-line-subtle py-20 sm:py-28"
+          className={cn(SECTION, RULE)}
         >
           <PricingSection
             geography={geography}
             pricing={pricing}
-            variantName={
-              distinctVariantName(model.name, variant.name)
-                ? `${model.name} ${variant.name}`
-                : model.name
-            }
+            variantName={variantName}
+            recordedBasePrice={recordedBasePrice}
           />
         </DetailChapter>
       </Container>
 
-      {/* ================================================== 07 · Explore */}
+      {/* =================================================== Compare */}
       <Container>
         <DetailChapter
-          id={explore.id}
-          number={explore.number}
-          label={explore.label}
-          title="Compare & related"
-          className="border-t border-line-subtle pt-20 pb-16 sm:pt-28"
+          id="compare"
+          title="Compare and related"
+          className={cn(RULE, "pt-16 pb-16 lg:pt-24")}
         >
-          <div className="space-y-20">
+          <div className="space-y-20 lg:space-y-24">
             <CompareWith self={{ slug: compareSlug, name: carName }} rivals={related} />
             <RelatedVehicles
               cars={related}
@@ -496,18 +487,19 @@ export default async function VariantPage({
             <DataConfidence detail={detail} />
           </div>
 
-          <p className="mt-20 border-t border-line pt-8 text-xs leading-relaxed text-ink-500">
+          <p className="mt-20 max-w-[80ch] border-t border-line-subtle pt-8 text-caption">
             {siteConfig.disclaimer}
           </p>
         </DetailChapter>
       </Container>
-
-      {/* Fixed to the viewport edge; last in the source so the tab order
-          reaches the car itself before the chapter list. */}
-      <ChapterIndicator
-        chapters={chapters.map(({ id, number, label }) => ({ id, number, label }))}
-        pillClearOf="car-hero"
-      />
     </>
   );
 }
+
+/** Vertical rhythm between chapters, and the hairline that separates them. */
+const SECTION = "py-16 lg:py-24";
+const RULE = "border-t border-line-subtle";
+
+/** The favourite toggle at the hero's button size (its colours are its own). */
+const SAVE_BUTTON =
+  "h-12 gap-2 rounded-control px-6 font-display text-[15px] font-medium tracking-normal normal-case [&_svg]:size-[18px]";

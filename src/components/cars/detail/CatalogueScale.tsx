@@ -54,7 +54,7 @@ export function CatalogueScale({
         {/* Track, with the share this car meets or beats filled in. */}
         <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-line-strong" />
         <div
-          className="absolute top-1/2 left-0 h-[2px] -translate-y-1/2 bg-gradient-to-r from-gold-800 via-gold-700 to-gold-500"
+          className="absolute top-1/2 left-0 h-[2px] -translate-y-1/2 bg-gradient-to-r from-gold-800 to-gold-600"
           style={{ width: at(standing.position) }}
         />
 
@@ -62,7 +62,7 @@ export function CatalogueScale({
         {standing.distribution.map((position, index) => (
           <span
             key={index}
-            className="absolute top-1/2 h-2.5 w-px -translate-y-1/2 bg-ink-300/35"
+            className="absolute top-1/2 h-2.5 w-px -translate-y-1/2 bg-ink-300/40"
             style={{ left: at(position) }}
           />
         ))}
@@ -77,11 +77,11 @@ export function CatalogueScale({
         </span>
       </div>
 
-      <div className="mt-1 flex items-baseline justify-between gap-3 font-mono text-micro text-ink-500 tabular-nums">
+      <div className="mt-1 flex items-baseline justify-between gap-3 text-caption tabular-nums">
         <span>
           {formatFigure(ends.left, decimals)} {unit}
         </span>
-        <span className="hidden truncate text-ink-600 sm:inline">{better} →</span>
+        <span className="hidden truncate text-ink-500 sm:inline">{better} →</span>
         <span>
           {formatFigure(ends.right, decimals)} {unit}
         </span>

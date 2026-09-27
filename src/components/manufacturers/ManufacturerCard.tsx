@@ -1,26 +1,47 @@
 import Link from "next/link";
-import { ArrowUpRight, MapPin } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Monogram } from "./Monogram";
+import { firstSentence } from "@/components/parts/parts-helpers";
 import { SEGMENT_LABELS } from "./brand";
-import type { ManufacturerListItem } from "@/lib/queries/manufacturers";
+import type { Manufacturer } from "@/types/domain";
 
 function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
+/** What a brand card shows; the directory and the country page both map to it. */
+export type ManufacturerCardData = Pick<
+  Manufacturer,
+  "slug" | "name" | "founded_year" | "headquarters" | "segment" | "description"
+> & {
+  country?: { name: string } | null;
+  model_count: number;
+  variant_count: number;
+  /** The models' names, when the card should list them. */
+  modelNames?: readonly string[];
+};
+
 /**
- * A marque in the directory. The whole card is one link; everything on it is
- * read from the manufacturer row, and the counts include published cars only.
+ * A brand as a card: name, a meta line (segment, founding year, headquarters,
+ * and the country unless the card already sits under a country heading), the
+ * first sentence of its history, and what the catalogue holds for it.
+ *
+ * The whole card is one link. No monogram: the maker has no recorded logo,
+ * and a letter tile read as a placeholder avatar.
  */
 export function ManufacturerCard({
   maker,
+  showCountry = true,
+  headingLevel = "h3",
   className,
 }: {
-  maker: ManufacturerListItem;
+  maker: ManufacturerCardData;
+  /** Off when the card sits under a country heading that already says it. */
+  showCountry?: boolean;
+  headingLevel?: "h3" | "h4";
   className?: string;
 }) {
+  const Heading = headingLevel;
   const counts =
     maker.model_count > 0
       ? `${plural(maker.model_count, "model", "models")} · ${plural(
@@ -29,75 +50,46 @@ export function ManufacturerCard({
           "variants",
         )}`
       : "No published cars yet";
+  const meta = [
+    SEGMENT_LABELS[maker.segment],
+    showCountry ? maker.country?.name : null,
+    maker.founded_year ? `Founded ${maker.founded_year}` : null,
+    maker.headquarters,
+  ].filter(Boolean);
+  const summary = firstSentence(maker.description, 200);
 
   return (
     <Link
       href={`/manufacturers/${maker.slug}`}
       className={cn(
-        "group edge-light relative flex h-full flex-col border border-line bg-surface-1/70 p-5 sm:p-6",
-        "transition-colors duration-(--duration-fast) ease-cinematic",
-        "hover:border-line-strong hover:bg-surface-2/70",
+        "group flex h-full flex-col rounded-card bg-surface-1 p-6 sm:p-7",
+        "transition-colors duration-(--duration-base) ease-standard hover:bg-surface-2",
         className,
       )}
     >
-      <div className="flex items-start gap-4">
-        <Monogram
-          name={maker.name}
-          className="transition-colors duration-(--duration-fast) group-hover:border-gold-700/70"
-        />
-        <div className="min-w-0 flex-1 pt-0.5">
-          <h3 className="font-display text-sm leading-snug tracking-[0.08em] break-words text-ink-50">
-            {maker.name}
-          </h3>
-          <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-xs text-ink-400">
-            {maker.country ? (
-              <>
-                <span aria-hidden="true">{maker.country.flag_emoji}</span>
-                <span>{maker.country.name}</span>
-              </>
-            ) : null}
-            {maker.country && maker.founded_year ? (
-              <span aria-hidden="true" className="text-ink-600">
-                ·
-              </span>
-            ) : null}
-            {maker.founded_year ? (
-              <span className="tabular">Est. {maker.founded_year}</span>
-            ) : null}
-          </p>
-        </div>
-      </div>
+      <Heading className="text-h3">{maker.name}</Heading>
+      {meta.length > 0 ? (
+        <p className="mt-2 text-body-s text-ink-400">{meta.join(" · ")}</p>
+      ) : null}
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        <Badge tone={maker.segment === "performance" ? "gold" : "neutral"}>
-          {SEGMENT_LABELS[maker.segment]}
-        </Badge>
-      </div>
+      {summary ? <p className="mt-5 line-clamp-3 text-body-s text-ink-300">{summary}</p> : null}
 
-      {maker.headquarters ? (
-        <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-ink-400">
-          <MapPin className="mt-px size-3.5 shrink-0 text-ink-500" aria-hidden="true" />
-          <span>
-            <span className="sr-only">Headquarters: </span>
-            {maker.headquarters}
-          </span>
+      {maker.modelNames && maker.modelNames.length > 0 ? (
+        <p className="mt-4 text-body-s text-ink-200">
+          <span className="sr-only">Models: </span>
+          {maker.modelNames.join(" · ")}
         </p>
       ) : null}
 
-      {maker.description ? (
-        <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-ink-400">
-          {maker.description}
-        </p>
-      ) : null}
-
-      <div className="mt-auto pt-5">
-        <div className="flex items-center justify-between gap-3 border-t border-line-subtle pt-4">
-          <p className="tabular font-mono text-xs text-ink-300">{counts}</p>
-          <ArrowUpRight
-            className="size-4 shrink-0 text-ink-500 transition-[color,transform] duration-(--duration-fast) group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-gold-300"
+      <div className="mt-auto flex items-center justify-between gap-4 pt-6">
+        <p className="text-caption">{counts}</p>
+        <span className="inline-flex min-h-11 items-center gap-2 font-display text-[15px] font-medium text-ink-100 transition-colors duration-(--duration-fast) group-hover:text-ink-50">
+          View brand
+          <ArrowRight
             aria-hidden="true"
+            className="size-[18px] text-ink-400 transition-[translate,color] duration-(--duration-base) ease-standard group-hover:translate-x-1 group-hover:text-ink-50 motion-reduce:translate-x-0"
           />
-        </div>
+        </span>
       </div>
     </Link>
   );

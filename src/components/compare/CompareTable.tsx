@@ -1,21 +1,32 @@
 import Link from "next/link";
-import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CompareCarSummary, CompareGroup } from "@/lib/compare-rows";
-import { CompareLink } from "./CompareState";
 import { CompareValue } from "./CompareValue";
-import { CarMarker, RowLabel } from "./parts";
+import { RowLabel } from "./parts";
+
+/**
+ * Column geometry shared with CompareHeader's photo grid, so each photograph
+ * sits over its column. Below lg the label column is the only one before the
+ * cars; from lg a group column is added on the left, holding each section's
+ * title, which sticks while its rows scroll past.
+ */
+export const LABEL_COLUMN = {
+  /** The group column (lg and up). */
+  group: "hidden lg:table-cell lg:w-40 xl:w-48",
+  /** The row-label column. */
+  label: "w-32 lg:w-40 xl:w-44",
+};
 
 /**
  * The comparison as a real table, from 768px up.
  *
- * Column widths are fixed (`table-layout: fixed`) — the label column is
- * LABEL_COLUMN and the cars share the rest evenly — so nothing scrolls
- * sideways, and CompareHeader's photo grid above lines up with the columns.
- * The header row (each car's name and its remove control) sticks under the
+ * Column widths are fixed (`table-layout: fixed`, taken from the header
+ * row's cells) and the cars share the rest evenly, so nothing scrolls
+ * sideways. The header row (each car's make and name) sticks under the
  * navbar while the rows scroll, so the reader never loses track of which
- * column is which. It can stick because the table is not inside an overflow
- * container.
+ * column is which; CompareShell measures its height into `--cmp-head-h` so
+ * the group titles can stick just below it. It can stick because the table
+ * is not inside an overflow container.
  *
  * Rows that do not differ carry a class that hides them when the shell is in
  * "differences only" mode; the switch lives in CompareShell.
@@ -27,116 +38,140 @@ export function CompareTable({
   cars: CompareCarSummary[];
   groups: CompareGroup[];
 }) {
-  const others = (slug: string) => cars.map((car) => car.slug).filter((s) => s !== slug);
+  const stuck = "sticky top-(--nav-offset) z-(--z-sticky) bg-void/92 backdrop-blur-md";
 
   return (
-    <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
+    <table className="w-full table-fixed border-separate border-spacing-0">
       <caption className="sr-only">
         Specifications of {cars.map((car) => car.fullName).join(", ")}, side by side
       </caption>
-      <colgroup>
-        <col className="w-28 lg:w-52" />
-        {cars.map((car) => (
-          <col key={car.slug} />
-        ))}
-      </colgroup>
 
-      <thead>
-        {/* Names — sticky. */}
+      <thead data-compare-head="">
         <tr>
+          <td
+            aria-hidden="true"
+            className={cn(LABEL_COLUMN.group, stuck, "border-b border-line")}
+          />
           <th
             scope="col"
-            className="sticky top-16 z-(--z-sticky) border-b border-line-strong bg-void/92 py-3 pr-4 text-left align-bottom backdrop-blur-md"
+            className={cn(
+              LABEL_COLUMN.label,
+              stuck,
+              "border-b border-line py-4 pr-4 text-left align-bottom font-normal",
+            )}
           >
-            <span className="hidden text-label lg:inline">Specification</span>
+            <span className="sr-only">Specification</span>
           </th>
-          {cars.map((car, index) => (
+          {cars.map((car) => (
             <th
               key={car.slug}
               scope="col"
-              className="sticky top-16 z-(--z-sticky) border-b border-line-strong bg-void/92 px-2 py-3 text-left align-top font-normal backdrop-blur-md lg:px-3"
+              className={cn(
+                stuck,
+                "border-b border-line px-3 py-4 text-left align-bottom font-normal",
+              )}
             >
-              <div className="flex items-start gap-2 pr-7">
-                <CarMarker index={index} className="mt-0.5 hidden lg:grid" />
-                <div className="min-w-0 flex-1">
-                  <span className="block truncate font-display text-micro tracking-[0.12em] text-ink-400 uppercase lg:tracking-[0.2em]">
-                    {car.manufacturer}
-                  </span>
-                  <Link
-                    href={car.href}
-                    className="mt-1 block font-display text-[11px] leading-snug tracking-[0.03em] break-words hyphens-auto text-ink-50 transition-colors hover:text-gold-300 lg:text-[13px] lg:tracking-[0.04em]"
-                  >
-                    {car.shortName}
-                  </Link>
-                </div>
-              </div>
-              <CompareLink
-                to={others(car.slug)}
-                aria-label={`Remove ${car.fullName} from the comparison`}
-                className="absolute top-1 right-0 grid size-11 place-items-center rounded-sm text-ink-500 transition-colors hover:bg-surface-2 hover:text-signal-negative"
+              <span className="block text-caption">{car.manufacturer}</span>
+              <Link
+                href={car.href}
+                className="mt-0.5 block text-body-s font-display font-medium text-ink-50 transition-colors hover:text-ink-200 lg:text-h4"
               >
-                <X className="size-4" aria-hidden="true" />
-              </CompareLink>
+                {car.shortName}
+              </Link>
             </th>
           ))}
         </tr>
       </thead>
 
-      {groups.map((group) => (
-        <tbody
-          key={group.id}
-          data-bar-group=""
-          className={cn(
-            "group/bars",
-            !group.differs && "group-data-[diff=on]/cmp:hidden",
-          )}
-        >
-          <tr>
-            <th
-              scope="colgroup"
-              colSpan={cars.length + 1}
-              className="border-b border-line pt-10 pb-3 text-left font-normal"
-            >
-              <span className="font-display text-[11px] tracking-[0.2em] text-gold-300 uppercase">
-                {group.title}
-              </span>
-              {group.note ? (
-                <span className="mt-1.5 block text-xs text-ink-500">{group.note}</span>
-              ) : null}
-            </th>
-          </tr>
-
-          {group.rows.map((row, rowIndex) => (
-            <tr
-              key={row.id}
-              className={cn(
-                "transition-colors hover:bg-surface-1/60",
-                !row.differs && "group-data-[diff=on]/cmp:hidden",
-              )}
-            >
+      {groups.map((group) => {
+        const headingId = `compare-table-${group.id}`;
+        return (
+          <tbody
+            key={group.id}
+            data-bar-group=""
+            aria-labelledby={headingId}
+            className={cn(
+              "group/bars",
+              !group.differs && "group-data-[diff=on]/cmp:hidden",
+            )}
+          >
+            {/* Below lg: the section title as a full-width row. */}
+            <tr className="lg:hidden">
               <th
-                scope="row"
-                className="border-b border-line-subtle pt-4 pr-4 pb-3.5 text-left align-top font-normal"
+                scope="colgroup"
+                colSpan={cars.length + 1}
+                className="border-b border-line pt-14 pb-4 text-left font-normal"
               >
-                <RowLabel row={row} />
+                <GroupTitle group={group} id={headingId} />
               </th>
-              {row.cells.map((cell, carIndex) => (
-                <td
-                  key={cars[carIndex]?.slug ?? carIndex}
-                  className="border-b border-line-subtle px-2 py-3.5 align-top lg:px-3"
-                >
-                  <CompareValue
-                    row={row}
-                    cell={cell}
-                    rowIndex={rowIndex}
-                    carIndex={carIndex}
-                  />
-                </td>
-              ))}
             </tr>
-          ))}
-        </tbody>
-      ))}
+
+            {group.rows.map((row, rowIndex) => (
+              <tr
+                key={row.id}
+                className={cn(
+                  "transition-colors duration-(--duration-fast) hover:bg-surface-1/70",
+                  !row.differs && "group-data-[diff=on]/cmp:hidden",
+                )}
+              >
+                {/* From lg: the section title in its own column, sticky. */}
+                {rowIndex === 0 ? (
+                  <th
+                    scope="rowgroup"
+                    rowSpan={group.rows.length}
+                    className="hidden border-b border-line bg-void pt-14 pr-6 text-left align-top font-normal lg:table-cell"
+                  >
+                    <div className="sticky top-[calc(var(--nav-offset)+var(--cmp-head-h,5rem)+1.5rem)] pb-6">
+                      <GroupTitle group={group} id={`${headingId}-side`} />
+                    </div>
+                  </th>
+                ) : null}
+                <th
+                  scope="row"
+                  className={cn(
+                    "border-b border-line-subtle py-4 pr-4 text-left align-top font-normal",
+                    rowIndex === 0 && "lg:pt-14",
+                  )}
+                >
+                  <RowLabel row={row} />
+                </th>
+                {row.cells.map((cell, carIndex) => (
+                  <td
+                    key={cars[carIndex]?.slug ?? carIndex}
+                    className={cn(
+                      "border-b border-line-subtle px-3 py-4 align-top",
+                      rowIndex === 0 && "lg:pt-14",
+                    )}
+                  >
+                    <CompareValue
+                      row={row}
+                      cell={cell}
+                      rowIndex={rowIndex}
+                      carIndex={carIndex}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        );
+      })}
     </table>
+  );
+}
+
+/**
+ * A section's title and note. Rendered in two places (a full-width row below
+ * lg, the sticky side column from lg); CSS shows exactly one, so a screen
+ * reader meets each title once.
+ */
+function GroupTitle({ group, id }: { group: CompareGroup; id: string }) {
+  return (
+    <>
+      <h3 id={id} className="text-h3">
+        {group.title}
+      </h3>
+      {group.note ? <p className="mt-2 max-w-[60ch] text-caption">{group.note}</p> : null}
+    </>
   );
 }

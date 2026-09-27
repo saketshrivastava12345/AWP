@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CloudOff, Heart, LogIn, MonitorSmartphone, RotateCw } from "lucide-react";
+import { CloudOff, Heart, MonitorSmartphone, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { carDisplayName } from "@/lib/format";
 import { Button, ButtonLink } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { CarCard } from "@/components/cars/CarCard";
 import { CarCardSkeleton } from "@/components/cars/CarCardSkeleton";
@@ -17,7 +16,7 @@ import { removeFavorites } from "@/lib/favorites/store";
 /** For the derived "Discontinued" badge; computed once, not on every render. */
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
-const GRID = "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3";
+const GRID = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6";
 
 /**
  * The saved-cars list: the account's when signed in, this browser's for a
@@ -73,43 +72,38 @@ export function FavoritesView() {
   };
 
   return (
-    <div className="mt-6">
-      <p className="min-h-5 text-sm text-ink-400" aria-live="polite">
+    <div className="mt-4">
+      {/* One message when the list is empty: the empty state below says it. */}
+      <p className="min-h-6 text-lead text-ink-300 empty:min-h-0" aria-live="polite">
         {!ready
           ? "Loading your saved cars…"
-          : `${ids.length === 0 ? "Nothing" : ids.length} saved${
-              signedIn ? " to your account" : " on this device"
-            }`}
+          : ids.length === 0
+            ? ""
+            : `${ids.length} saved${signedIn ? " to your account" : " in this browser"}`}
       </p>
 
-      {ready && !signedIn ? (
+      {ready && !signedIn && ids.length > 0 ? (
         <aside
-          aria-label="Saved on this device"
-          className="mt-8 flex flex-col gap-4 rounded-md border border-line bg-surface-1 p-5 sm:flex-row sm:items-center sm:justify-between"
+          aria-label="Saved in this browser"
+          className="mt-8 flex flex-col gap-x-6 gap-y-1 rounded-card bg-surface-1 py-2 pr-4 pl-4 sm:flex-row sm:items-center sm:justify-between sm:pl-5"
         >
-          <div className="flex gap-4">
+          <p className="flex items-start gap-3 py-2 text-body-s text-ink-300 sm:items-center">
             <MonitorSmartphone
-              className="mt-0.5 size-5 shrink-0 text-gold-400"
+              className="mt-0.5 size-[18px] shrink-0 text-ink-400 sm:mt-0"
               strokeWidth={1.5}
               aria-hidden="true"
             />
-            <div>
-              <p className="text-sm text-ink-100">
-                These cars are saved in this browser only.
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-ink-400">
-                Clearing site data or switching devices loses them. Sign in and they move
-                to your account, where they follow you everywhere.
-              </p>
-            </div>
-          </div>
+            <span>
+              <span className="text-ink-100">Saved in this browser only.</span> Sign in to
+              keep them on every device.
+            </span>
+          </p>
           <ButtonLink
             href="/login?next=%2Ffavorites"
-            variant="secondary"
+            variant="link"
             size="sm"
-            className="h-11 shrink-0 self-start sm:self-auto"
+            className="ml-[30px] shrink-0 self-start sm:ml-0 sm:self-auto"
           >
-            <LogIn className="size-3.5" aria-hidden="true" />
             Sign in
           </ButtonLink>
         </aside>
@@ -124,19 +118,24 @@ export function FavoritesView() {
           ))}
         </ul>
       ) : shown.length === 0 ? (
-        <EmptyState
-          className="mt-10"
-          icon={<Heart className="size-7" strokeWidth={1.25} aria-hidden="true" />}
-          title="No saved cars yet"
-          description="Press the heart on any car to keep it here, ready to compare or come back to."
-          action={
-            <ButtonLink href="/cars" variant="secondary" size="sm" className="h-11">
-              Browse the collection
-            </ButtonLink>
-          }
-        />
+        <div className="mt-10 flex flex-col items-center rounded-card bg-surface-1 px-6 py-16 text-center sm:py-24">
+          <Heart className="size-7 text-ink-400" strokeWidth={1.25} aria-hidden="true" />
+          <h2 className="mt-6 text-h3">No saved cars yet</h2>
+          <p className="mt-3 max-w-md text-body text-ink-400">
+            Press the heart on any car to keep it here, ready to compare or come back to.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+            <ButtonLink href="/cars">Browse cars</ButtonLink>
+            {signedIn ? null : (
+              <ButtonLink href="/login?next=%2Ffavorites" variant="link">
+                Sign in to see your account’s cars
+              </ButtonLink>
+            )}
+          </div>
+        </div>
       ) : (
         <>
+          <h2 className="sr-only">Your saved cars</h2>
           {visible.length > 0 ? (
             <ul aria-label="Saved cars" className={cn(GRID, "mt-10")}>
               {visible.map(({ id, entry }, index) => {
@@ -177,7 +176,7 @@ export function FavoritesView() {
                       />
                     </div>
                     {removed ? (
-                      <p className="mt-2 text-xs text-ink-400">
+                      <p className="mt-3 text-caption">
                         Removed. Press the heart to save it again.
                       </p>
                     ) : null}
@@ -188,13 +187,13 @@ export function FavoritesView() {
           ) : null}
 
           {missing.length > 0 ? (
-            <div className="mt-8 flex flex-col gap-3 rounded-md border border-dashed border-line p-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-ink-300">
+            <div className="mt-8 flex flex-col gap-3 rounded-card bg-surface-1 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-body-s text-ink-300">
                 {missing.length === 1
                   ? "1 saved car is no longer in the catalogue."
                   : `${missing.length} saved cars are no longer in the catalogue.`}
               </p>
-              <Button variant="ghost" size="sm" className="h-11" onClick={removeMissing}>
+              <Button variant="ghost" size="sm" onClick={removeMissing}>
                 Remove {missing.length === 1 ? "it" : "them"}
               </Button>
             </div>
@@ -203,9 +202,9 @@ export function FavoritesView() {
           {failed.length > 0 ? (
             <div
               role="alert"
-              className="mt-8 flex flex-col gap-3 rounded-md border border-signal-negative/40 p-5 sm:flex-row sm:items-center sm:justify-between"
+              className="mt-8 flex flex-col gap-3 rounded-card border-l-2 border-signal-negative bg-surface-1 px-5 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
-              <p className="flex items-center gap-3 text-sm text-ink-200">
+              <p className="flex items-center gap-3 text-body-s text-ink-200">
                 <CloudOff
                   className="size-4 shrink-0 text-signal-negative"
                   aria-hidden="true"
@@ -217,10 +216,9 @@ export function FavoritesView() {
               <Button
                 variant="secondary"
                 size="sm"
-                className="h-11"
                 onClick={() => retryCatalogCards(failed)}
               >
-                <RotateCw className="size-3.5" aria-hidden="true" />
+                <RotateCw aria-hidden="true" />
                 Try again
               </Button>
             </div>

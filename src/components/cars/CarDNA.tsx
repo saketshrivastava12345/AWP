@@ -33,14 +33,13 @@ export function CarDNA({
     <section
       id="dna"
       aria-labelledby="dna-heading"
-      className={cn("scroll-mt-24", className)}
+      className={className}
     >
       <DetailHeading
         id="dna-heading"
         level={headingLevel}
-        eyebrow="Car DNA"
-        title="Percentile profile"
-        meta={`Against ${populationSize} catalogued cars`}
+        title="Car DNA"
+        note={`Against ${populationSize} catalogued cars`}
         description={
           <>
             Each bar is this car&apos;s percentile rank among the cars in the catalogue
@@ -50,23 +49,21 @@ export function CarDNA({
         }
       />
 
-      <dl className="mt-8 grid gap-x-10 gap-y-7 md:grid-cols-2">
+      <dl className="mt-10 grid gap-x-16 gap-y-8 md:grid-cols-2">
         {shown.map((metric) => (
           <div key={metric.id}>
-            <div className="flex items-center justify-between gap-4">
-              <dt className="flex items-center gap-1 font-display text-[10px] tracking-[0.18em] text-ink-200 uppercase">
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="flex items-center gap-1 text-body-s text-ink-200">
                 {metric.label}
                 <InfoHint label={`How ${metric.label.toLowerCase()} is calculated`}>
                   {metric.formula}
                 </InfoHint>
               </dt>
-              <dd className="flex items-baseline gap-3">
+              <dd className="flex items-baseline gap-3 text-right">
                 {metric.display ? (
-                  <span className="tabular font-mono text-[11px] text-ink-400">
-                    {metric.display}
-                  </span>
+                  <span className="text-caption tabular-nums">{metric.display}</span>
                 ) : null}
-                <span className="tabular font-mono text-xs text-gold-300">
+                <span className="text-data text-ink-50">
                   {ordinal(metric.value)}
                   <span className="sr-only"> percentile</span>
                 </span>
@@ -74,7 +71,7 @@ export function CarDNA({
             </div>
 
             <div
-              className="mt-2.5 h-1 w-full overflow-hidden bg-surface-3"
+              className="mt-3 h-1 w-full overflow-hidden rounded-pill bg-surface-3"
               role="meter"
               aria-valuenow={metric.value}
               aria-valuemin={0}
@@ -82,7 +79,7 @@ export function CarDNA({
               aria-label={`${metric.label}: ${ordinal(metric.value)} percentile`}
             >
               <div
-                className="h-full bg-gradient-to-r from-gold-700 to-gold-400"
+                className="h-full rounded-pill bg-gold-500"
                 style={{ width: `${metric.value}%` }}
               />
             </div>

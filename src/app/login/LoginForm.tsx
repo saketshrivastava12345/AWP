@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { FormField, Input, describedBy } from "@/components/ui/Field";
 import { FormMessage } from "@/components/account/AuthShell";
+import { PasswordInput } from "@/components/account/PasswordInput";
 import { signIn, signUp } from "@/app/auth/actions";
 import { AUTH_MESSAGES, INITIAL_FORM_STATE, type FormState } from "@/app/auth/form-state";
 import { safeNextPath } from "@/app/auth/next-path";
@@ -25,6 +26,13 @@ import { PASSWORD_MAX, PASSWORD_MIN } from "@/app/auth/validation";
 
 const CREATE_ID = "create-account";
 const SIGN_IN_ID = "sign-in";
+
+/* The tabs share the sticky sub-navigation's underline style. */
+const TAB =
+  "-mb-px inline-flex h-12 items-center border-b-2 text-body-s rounded-xs " +
+  "transition-colors duration-(--duration-fast) focus-visible:outline-offset-4";
+const TAB_ACTIVE = "border-gold-500 text-ink-50";
+const TAB_IDLE = "border-transparent text-ink-300 hover:text-ink-50";
 
 function subscribeLocation(onChange: () => void): () => void {
   window.addEventListener("hashchange", onChange);
@@ -80,20 +88,19 @@ function SignInForm({ next }: { next: string | null }) {
         />
       </FormField>
       <FormField id="signin-password" label="Password" error={passwordError}>
-        <Input
+        <PasswordInput
           id="signin-password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           invalid={Boolean(passwordError)}
           aria-describedby={describedBy("signin-password", null, passwordError)}
         />
       </FormField>
-      <p className="-mt-1 text-right">
+      <p className="-mt-2">
         <Link
           href="/login/forgot"
-          className="inline-flex min-h-11 items-center text-xs text-ink-300 underline-offset-4 hover:text-gold-200 hover:underline"
+          className="inline-flex min-h-11 items-center text-body-s text-ink-300 underline decoration-ink-600 underline-offset-4 transition-colors duration-(--duration-fast) hover:text-ink-50 hover:decoration-ink-300"
         >
           Forgot your password?
         </Link>
@@ -102,7 +109,7 @@ function SignInForm({ next }: { next: string | null }) {
       <Button type="submit" loading={pending} className="w-full">
         Sign in
       </Button>
-      <p className="text-xs leading-relaxed text-ink-500">
+      <p className="text-caption">
         Cars you saved in this browser before signing in are added to your account.
       </p>
     </form>
@@ -133,19 +140,18 @@ export function LoginForm() {
     <div className="group/auth">
       <nav
         aria-label="Sign in or create an account"
-        className="-mt-1 mb-7 flex border-b border-line"
+        className="mb-10 flex gap-8 border-b border-line-subtle"
       >
         <a
           href={`#${SIGN_IN_ID}`}
           aria-current={hash === null ? undefined : creating ? undefined : "page"}
           className={cn(
-            "-mb-px inline-flex h-11 items-center border-b px-4 font-display text-micro tracking-button uppercase",
-            "transition-colors duration-(--duration-fast) outline-none focus-visible:bg-surface-2",
+            TAB,
             creating
-              ? "border-transparent text-ink-400 hover:text-ink-100"
+              ? TAB_IDLE
               : cn(
-                  "border-gold-500 text-gold-300",
-                  "group-has-[#create-account:target]/auth:border-transparent group-has-[#create-account:target]/auth:text-ink-400",
+                  TAB_ACTIVE,
+                  "group-has-[#create-account:target]/auth:border-transparent group-has-[#create-account:target]/auth:text-ink-300",
                 ),
           )}
         >
@@ -155,13 +161,12 @@ export function LoginForm() {
           href={`#${CREATE_ID}`}
           aria-current={hash === null ? undefined : creating ? "page" : undefined}
           className={cn(
-            "-mb-px inline-flex h-11 items-center border-b px-4 font-display text-micro tracking-button uppercase",
-            "transition-colors duration-(--duration-fast) outline-none focus-visible:bg-surface-2",
+            TAB,
             creating
-              ? "border-gold-500 text-gold-300"
+              ? TAB_ACTIVE
               : cn(
-                  "border-transparent text-ink-400 hover:text-ink-100",
-                  "group-has-[#create-account:target]/auth:border-gold-500 group-has-[#create-account:target]/auth:text-gold-300",
+                  TAB_IDLE,
+                  "group-has-[#create-account:target]/auth:border-gold-500 group-has-[#create-account:target]/auth:text-ink-50",
                 ),
           )}
         >
@@ -170,7 +175,7 @@ export function LoginForm() {
       </nav>
 
       {notice ? (
-        <FormMessage tone="info" className="mb-6">
+        <FormMessage tone="info" className="mb-8">
           {notice}
         </FormMessage>
       ) : null}
@@ -236,10 +241,9 @@ function SignUpFormBound({
         />
       </FormField>
       <FormField id="signup-password" label="Password" hint={hint} error={passwordError}>
-        <Input
+        <PasswordInput
           id="signup-password"
           name="password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={PASSWORD_MIN}
@@ -252,7 +256,7 @@ function SignUpFormBound({
       <Button type="submit" loading={pending} className="w-full">
         Create account
       </Button>
-      <p className="text-xs leading-relaxed text-ink-500">
+      <p className="text-caption">
         An account keeps your saved and recently viewed cars in sync across devices.
         Nothing else is stored, and only you can read it.
       </p>

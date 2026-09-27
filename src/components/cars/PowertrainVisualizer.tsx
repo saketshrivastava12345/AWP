@@ -39,7 +39,7 @@ function stagesFor(fuelType: FuelType | null): Stage[] {
       return [
         { id: "battery", label: "Battery", tone: "electric" },
         { id: "engine", label: "Engine", tone: "fuel" },
-        { id: "hybrid", label: "Hybrid System", tone: "electric" },
+        { id: "hybrid", label: "Hybrid system", tone: "electric" },
         { id: "transmission", label: "Transmission", tone: "mech" },
         { id: "wheels", label: "Wheels", tone: "mech" },
       ];
@@ -54,10 +54,11 @@ function stagesFor(fuelType: FuelType | null): Stage[] {
   }
 }
 
-const TONE_CLASSES: Record<Stage["tone"], string> = {
-  fuel: "border-gold-700 text-gold-300",
-  electric: "border-signal-electric/45 text-signal-electric",
-  mech: "border-line-strong text-ink-200",
+/** Tones are a leading dot, as on a Badge; the label stays ink-100. */
+const TONE_DOTS: Record<Stage["tone"], string | null> = {
+  fuel: "bg-ink-300",
+  electric: "bg-signal-electric",
+  mech: null,
 };
 
 /** Which corners receive drive, for the wheel diagram. */
@@ -149,76 +150,75 @@ export function PowertrainVisualizer({
   const stages = stagesFor(fuelType);
 
   return (
-    <section
-      id="powertrain"
-      aria-labelledby="powertrain-heading"
-      className={cn("scroll-mt-24", className)}
-    >
+    <section id="powertrain" aria-labelledby="powertrain-heading" className={className}>
       <DetailHeading
         id="powertrain-heading"
         level={headingLevel}
-        eyebrow="Powertrain"
         title="How power reaches the road"
-        meta={DRIVE_LABELS[driveType ?? "none"]}
       />
 
-      <div className="mt-8 flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-14">
+      <div className="mt-10 flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-16">
         <ol className="flex flex-1 flex-wrap items-center gap-y-4">
-          {stages.map((stage, index) => (
-            <li key={stage.id} className="flex items-center">
-              <span
-                className={cn(
-                  "rounded-xs border px-3 py-2 font-display text-[10px] tracking-[0.14em] uppercase",
-                  TONE_CLASSES[stage.tone],
-                )}
-              >
-                {stage.label}
-              </span>
+          {stages.map((stage, index) => {
+            const dot = TONE_DOTS[stage.tone];
+            return (
+              <li key={stage.id} className="flex items-center">
+                <span className="inline-flex h-9 items-center gap-2 rounded-pill border border-line-strong px-4 text-[13px] leading-none font-medium whitespace-nowrap text-ink-100">
+                  {dot ? (
+                    <span
+                      aria-hidden="true"
+                      className={cn("size-1.5 shrink-0 rounded-full", dot)}
+                    />
+                  ) : null}
+                  {stage.label}
+                </span>
 
-              {index < stages.length - 1 ? (
-                <svg
-                  width="34"
-                  height="10"
-                  viewBox="0 0 34 10"
-                  aria-hidden="true"
-                  className="mx-1 shrink-0"
-                >
-                  <line
-                    x1="0"
-                    y1="5"
-                    x2="26"
-                    y2="5"
-                    className="stroke-line-strong"
-                    strokeWidth="1"
-                  />
-                  {/* The moving dash is the "flow". strokeDashoffset animates
-                      via CSS, so reduced motion stops it automatically. */}
-                  <line
-                    x1="0"
-                    y1="5"
-                    x2="26"
-                    y2="5"
-                    className="animate-flow stroke-gold-400"
-                    strokeWidth="1.5"
-                    strokeDasharray="4 10"
-                  />
-                  <path d="M26 1.5 L32 5 L26 8.5 Z" className="fill-line-strong" />
-                </svg>
-              ) : null}
-            </li>
-          ))}
+                {index < stages.length - 1 ? (
+                  <svg
+                    width="34"
+                    height="10"
+                    viewBox="0 0 34 10"
+                    aria-hidden="true"
+                    className="mx-1 shrink-0"
+                  >
+                    <line
+                      x1="0"
+                      y1="5"
+                      x2="26"
+                      y2="5"
+                      className="stroke-line-strong"
+                      strokeWidth="1"
+                    />
+                    {/* The moving dash is the "flow". strokeDashoffset animates
+                        via CSS, so reduced motion stops it automatically. */}
+                    <line
+                      x1="0"
+                      y1="5"
+                      x2="26"
+                      y2="5"
+                      className="animate-flow stroke-ink-300"
+                      strokeWidth="1.5"
+                      strokeDasharray="4 10"
+                    />
+                    <path d="M26 1.5 L32 5 L26 8.5 Z" className="fill-line-strong" />
+                  </svg>
+                ) : null}
+              </li>
+            );
+          })}
         </ol>
 
-        <div className="flex shrink-0 items-center gap-5">
+        <figure className="flex shrink-0 items-center gap-5">
           <WheelDiagram drive={driveType} />
-          <div>
-            <p className="text-label">Driven wheels</p>
-            <p className="mt-2 font-mono text-xs text-ink-200">
-              {driveType ? driveType.toUpperCase() : NOT_AVAILABLE}
+          <figcaption>
+            <p className="text-body-s text-ink-100">
+              {driveType ? DRIVE_LABELS[driveType] : NOT_AVAILABLE}
             </p>
-            <p className="mt-1 text-[11px] text-ink-500">Gold = driven</p>
-          </div>
-        </div>
+            <p className="mt-1 text-caption">
+              {driveType ? "Driven wheels in gold" : "Driven wheels not recorded"}
+            </p>
+          </figcaption>
+        </figure>
       </div>
     </section>
   );

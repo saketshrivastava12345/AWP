@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function ForgotPasswordPage() {
   return (
     <AuthShell
-      title="RESET PASSWORD"
+      title="Reset your password"
       description="Enter the email address you signed up with. If it has an account, we’ll send a link to choose a new password."
     >
       <ForgotPasswordForm />

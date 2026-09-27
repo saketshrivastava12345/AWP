@@ -2,14 +2,18 @@
 
 import { useRef, type KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
+import { chipClasses, chipCountClasses } from "@/components/manufacturers/brand";
 
 export type CategoryChip = { value: string; label: string; count: number };
 
 /**
- * Single-choice category chips with radio semantics: one Tab stop, arrow keys
- * move and select, Home/End jump to the ends. Separate bordered chips rather
- * than a joined strip, so ten categories can wrap onto a second line on wide
- * screens; on phones they scroll sideways in one row.
+ * Single-choice filter chips with radio semantics: one Tab stop, arrow keys
+ * move and select, Home/End jump to the ends. Sentence-case pills; the active
+ * one carries the gold border.
+ *
+ * On phones they sit in one row that scrolls sideways, with faded edges so a
+ * cut-off chip reads as "more this way"; the row reaches into the page gutter
+ * so the first chip is not faded. From `sm` they wrap.
  */
 export function CategoryChips({
   label,
@@ -46,7 +50,8 @@ export function CategoryChips({
       role="radiogroup"
       aria-label={label}
       className={cn(
-        "-mx-5 flex [scrollbar-width:none] gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0",
+        "no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-0.5 edge-fade-x",
+        "sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:[mask-image:none]",
         className,
       )}
     >
@@ -65,24 +70,12 @@ export function CategoryChips({
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => move(event, index)}
             className={cn(
-              "inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xs border px-3.5",
-              "font-display text-micro tracking-hud whitespace-nowrap uppercase",
-              "transition-colors duration-(--duration-fast)",
-              checked
-                ? "border-gold-600 bg-gold-500/10 text-gold-300"
-                : "border-line bg-surface-1/60 text-ink-300 hover:border-line-strong hover:text-ink-50",
-              option.count === 0 && !checked && "text-ink-500",
+              chipClasses(checked),
+              option.count === 0 && !checked && "text-ink-400",
             )}
           >
             {option.label}
-            <span
-              className={cn(
-                "tabular font-mono text-[11px] tracking-normal",
-                checked ? "text-gold-400/80" : "text-ink-500",
-              )}
-            >
-              {option.count}
-            </span>
+            <span className={chipCountClasses(checked)}>{option.count}</span>
           </button>
         );
       })}

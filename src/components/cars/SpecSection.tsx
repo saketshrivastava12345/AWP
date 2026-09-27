@@ -53,25 +53,22 @@ export function SpecSection({
     <section
       id={id}
       aria-labelledby={`${id}-heading`}
-      className={cn("scroll-mt-24 pt-12 first:pt-0", className)}
+      className={cn("pt-14 first:pt-0", className)}
     >
-      <Heading
-        id={`${id}-heading`}
-        className="border-b border-line pb-4 font-display text-sm tracking-[0.18em] text-ink-50 uppercase"
-      >
+      <Heading id={`${id}-heading`} className="text-h3">
         {title}
       </Heading>
 
       {rows.length > 0 ? (
-        <dl className="mt-1">
+        <dl className="mt-4 border-t border-line">
           {rows.map((row) => {
             const unavailable = row.value === null;
             return (
               <div
                 key={row.label}
-                className="grid grid-cols-2 items-center gap-4 border-b border-line-subtle py-3 sm:grid-cols-[minmax(0,16rem)_1fr]"
+                className="grid grid-cols-2 items-baseline gap-4 border-b border-line-subtle py-3.5 sm:grid-cols-[minmax(0,18rem)_1fr]"
               >
-                <dt className="flex min-w-0 items-center gap-1 text-sm text-ink-400">
+                <dt className="flex min-w-0 items-center gap-1 text-body-s text-ink-300">
                   <span>{row.label}</span>
                   {row.hint ? (
                     <InfoHint label={`About ${row.label.toLowerCase()}`}>
@@ -81,8 +78,8 @@ export function SpecSection({
                 </dt>
                 <dd
                   className={cn(
-                    "tabular text-right font-mono text-sm break-words sm:text-left",
-                    unavailable ? "font-sans text-ink-500 italic" : "text-ink-100",
+                    "min-w-0 text-right [overflow-wrap:anywhere] sm:text-left",
+                    unavailable ? "text-body-s text-ink-400" : "text-data text-ink-50",
                   )}
                 >
                   {unavailable ? NOT_AVAILABLE : row.value}
@@ -95,7 +92,7 @@ export function SpecSection({
 
       {children}
 
-      {note ? <p className="mt-5 text-xs leading-relaxed text-ink-500">{note}</p> : null}
+      {note ? <p className="mt-4 max-w-[72ch] text-caption">{note}</p> : null}
     </section>
   );
 }

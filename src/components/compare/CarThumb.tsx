@@ -36,7 +36,7 @@ export function CarThumb({
   sizes: string;
   /** Photo credit, shown under the frame while the photograph is shown. */
   credit?: string | null;
-  /** "No photograph yet" under the silhouette, when there is room for it. */
+  /** "Drawing · no photograph" under the silhouette, when there is room for it. */
   caption?: boolean;
   /** Load immediately (the page's largest image, above the fold). */
   eager?: boolean;
@@ -75,14 +75,14 @@ export function CarThumb({
       {showPhoto && credit ? (
         <p
           className={cn(
-            "mt-1.5 line-clamp-2 text-nano leading-snug text-ink-500",
+            "mt-2 line-clamp-2 text-nano leading-snug text-ink-500",
             reserveCredit && "h-[2lh]",
           )}
         >
           {credit}
         </p>
       ) : reserveCredit ? (
-        <p aria-hidden="true" className="mt-1.5 h-[2lh] text-nano leading-snug" />
+        <p aria-hidden="true" className="mt-2 h-[2lh] text-nano leading-snug" />
       ) : null}
     </div>
   );

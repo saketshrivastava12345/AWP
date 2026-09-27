@@ -1,11 +1,11 @@
-import { formatDate, formatPrice, formatPriceCompact } from "@/lib/format";
+import { formatDate, formatPrice } from "@/lib/format";
 import { PRICE_TYPE_LABELS } from "@/lib/pricing/engine";
 import type { PriceType } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
 /**
  * A catalogue listed price, always with what kind of figure it is and where
- * it applies: "₹3.51 Cr · Ex-showroom, Pune" or "$203.5K · Base price".
+ * it applies: "Ex-showroom ₹3,51,00,000 · Pune" or "Base price $203,500".
  *
  * The figure is the one the catalogue view resolved (the most recently
  * verified in-force listed price in any market, else the variant's recorded
@@ -69,9 +69,10 @@ export function ListedPrice({
 }: {
   price: ListedPriceData;
   /**
-   * card: amount over a one-line qualifier with the most specific market.
+   * card: "Base price $203,500" over a caption with the market and
+   * verification.
    * inline: one line, "amount · type, market".
-   * hero: large amount, full market and the verification date.
+   * hero: the amount set large, then the type, market and verification.
    */
   size?: "card" | "inline" | "hero";
   /** Shown when there is no recorded price; `null` renders nothing. */
@@ -81,45 +82,35 @@ export function ListedPrice({
   if (!hasPrice(price)) {
     if (placeholder === null) return null;
     return (
-      <p className={cn("text-xs text-ink-500", className)}>
+      <p className={cn("text-caption text-ink-400", className)}>
         <span>{placeholder}</span>
       </p>
     );
   }
 
   const currency = price.listed_price_currency;
-  const compact = formatPriceCompact(price.listed_price, currency);
+  // Always the full figure: "$161,100", never "$161.1K". An abbreviated
+  // price reads as a different kind of claim.
   const full = formatPrice(price.listed_price, currency);
   const type = listedPriceTypeLabel(price.listed_price_type, size === "hero");
   const market = price.listed_price_market?.trim() || null;
   // "Pune, Maharashtra, India" -> "Pune": the most specific part fits a card.
   const shortMarket = market?.split(",")[0]?.trim() ?? null;
-  // A figure with no recorded market says so rather than leaving it implicit.
-  const qualifier = [
-    type,
-    size === "hero" ? market : shortMarket,
-    market ? null : "market not recorded",
-  ]
-    .filter(Boolean)
-    .join(size === "card" && !market ? " · " : ", ");
   const verified = price.listed_price_verified_at
     ? formatDate(price.listed_price_verified_at, "")
     : "";
-
-  // Compact forms ("₹3.51 Cr", "$203.5K") are for the eye; screen readers get
-  // the full amount.
-  const amount = (
-    <>
-      <span aria-hidden="true">{compact}</span>
-      <span className="sr-only">{full}</span>
-    </>
-  );
+  const verification = verified ? `Verified ${verified}` : "Unverified";
+  // A figure with no recorded market says so rather than leaving it implicit.
+  const where =
+    (size === "hero" ? market : shortMarket) ?? (market ? null : "market not recorded");
 
   if (size === "inline") {
     return (
-      <p className={cn("text-sm", className)}>
-        <span className="tabular font-mono text-gold-200">{amount}</span>
-        {qualifier ? <span className="text-ink-400"> · {qualifier}</span> : null}
+      <p className={cn("text-body-s text-ink-400", className)}>
+        <span className="tabular text-ink-100">{full}</span>
+        {type || where ? (
+          <span> · {[type, where].filter(Boolean).join(", ")}</span>
+        ) : null}
       </p>
     );
   }
@@ -127,28 +118,28 @@ export function ListedPrice({
   if (size === "hero") {
     return (
       <div className={className}>
-        <p className="tabular font-mono text-2xl text-gold-200 sm:text-3xl">{amount}</p>
-        {qualifier ? <p className="mt-1.5 text-sm text-ink-300">{qualifier}</p> : null}
-        {verified ? (
-          <p className="mt-1 text-xs text-ink-500">Verified {verified}</p>
-        ) : null}
+        <p className="text-lead text-ink-300">
+          {type ? <span>{type} </span> : null}
+          <span className="tabular text-ink-100">{full}</span>
+        </p>
+        <p className="mt-1 text-caption text-ink-400">
+          {[verification, where].filter(Boolean).join(" · ")}
+        </p>
       </div>
     );
   }
 
   return (
     <div className={cn("min-w-0", className)}>
-      <p className="tabular truncate font-mono text-sm text-gold-200">{amount}</p>
-      {qualifier ? (
-        <p className="mt-1 truncate text-[11px] text-ink-400">
-          {qualifier}
-          {market && market !== shortMarket ? (
-            <span className="sr-only"> ({market})</span>
-          ) : null}
-        </p>
-      ) : null}
-      <p className="mt-0.5 truncate text-[11px] text-ink-500">
-        {verified ? `Verified ${verified}` : "Unverified"}
+      <p className="truncate text-body-s text-ink-300">
+        {type ? <span>{type} </span> : null}
+        <span className="tabular text-ink-100">{full}</span>
+      </p>
+      <p className="mt-0.5 truncate text-caption text-ink-400">
+        {[verification, where].filter(Boolean).join(" · ")}
+        {market && market !== shortMarket ? (
+          <span className="sr-only"> ({market})</span>
+        ) : null}
       </p>
     </div>
   );

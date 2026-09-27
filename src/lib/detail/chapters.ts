@@ -61,3 +61,41 @@ export function chapterPosition(
   if (!current || !last) return null;
   return `${current.number} / ${last.number}`;
 }
+
+// ---------------------------------------------------------------------------
+// The car page's sections, in reading order, for its sticky sub-navigation
+// ---------------------------------------------------------------------------
+
+export type DetailSectionId =
+  | "overview"
+  | "performance"
+  | "engineering"
+  | "design"
+  | "technical-data"
+  | "pricing"
+  | "compare";
+
+export type DetailSection = { id: DetailSectionId; label: string };
+
+const DETAIL_SECTIONS: readonly DetailSection[] = [
+  { id: "overview", label: "Overview" },
+  { id: "performance", label: "Performance" },
+  { id: "engineering", label: "Engineering" },
+  { id: "design", label: "Design" },
+  { id: "technical-data", label: "Technical data" },
+  { id: "pricing", label: "Price" },
+  { id: "compare", label: "Compare" },
+];
+
+/**
+ * The sections the car page renders, in order, as sub-nav items
+ * ({ label, href: "#id" }). A section the page leaves out (`present[id] ===
+ * false`) is dropped, so the bar never links to a section that is not there.
+ */
+export function detailSubNav(
+  present: Partial<Record<DetailSectionId, boolean>> = {},
+): { id: DetailSectionId; label: string; href: string }[] {
+  return DETAIL_SECTIONS.filter((section) => present[section.id] !== false).map(
+    (section) => ({ ...section, href: `#${section.id}` }),
+  );
+}

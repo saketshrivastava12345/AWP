@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import { formatEnumLabel, formatNumber, NOT_AVAILABLE } from "@/lib/format";
 import { drawingGeometry, pathFrom, type Point } from "@/lib/detail/drawing";
 import { toFinite } from "@/lib/detail/figures";
-import { vehicleCode } from "@/lib/detail/vehicle";
 import { powertrainKind, type VariantDetail } from "@/types/domain";
 import { DetailHeading } from "./DetailHeading";
 
@@ -288,18 +287,13 @@ export function DimensionDrawing({
       <DetailHeading
         id={headingId}
         level={headingLevel}
-        eyebrow="Dimensions"
         title="Technical drawing"
-        meta={`DWG · ${vehicleCode(detail)}`}
+        note="Side elevation and plan, in millimetres"
       />
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_17rem] xl:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <figure className="min-w-0">
-          <div className="relative overflow-hidden rounded-xs border border-line bg-surface-1/40">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 tech-grid opacity-70"
-            />
+          <div className="relative overflow-hidden rounded-card bg-surface-1">
             <div
               role="img"
               aria-label={summary}
@@ -428,13 +422,13 @@ export function DimensionDrawing({
 
               {/* Labels: HTML, so they stay legible at every size. */}
               <span
-                className="absolute text-hud text-ink-500"
+                className="absolute text-caption"
                 style={{ ...pct(originX, pad * 0.7) }}
               >
                 Side elevation
               </span>
               <span
-                className="absolute text-hud text-ink-500"
+                className="absolute text-caption"
                 style={{ ...pct(originX, planTop - 0.075 * L) }}
               >
                 Plan
@@ -443,7 +437,7 @@ export function DimensionDrawing({
                 <span
                   key={label.key}
                   className={cn(
-                    "absolute flex items-baseline gap-1.5 rounded-xs bg-void px-1.5 py-0.5 font-mono text-[10px] leading-none whitespace-nowrap tabular-nums sm:text-[11px]",
+                    "absolute flex items-baseline gap-1.5 rounded-xs bg-surface-1 px-1.5 py-0.5 font-mono text-[11px] leading-none whitespace-nowrap tabular-nums sm:text-xs",
                     label.placement === "on-line" && "-translate-x-1/2 -translate-y-1/2",
                     label.placement === "on-line-vertical" &&
                       "-translate-x-1/2 -translate-y-1/2 -rotate-90",
@@ -452,47 +446,45 @@ export function DimensionDrawing({
                   style={pct(label.x, label.y)}
                 >
                   <span className="text-ink-500">{label.abbr}</span>
-                  <span className="text-gold-200">{formatNumber(label.value)}</span>
+                  <span className="text-ink-50">{formatNumber(label.value)}</span>
                 </span>
               ))}
             </div>
           </div>
-          <figcaption className="mt-3 flex flex-col gap-1 text-xs leading-relaxed text-ink-500 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-            <span className={toScale ? undefined : "text-ink-400"}>{caption}</span>
-            <span className="shrink-0 text-hud text-ink-600">
-              mm · body-style drawing, not a likeness
-            </span>
+          <figcaption className="mt-3 flex flex-col gap-1 text-caption sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <span>{caption}</span>
+            <span className="shrink-0">Body-style drawing, not a likeness</span>
           </figcaption>
         </figure>
 
         {/* ------------------------------------------------ Figures table */}
         <div>
-          <dl className="divide-y divide-line-subtle border-y border-line">
+          <dl className="border-t border-line">
             {rowsTable.map((row) => (
               <div
                 key={row.label}
-                className="flex items-baseline justify-between gap-4 py-2.5"
+                className="flex items-baseline justify-between gap-4 border-b border-line-subtle py-3"
               >
-                <dt className="text-sm text-ink-300">{row.label}</dt>
-                <dd className="font-mono text-sm tabular-nums">
+                <dt className="text-body-s text-ink-300">{row.label}</dt>
+                <dd className="text-right">
                   {row.value === null ? (
-                    <span className="text-ink-500 italic">{NOT_AVAILABLE}</span>
+                    <span className="text-body-s text-ink-400">{NOT_AVAILABLE}</span>
                   ) : (
-                    <span className="text-ink-50">{row.value}</span>
+                    <span className="text-data text-ink-50">{row.value}</span>
                   )}
                 </dd>
               </div>
             ))}
           </dl>
           {dims?.notes?.trim() ? (
-            <p className="mt-4 text-xs leading-relaxed text-ink-500">{dims.notes}</p>
+            <p className="mt-4 text-caption">{dims.notes}</p>
           ) : null}
           {labels.length > 0 ? (
             // Key to the abbreviations — only those the drawing actually uses.
-            <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-hud text-ink-600">
+            <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-caption">
               {labels.map((label) => (
                 <div key={label.key} className="contents">
-                  <dt>{label.abbr}</dt>
+                  <dt className="font-mono text-ink-300">{label.abbr}</dt>
                   <dd>{ABBREVIATIONS[label.abbr] ?? label.key}</dd>
                 </div>
               ))}

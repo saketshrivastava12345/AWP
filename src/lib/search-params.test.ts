@@ -3,6 +3,7 @@ import {
   buildChips,
   buildQueryString,
   catalogueHref,
+  catalogueTitle,
   clearFiltersHref,
   countFilterChips,
   filtersToParams,
@@ -328,5 +329,37 @@ describe("buildChips", () => {
       EMPTY_FILTER_OPTIONS,
     );
     expect(chips[0]!.href).toBe("/cars?fuel=diesel&sort=year-desc");
+  });
+});
+
+describe("catalogueTitle", () => {
+  const title = (params: RawSearchParams) =>
+    catalogueTitle(resolveCatalogueState(params), EMPTY_FILTER_OPTIONS);
+
+  it("names the unfiltered catalogue", () => {
+    expect(title({})).toBe("All cars");
+    expect(title({ sort: "speed-desc", page: "2" })).toBe("All cars");
+  });
+
+  it("builds a phrase from single values", () => {
+    expect(title({ country: "germany" })).toBe("German cars");
+    expect(title({ fuel: "electric", body: "suv" })).toBe("Electric SUVs");
+    expect(title({ manufacturer: "porsche" })).toBe("Porsche");
+    expect(title({ manufacturer: "porsche", fuel: "electric" })).toBe(
+      "Electric Porsche cars",
+    );
+    expect(title({ category: "ev" })).toBe("Electric cars");
+    expect(title({ country: "japan", category: "sports-car" })).toBe(
+      "Japanese sports cars",
+    );
+  });
+
+  it("reads filters the search parser found", () => {
+    expect(title({ q: "german supercars" })).toBe("German supercars");
+  });
+
+  it("falls back when the filters do not make a phrase", () => {
+    expect(title({ powerMin: "500" })).toBe("Cars matching your filters");
+    expect(title({ country: ["germany", "italy"] })).toBe("Cars matching your filters");
   });
 });

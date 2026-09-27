@@ -17,7 +17,7 @@ export function CarSilhouette({
 }: {
   bodyType: string | null;
   powertrain: PowertrainKind;
-  /** Show the "No photograph yet" caption (too small to read on thumbnails). */
+  /** Show the "Drawing · no photograph" caption (too small to read on thumbnails). */
   caption?: boolean;
   className?: string;
 }) {
@@ -26,7 +26,7 @@ export function CarSilhouette({
     <div
       className={cn(
         "@container absolute inset-0 flex flex-col items-center justify-center gap-2",
-        "bg-gradient-to-b from-surface-2/50 to-surface-1/90",
+        "bg-surface-2",
         className,
       )}
     >
@@ -38,7 +38,7 @@ export function CarSilhouette({
       >
         <path
           d={shape.body}
-          className="fill-surface-3 stroke-ink-600"
+          className="fill-surface-3 stroke-ink-500"
           strokeWidth={2.5}
         />
         {shape.glass ? <path d={shape.glass} className="fill-void/70" /> : null}
@@ -48,25 +48,27 @@ export function CarSilhouette({
               cx={wheel.cx}
               cy={wheel.cy}
               r={wheel.r}
-              className="fill-void stroke-ink-600"
+              className="fill-void stroke-ink-500"
               strokeWidth={2.5}
             />
             <circle
               cx={wheel.cx}
               cy={wheel.cy}
               r={wheel.r * 0.62}
-              className="stroke-gold-700"
+              className="stroke-ink-400"
               strokeWidth={2}
             />
           </g>
         ))}
       </svg>
       {caption ? (
-        <span className="font-display text-nano tracking-hud whitespace-nowrap text-ink-500 uppercase">
-          <span className="sr-only @min-[11rem]:not-sr-only">No photograph yet</span>
+        <span className="text-caption whitespace-nowrap">
+          <span className="sr-only @min-[11rem]:not-sr-only">
+            Drawing · no photograph
+          </span>
         </span>
       ) : (
-        <span className="sr-only">No photograph yet</span>
+        <span className="sr-only">Drawing · no photograph</span>
       )}
     </div>
   );

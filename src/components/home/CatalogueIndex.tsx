@@ -1,113 +1,92 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import { CACHE_SECONDS } from "@/lib/cache-tags";
+import { ArrowRight } from "lucide-react";
 import { formatNumber } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import type { CountKey, HomeCounts } from "@/lib/queries/home";
 import { Container } from "@/components/ui/Container";
+import { SectionHeading } from "@/components/ui/SectionHeading";
+import { CarPhoto } from "@/components/cars/CarPhoto";
+import { Silhouette } from "@/components/cars/catalogue/Silhouette";
+import type { HomeSegment } from "./home-data";
 
 /**
- * The catalogue's hierarchy with a live count at every level — the site's
- * structure and its size in one line, each level a way in.
+ * Ways into the collection by kind of car — "shop by segment". Each tile is a
+ * /cars filter, counted over the same rows the filter rail counts, and only a
+ * segment with at least one car is offered (see pickSegments).
+ *
+ * A tile shows a real photograph of one of its cars when the catalogue has
+ * one, and otherwise the segment's body-style drawing, which labels itself
+ * as a drawing. Either is decorative: the tile's name is its label.
  */
 
-const LEVELS: { key: CountKey; label: string; href: string }[] = [
-  { key: "countries", label: "Countries", href: "/countries" },
-  { key: "manufacturers", label: "Manufacturers", href: "/manufacturers" },
-  { key: "models", label: "Models", href: "/cars" },
-  { key: "variants", label: "Variants", href: "/cars" },
-  { key: "parts", label: "Parts", href: "/parts" },
-];
+const SIZES = "(min-width: 1360px) 420px, (min-width: 1024px) 31vw, (min-width: 640px) 46vw, 76vw";
 
-/** "once an hour", "once every 6 hours", "once every 10 minutes". */
-function refreshLabel(seconds: number): string {
-  if (seconds === 3600) return "once an hour";
-  if (seconds % 3600 === 0) return `once every ${seconds / 3600} hours`;
-  return `once every ${Math.round(seconds / 60)} minutes`;
+function SegmentTile({ segment }: { segment: HomeSegment }) {
+  const drawing = <Silhouette bodyType={segment.bodyType} fuelType={segment.fuelType} />;
+  return (
+    <Link
+      href={segment.href}
+      className="group flex h-full flex-col overflow-hidden rounded-card bg-surface-1 transition-colors duration-(--duration-fast) hover:bg-surface-2"
+    >
+      {/* Decorative: the tile's name is its label. */}
+      <span
+        aria-hidden="true"
+        className="relative block aspect-[16/10] overflow-hidden bg-surface-2"
+      >
+        <span className="absolute inset-0 transition-transform duration-(--duration-normal) ease-standard group-hover:scale-[1.03] motion-reduce:group-hover:scale-100">
+          {segment.photo ? (
+            <CarPhoto
+              src={segment.photo.url}
+              alt=""
+              sizes={SIZES}
+              fallback={drawing}
+            />
+          ) : (
+            drawing
+          )}
+        </span>
+      </span>
+      <span className="flex flex-1 items-end justify-between gap-4 p-5">
+        <span className="min-w-0">
+          <span className="block text-h4">{segment.label}</span>
+          <span className="mt-1 block text-body-s text-ink-400">
+            {formatNumber(segment.count)} {segment.count === 1 ? "car" : "cars"}
+          </span>
+        </span>
+        <ArrowRight
+          className="mb-1 size-5 shrink-0 text-ink-400 transition-[translate,color] duration-(--duration-base) ease-standard group-hover:translate-x-1 group-hover:text-ink-50 motion-reduce:group-hover:translate-x-0"
+          aria-hidden="true"
+        />
+      </span>
+    </Link>
+  );
 }
 
-export function CatalogueIndex({ counts }: { counts: HomeCounts }) {
-  const known = LEVELS.filter(({ key }) => counts[key] !== null).length;
+export function CatalogueIndex({ segments }: { segments: HomeSegment[] }) {
+  // Nothing to offer (the catalogue could not be read): the section would be
+  // a heading over nothing, and the hero already links to the collection.
+  if (segments.length === 0) return null;
 
   return (
-    <section
-      aria-labelledby="index-heading"
-      className="border-t border-line bg-surface-1/40"
-    >
-      <Container className="py-16 sm:py-20">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-label">The catalogue, live</p>
-            <h2
-              id="index-heading"
-              className="mt-3 font-display text-xl tracking-[0.06em] text-ink-50 sm:text-2xl"
+    <section aria-labelledby="segments-heading" className="py-16 lg:py-24">
+      <Container>
+        <SectionHeading
+          id="segments-heading"
+          title="Find your kind of car"
+          actionHref="/cars"
+          actionLabel="All cars"
+        />
+        {/* Phones: a swipeable row. From sm: a grid, every tile whole. */}
+        <ul
+          className="no-scrollbar -mx-5 mt-10 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pt-1 pb-3 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:p-0 lg:grid-cols-3 lg:gap-6"
+        >
+          {segments.map((segment) => (
+            <li
+              key={segment.href}
+              className="w-[76%] max-w-80 shrink-0 snap-start sm:w-auto sm:max-w-none"
             >
-              From nation to nut and bolt
-            </h2>
-          </div>
-          <p className="max-w-sm text-xs leading-relaxed text-ink-400 sm:text-right">
-            Exact counts from the catalogue database, re-read at most{" "}
-            {refreshLabel(CACHE_SECONDS.catalogue)}. A model counts once at least one of
-            its variants is published.
-          </p>
-        </div>
-
-        {known === 0 ? (
-          <p className="mt-10 border border-dashed border-line px-6 py-8 text-sm text-ink-400">
-            The catalogue could not be counted just now. Every section below still links
-            to its full index.
-          </p>
-        ) : (
-          <ol className="mt-10 grid grid-cols-2 border-t border-l border-line sm:grid-cols-3 lg:grid-cols-5">
-            {LEVELS.map((level, index) => {
-              const value = counts[level.key];
-              return (
-                <li
-                  key={level.key}
-                  className={cn(
-                    "relative border-r border-b border-line",
-                    // Five cells in two columns: the last spans the row.
-                    index === LEVELS.length - 1 && "max-sm:col-span-2",
-                  )}
-                >
-                  <Link
-                    href={level.href}
-                    className="group flex h-full flex-col justify-between gap-6 p-5 transition-colors hover:bg-surface-2/60 sm:p-6"
-                  >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="tabular font-mono text-micro text-ink-500">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      {index < LEVELS.length - 1 ? (
-                        <ChevronRight
-                          className="size-3.5 text-ink-600 transition-colors group-hover:text-gold-400"
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                    </span>
-                    <span>
-                      <span className="tabular block font-display text-3xl tracking-[0.02em] text-ink-50 sm:text-4xl">
-                        {value === null ? (
-                          <>
-                            <span aria-hidden="true" className="text-ink-600">
-                              —
-                            </span>
-                            <span className="sr-only">Not available</span>
-                          </>
-                        ) : (
-                          formatNumber(value)
-                        )}
-                      </span>
-                      <span className="mt-2 block text-label text-nano transition-colors group-hover:text-gold-300">
-                        {level.label}
-                      </span>
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ol>
-        )}
+              <SegmentTile segment={segment} />
+            </li>
+          ))}
+        </ul>
       </Container>
     </section>
   );

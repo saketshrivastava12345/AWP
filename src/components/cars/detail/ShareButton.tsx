@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
+import { buttonClasses } from "@/components/ui/Button";
 
 /**
  * Share this car.
@@ -74,23 +75,24 @@ export function ShareButton({
     await copy();
   };
 
+  // A round icon button on phones; from lg it carries its label, like the
+  // hero's other secondary actions.
   return (
     <button
       type="button"
       onClick={share}
       className={cn(
-        "inline-flex h-11 items-center justify-center gap-2 rounded-xs border border-line-strong px-4",
-        "font-display text-[11px] tracking-button whitespace-nowrap text-ink-100 uppercase",
-        "transition-colors duration-(--duration-fast) hover:border-gold-500 hover:text-gold-300",
+        buttonClasses("secondary", "md"),
+        "size-12 rounded-pill px-0 lg:w-auto lg:rounded-control lg:px-6",
         className,
       )}
     >
       {copied ? (
-        <Check className="size-3.5 shrink-0 text-signal-positive" aria-hidden="true" />
+        <Check className="text-signal-positive" aria-hidden="true" />
       ) : (
-        <Share2 className="size-3.5 shrink-0" aria-hidden="true" />
+        <Share2 aria-hidden="true" />
       )}
-      <span>{copied ? "Copied" : label}</span>
+      <span className="sr-only lg:not-sr-only">{copied ? "Copied" : label}</span>
     </button>
   );
 }

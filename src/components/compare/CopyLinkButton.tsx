@@ -2,7 +2,7 @@
 
 import { Link2 } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
-import { cn } from "@/lib/utils";
+import { buttonClasses } from "@/components/ui/Button";
 
 /**
  * Copies the comparison's address. The URL is the whole state — cars, order
@@ -42,14 +42,9 @@ export function CopyLinkButton({
     <button
       type="button"
       onClick={copy}
-      className={cn(
-        "inline-flex h-11 items-center gap-2 rounded-xs border border-line-strong px-4",
-        "font-display text-micro tracking-button text-ink-100 uppercase transition-colors duration-(--duration-fast)",
-        "hover:border-gold-500 hover:text-gold-300",
-        className,
-      )}
+      className={buttonClasses("secondary", "sm", className)}
     >
-      <Link2 className="size-3.5" aria-hidden="true" />
+      <Link2 aria-hidden="true" />
       Copy link
     </button>
   );

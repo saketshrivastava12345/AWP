@@ -1,32 +1,34 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowUpRight, CarFront, MapPin } from "lucide-react";
+import { ArrowUpRight, CarFront } from "lucide-react";
 import { Container } from "@/components/ui/Container";
-import { Badge } from "@/components/ui/Badge";
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { ButtonLink } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { StatCard, StatRow } from "@/components/ui/StatCard";
+import { SubNav, type SubNavItem } from "@/components/ui/SubNav";
 import { CarGrid } from "@/components/cars/CarGrid";
+import { BrandHero } from "@/components/manufacturers/BrandHero";
 import { BrandTabs } from "@/components/manufacturers/BrandTabs";
-import { Monogram } from "@/components/manufacturers/Monogram";
 import { ModelLineup } from "@/components/manufacturers/ModelLineup";
 import {
   SEGMENT_LABELS,
   brandTabs,
   buildLineup,
-  monogramOf,
+  heroVisual,
   powerRange,
+  rangeLabel,
   websiteLink,
 } from "@/components/manufacturers/brand";
+import { firstSentence } from "@/components/parts/parts-helpers";
 import {
   getAllManufacturerSlugs,
   getManufacturerDetail,
 } from "@/lib/queries/manufacturers";
 import { breadcrumbJsonLd, serializeJsonLd, type JsonLd } from "@/lib/json-ld";
-import { formatNumber } from "@/lib/format";
+import { carDisplayName, formatNumber } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
 import { PLACEHOLDER_PARAM, withPlaceholder } from "@/lib/static-params";
 
@@ -64,11 +66,8 @@ export async function generateMetadata({
   };
 }
 
-function powerLabel(range: { min: number; max: number }): string {
-  return range.min === range.max
-    ? formatNumber(range.min)
-    : `${formatNumber(range.min)}–${formatNumber(range.max)}`;
-}
+const linkClass =
+  "text-ink-100 underline decoration-ink-600 underline-offset-4 transition-colors duration-(--duration-fast) hover:text-ink-50 hover:decoration-ink-300";
 
 export default async function ManufacturerPage({
   params,
@@ -82,7 +81,9 @@ export default async function ManufacturerPage({
   const tabs = brandTabs(cars);
   const power = powerRange(cars);
   const website = websiteLink(manufacturer.website);
+  const visual = heroVisual(cars);
   const path = `/manufacturers/${manufacturer.slug}`;
+  const catalogueHref = `/cars/${manufacturer.slug}`;
 
   // Structured data asserts only what the row holds: no invented logo, no
   // guessed address beyond the recorded headquarters and country.
@@ -107,11 +108,53 @@ export default async function ManufacturerPage({
   const breadcrumbs = breadcrumbJsonLd(
     [
       { name: siteConfig.name, path: "/" },
-      { name: "Manufacturers", path: "/manufacturers" },
+      { name: "Brands", path: "/manufacturers" },
       { name: manufacturer.name, path },
     ],
     siteConfig.url,
   );
+
+  const sections: SubNavItem[] = [
+    { label: "History", href: "#history" },
+    ...(cars.length > 0
+      ? [
+          { label: "Models", href: "#models" },
+          { label: "Cars", href: "#cars" },
+        ]
+      : []),
+  ];
+
+  const facts: { term: string; detail: ReactNode }[] = [
+    {
+      term: "Founded",
+      detail: manufacturer.founded_year ? String(manufacturer.founded_year) : null,
+    },
+    { term: "Headquarters", detail: manufacturer.headquarters },
+    {
+      term: "Country",
+      detail: (
+        <Link href={`/countries/${country.slug}`} className={linkClass}>
+          {country.name}
+        </Link>
+      ),
+    },
+    { term: "Segment", detail: SEGMENT_LABELS[manufacturer.segment] },
+    {
+      term: "Website",
+      detail: website ? (
+        <a
+          href={website.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`inline-flex items-center gap-1 ${linkClass}`}
+        >
+          {website.label}
+          <ArrowUpRight className="size-4 text-ink-400" aria-hidden="true" />
+          <span className="sr-only"> (official website, opens in a new tab)</span>
+        </a>
+      ) : null,
+    },
+  ];
 
   return (
     <>
@@ -120,182 +163,177 @@ export default async function ManufacturerPage({
         dangerouslySetInnerHTML={{ __html: serializeJsonLd([organization, breadcrumbs]) }}
       />
 
-      {/* ------------------------------------------------------------ Hero */}
-      <section className="relative isolate overflow-hidden border-b border-line">
-        <div aria-hidden="true" className="absolute inset-0 -z-10 tech-grid opacity-80" />
-        <div
-          aria-hidden="true"
-          className="absolute -top-48 -right-40 -z-10 h-[32rem] w-[44rem] max-w-none rounded-full bg-gold-700/10 blur-[150px]"
-        />
-        <p
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-6 -bottom-10 -z-10 font-display text-[clamp(9rem,26vw,20rem)] leading-none text-ink-50/[0.03] select-none"
-        >
-          {monogramOf(manufacturer.name)}
-        </p>
-
-        <Container className="pt-8 pb-14 sm:pt-10 sm:pb-20">
-          <Breadcrumbs
-            items={[
-              { label: "Manufacturers", href: "/manufacturers" },
-              { label: manufacturer.name },
-            ]}
-          />
-
-          <div className="mt-10 flex flex-col gap-7 sm:flex-row sm:items-end sm:gap-9">
-            <Monogram name={manufacturer.name} size="lg" />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <Link
-                  href={`/countries/${country.slug}`}
-                  className="inline-flex items-center gap-2 text-hud transition-colors duration-(--duration-fast) hover:text-gold-300"
-                >
-                  <span className="text-base leading-none" aria-hidden="true">
-                    {country.flag_emoji}
-                  </span>
-                  {country.name}
-                </Link>
-                {manufacturer.founded_year ? (
-                  <span className="tabular text-hud">
-                    Est. {manufacturer.founded_year}
-                  </span>
-                ) : null}
-                <Badge tone={manufacturer.segment === "performance" ? "gold" : "neutral"}>
-                  {SEGMENT_LABELS[manufacturer.segment]}
-                </Badge>
-              </div>
-              <h1 className="mt-4 font-display text-[clamp(2rem,7vw,4.75rem)] leading-[1.04] tracking-[0.04em] break-words text-ink-50">
-                {manufacturer.name}
-              </h1>
-            </div>
-          </div>
-
-          {manufacturer.description ? (
-            <p className="mt-8 max-w-3xl text-base leading-relaxed text-ink-300 sm:text-lg">
-              {manufacturer.description}
-            </p>
-          ) : null}
-
-          <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
-            {manufacturer.headquarters ? (
-              <p className="flex items-center gap-2 text-ink-300">
-                <MapPin className="size-4 text-ink-500" aria-hidden="true" />
-                <span className="sr-only">Headquarters: </span>
-                {manufacturer.headquarters}
-              </p>
+      <BrandHero
+        crumbs={[{ label: "Brands", href: "/manufacturers" }, { label: manufacturer.name }]}
+        title={manufacturer.name}
+        lead={firstSentence(manufacturer.description, 240)}
+        meta={[
+          <Link
+            key="country"
+            href={`/countries/${country.slug}`}
+            className="inline-flex items-center gap-2 transition-colors duration-(--duration-fast) hover:text-ink-50"
+          >
+            {country.flag_emoji ? (
+              <span aria-hidden="true" className="text-base leading-none">
+                {country.flag_emoji}
+              </span>
             ) : null}
-            {website ? (
-              <a
-                href={website.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center gap-1.5 text-gold-300 transition-colors duration-(--duration-fast) hover:text-gold-200"
-              >
-                {website.label}
-                <ArrowUpRight className="size-4" aria-hidden="true" />
-                <span className="sr-only"> (official website, opens in a new tab)</span>
-              </a>
-            ) : null}
-          </div>
-
-          <div className="mt-8 flex flex-wrap gap-3">
+            {country.name}
+          </Link>,
+          manufacturer.founded_year ? `Founded ${manufacturer.founded_year}` : null,
+          manufacturer.headquarters,
+        ]}
+        actions={
+          <>
             {cars.length > 0 ? (
-              <ButtonLink href={`/cars/${manufacturer.slug}`}>
+              <ButtonLink href={catalogueHref}>
                 View all {cars.length} {cars.length === 1 ? "car" : "cars"}
               </ButtonLink>
             ) : null}
             <ButtonLink href={`/countries/${country.slug}`} variant="secondary">
               More from {country.name}
             </ButtonLink>
-          </div>
-        </Container>
-      </section>
-
-      <Container className="py-14 sm:py-16">
+          </>
+        }
+        photo={
+          visual?.kind === "photo"
+            ? {
+                src: visual.src,
+                alt: carDisplayName(
+                  visual.car.manufacturer_name,
+                  visual.car.model_name,
+                  visual.car.variant_name,
+                ),
+                href: `/cars/${visual.car.manufacturer_slug}/${visual.car.model_slug}/${visual.car.variant_slug}`,
+                bodyType: visual.car.body_type,
+                fuelType: visual.car.fuel_type,
+              }
+            : null
+        }
+        drawing={
+          visual?.kind === "drawing"
+            ? { bodyType: visual.car.body_type, fuelType: visual.car.fuel_type }
+            : null
+        }
+      >
         <StatRow>
           <StatCard
             label="Founded"
             value={manufacturer.founded_year ? String(manufacturer.founded_year) : null}
-            size="sm"
           />
           <StatCard
             label="Models"
             value={formatNumber(lineup.length)}
             hint="Models with at least one published variant in the catalogue."
-            size="sm"
           />
-          <StatCard label="Variants" value={formatNumber(cars.length)} size="sm" />
+          <StatCard label="Variants" value={formatNumber(cars.length)} />
           <StatCard
-            label="Power range"
-            value={power ? powerLabel(power) : null}
-            unit={power ? "PS / hp" : undefined}
+            label="Power"
+            value={power ? rangeLabel(power, formatNumber) : null}
+            unit={power ? "hp" : undefined}
             hint={
               power
                 ? `Lowest and highest published output across ${power.count} of ${cars.length} variants, as the maker publishes it: European makers quote metric PS, US and Japanese makers SAE net hp.`
                 : undefined
             }
-            size="sm"
           />
         </StatRow>
+      </BrandHero>
 
-        {cars.length === 0 ? (
+      <SubNav items={sections} label={`${manufacturer.name}: on this page`} />
+
+      <Container
+        as="section"
+        id="history"
+        aria-labelledby="history-heading"
+        className="py-16 lg:py-24"
+      >
+        <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
+          <h2 id="history-heading" className="text-h2 lg:col-span-4">
+            History
+          </h2>
+          <div className="lg:col-span-8">
+            {manufacturer.description ? (
+              <p className="max-w-[60ch] text-lead">{manufacturer.description}</p>
+            ) : (
+              <p className="max-w-[60ch] text-body text-ink-400">
+                No history is recorded for {manufacturer.name} yet.
+              </p>
+            )}
+            <dl className="mt-10 grid border-t border-line sm:grid-cols-2 sm:gap-x-12">
+              {facts.map((fact) => (
+                <div
+                  key={fact.term}
+                  className="flex items-baseline justify-between gap-6 border-b border-line-subtle py-4"
+                >
+                  <dt className="text-body-s text-ink-400">{fact.term}</dt>
+                  <dd className="text-right text-body-s text-ink-100">
+                    {fact.detail ?? <span className="text-ink-400">Not available</span>}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </Container>
+
+      {cars.length === 0 ? (
+        <Container className="pb-24">
           <EmptyState
-            className="mt-16"
             icon={<CarFront className="size-7" strokeWidth={1.25} aria-hidden="true" />}
             title="No published cars yet"
             description={`${manufacturer.name} is in the catalogue, but none of its models has a published variant yet.`}
           />
-        ) : (
-          <>
-            <section className="mt-20" aria-labelledby="lineup-heading">
-              <SectionHeading
-                overline="Line-up"
-                title={<span id="lineup-heading">Models and generations</span>}
-                description="Every model with a published variant, newest generation first. Open a model for its catalogue page, or a variant for its full specification."
-                action={
-                  <ButtonLink
-                    href={`/cars/${manufacturer.slug}`}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    Brand catalogue
-                  </ButtonLink>
-                }
-              />
-              <div className="mt-10">
-                <ModelLineup manufacturerSlug={manufacturer.slug} models={lineup} />
-              </div>
-            </section>
+        </Container>
+      ) : (
+        <>
+          <Container
+            as="section"
+            id="models"
+            aria-labelledby="models-heading"
+            className="border-t border-line-subtle py-16 lg:py-24"
+          >
+            <SectionHeading
+              id="models-heading"
+              title="Models"
+              description="Every model with a published variant, newest generation first. Open a model for its catalogue page, or a variant for its full specification."
+              actionHref={catalogueHref}
+              actionLabel="Brand catalogue"
+            />
+            <div className="mt-10">
+              <ModelLineup manufacturerSlug={manufacturer.slug} models={lineup} />
+            </div>
+          </Container>
 
-            <section className="mt-20" aria-labelledby="cars-heading">
-              <SectionHeading
-                overline="The cars"
-                title={
-                  <span id="cars-heading">
-                    Every {manufacturer.name} in the catalogue
-                  </span>
-                }
-                description="Most powerful first. A figure the maker does not publish is shown as a dash, never estimated."
-              />
-              <div className="mt-8">
-                {tabs.length > 1 ? (
-                  <BrandTabs
-                    label={`${manufacturer.name} cars by type`}
-                    tabs={tabs.map((tab) => ({
-                      id: tab.id,
-                      label: tab.label,
-                      count: tab.cars.length,
-                      content: <CarGrid cars={tab.cars} />,
-                    }))}
-                  />
-                ) : (
-                  <CarGrid cars={cars} />
-                )}
-              </div>
-            </section>
-          </>
-        )}
-      </Container>
+          <Container
+            as="section"
+            id="cars"
+            aria-labelledby="cars-heading"
+            className="border-t border-line-subtle py-16 lg:py-24"
+          >
+            <SectionHeading
+              id="cars-heading"
+              title={`Every ${manufacturer.name} in the catalogue`}
+              description="Most powerful first. A figure the maker does not publish is shown as a dash, never estimated."
+            />
+            <div className="mt-10">
+              {tabs.length > 1 ? (
+                <BrandTabs
+                  label={`${manufacturer.name} cars by type`}
+                  tabs={tabs.map((tab) => ({
+                    id: tab.id,
+                    label: tab.label,
+                    count: tab.cars.length,
+                    content: <CarGrid cars={tab.cars} />,
+                  }))}
+                />
+              ) : (
+                <CarGrid cars={cars} />
+              )}
+            </div>
+          </Container>
+        </>
+      )}
     </>
   );
 }

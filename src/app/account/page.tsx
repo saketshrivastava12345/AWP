@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { ChevronRight, Heart, History, KeyRound, LayoutDashboard } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { DisplayNameForm } from "@/components/account/DisplayNameForm";
 import { SignOutButton } from "@/components/account/SignOutButton";
 import { getSessionUser } from "@/lib/queries/auth";
 import { signOut } from "@/app/auth/actions";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Your account",
@@ -16,54 +17,75 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-function Panel({
+/** Label column | content column, shared by every row so they line up. */
+const ROW = "grid gap-2 py-6 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-8";
+
+/** A titled group of settings rows, divided by hairlines. */
+function Group({
+  id,
   title,
   description,
   children,
 }: {
+  id: string;
   title: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-md border border-line bg-surface-1 p-6 sm:p-8">
-      <h2 className="font-display text-xs tracking-hud text-ink-100 uppercase">
+    <section aria-labelledby={id}>
+      <h2 id={id} className="text-h3">
         {title}
       </h2>
       {description ? (
-        <p className="mt-2 text-sm leading-relaxed text-ink-400">{description}</p>
+        <p className="mt-2 max-w-[60ch] text-body-s text-ink-400">{description}</p>
       ) : null}
-      <div className="mt-6">{children}</div>
+      <ul className="mt-6 divide-y divide-line-subtle border-y border-line-subtle">
+        {children}
+      </ul>
     </section>
   );
 }
 
-function RowLink({
+/** A read-only setting: its name, and what it is set to. */
+function ValueRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <li className={ROW}>
+      <span className="text-body text-ink-100">{label}</span>
+      <span className="min-w-0 text-body text-ink-300">{children}</span>
+    </li>
+  );
+}
+
+/** A row that opens another page: the whole row is the link. */
+function LinkRow({
   href,
-  icon,
-  title,
+  label,
   detail,
 }: {
   href: string;
-  icon: ReactNode;
-  title: string;
+  label: string;
   detail: string;
 }) {
   return (
     <li>
       <Link
         href={href}
-        className="group flex min-h-14 items-center gap-4 rounded-sm px-3 py-3 transition-colors duration-(--duration-fast) outline-none hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:ring-2 focus-visible:ring-gold-500"
+        className="group flex min-h-16 items-center gap-6 rounded-xs focus-visible:outline-offset-2"
       >
-        <span className="grid size-9 shrink-0 place-items-center rounded-full border border-line text-gold-400">
-          {icon}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm text-ink-100">{title}</span>
-          <span className="block truncate text-xs text-ink-400">{detail}</span>
+        <span className={cn(ROW, "min-w-0 flex-1")}>
+          <span className="text-body text-ink-100 transition-colors duration-(--duration-fast) group-hover:text-ink-50">
+            {label}
+          </span>
+          <span className="text-body-s text-ink-400 sm:text-body sm:text-ink-400">
+            {detail}
+          </span>
         </span>
         <ChevronRight
-          className="size-4 shrink-0 text-ink-500 transition-colors group-hover:text-gold-300"
+          className={cn(
+            "size-5 shrink-0 text-ink-400 transition-[translate,color] duration-(--duration-base) ease-standard",
+            "group-hover:translate-x-1 group-hover:text-ink-50 motion-reduce:translate-x-0",
+          )}
           aria-hidden="true"
         />
       </Link>
@@ -79,82 +101,79 @@ async function AccountDetails() {
   const isAdmin = user.role === "admin";
 
   return (
-    <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-      <div className="space-y-6">
-        <Panel title="Profile">
-          <dl>
-            <dt className="text-label">Email</dt>
-            <dd className="mt-2 text-sm break-all text-ink-100">
-              {user.email ?? "No email on this account"}
-            </dd>
-          </dl>
-          <div className="mt-8 border-t border-line-subtle pt-6">
-            <DisplayNameForm initialName={user.displayName ?? fallbackName} />
-          </div>
-        </Panel>
+    <div className="mt-16 max-w-4xl space-y-16 lg:mt-20 lg:space-y-20">
+      <Group id="account-profile" title="Profile">
+        <ValueRow label="Email">
+          <span className="break-all">{user.email ?? "No email on this account"}</span>
+        </ValueRow>
+        <li>
+          <DisplayNameForm
+            initialName={user.displayName ?? fallbackName}
+            rowClassName={ROW}
+          />
+        </li>
+      </Group>
 
-        <Panel
-          title="Security"
-          description="Change your password here. If you forgot it, sign out and use “Forgot your password?” on the sign-in page."
-        >
-          <ul className="-mx-3">
-            <RowLink
-              href="/account/password"
-              icon={<KeyRound className="size-4" aria-hidden="true" />}
-              title="Change password"
-              detail="You’ll need your current password."
-            />
-          </ul>
-        </Panel>
-      </div>
+      <Group
+        id="account-security"
+        title="Security"
+        description="Forgotten it? Sign out, then choose “Forgot your password?” on the sign-in page."
+      >
+        <LinkRow
+          href="/account/password"
+          label="Password"
+          detail="Change it. You’ll need your current password."
+        />
+      </Group>
 
-      <div className="space-y-6">
-        <Panel title="Your garage">
-          <ul className="-mx-3">
-            <RowLink
-              href="/favorites"
-              icon={<Heart className="size-4" aria-hidden="true" />}
-              title="Saved cars"
-              detail="Synced to this account on every device."
-            />
-            <RowLink
-              href="/favorites#recently-viewed-heading"
-              icon={<History className="size-4" aria-hidden="true" />}
-              title="Recently viewed"
-              detail="The last cars you opened."
-            />
-            {isAdmin ? (
-              <RowLink
-                href="/admin"
-                icon={<LayoutDashboard className="size-4" aria-hidden="true" />}
-                title="Admin dashboard"
-                detail="Manage the catalogue."
-              />
-            ) : null}
-          </ul>
-        </Panel>
+      <Group id="account-garage" title="Your garage">
+        <LinkRow
+          href="/favorites"
+          label="Saved cars"
+          detail="Synced to this account on every device."
+        />
+        <LinkRow
+          href="/favorites#recently-viewed-heading"
+          label="Recently viewed"
+          detail="The last cars you opened."
+        />
+        {isAdmin ? (
+          <LinkRow href="/admin" label="Admin" detail="Manage the catalogue." />
+        ) : null}
+      </Group>
 
-        <Panel
-          title="Session"
-          description="Signing out ends this session on this device only."
-        >
+      <Group
+        id="account-session"
+        title="Session"
+        description="Signing out ends this session on this device only."
+      >
+        <li className={ROW}>
+          <span className="text-body text-ink-100 sm:pt-3">This device</span>
           <form action={signOut}>
-            <SignOutButton className="w-full" />
+            <SignOutButton />
           </form>
-        </Panel>
-      </div>
+        </li>
+      </Group>
     </div>
   );
 }
 
 function AccountSkeleton() {
   return (
-    <div
-      aria-hidden="true"
-      className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
-    >
-      <Skeleton className="h-72 rounded-md" />
-      <Skeleton className="h-72 rounded-md" />
+    <div aria-hidden="true" className="mt-16 max-w-4xl space-y-16 lg:mt-20">
+      {[2, 1].map((rows, group) => (
+        <div key={group}>
+          <Skeleton className="h-7 w-32" />
+          <div className="mt-6 divide-y divide-line-subtle border-y border-line-subtle">
+            {Array.from({ length: rows }, (_, index) => (
+              <div key={index} className={ROW}>
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-5 w-full max-w-sm" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -166,11 +185,11 @@ function AccountSkeleton() {
  */
 export default function AccountPage() {
   return (
-    <Container className="py-14 sm:py-16">
-      <p className="text-label">Account</p>
-      <h1 className="mt-5 font-display text-2xl tracking-[0.06em] text-ink-50 sm:text-3xl">
-        YOUR ACCOUNT
-      </h1>
+    <Container className="pt-12 pb-24 sm:pt-16 lg:pt-20 lg:pb-32">
+      <h1 className="text-h1">Your account</h1>
+      <p className="mt-4 max-w-[60ch] text-lead">
+        Your profile, your password and the cars you keep.
+      </p>
       <Suspense fallback={<AccountSkeleton />}>
         <AccountDetails />
       </Suspense>

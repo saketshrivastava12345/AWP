@@ -17,7 +17,7 @@ async function PasswordScreen() {
 
   return (
     <AuthShell
-      title={context.viaEmailLink ? "CHOOSE A NEW PASSWORD" : "CHANGE PASSWORD"}
+      title={context.viaEmailLink ? "Choose a new password" : "Change your password"}
       description={
         context.viaEmailLink
           ? "Your reset link worked. Choose a new password to finish."

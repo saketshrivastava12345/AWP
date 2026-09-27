@@ -28,8 +28,10 @@ import { PRICE_TYPE_LABELS } from "@/lib/pricing/engine";
  *     row has a direction (bigger is not always better), and the cars do not
  *     all tie. Crowning the only car with data would imply it won a contest
  *     the others never entered.
- *   - Bars follow the same rule: one figure alone has nothing to be measured
- *     against, so it gets no bar.
+ *   - Bars are drawn only on the headline performance rows (`showBar`), and
+ *     only under the same rule: one figure alone has nothing to be measured
+ *     against, so it gets no bar. A bar on gears, seats or a dimension says
+ *     nothing a reader can use, so those rows are figures only.
  *   - Figures measured under different standards (WLTP vs EPA range) are
  *     neither ranked nor scaled against each other.
  *   - Prices are never ranked or scaled: they are in different currencies and
@@ -166,6 +168,12 @@ type NumberSpec = {
   comparableKey?: (car: CompareInput) => string | null;
   incomparableNote?: string;
   applies?: Applies;
+  /**
+   * Draw bars for this row. Only the headline performance figures have them
+   * (power, torque, sprints, top speed, power-to-weight, range); every other
+   * row is figures, and a best marker where the row has a direction.
+   */
+  showBar?: boolean;
 };
 
 type TextSpec = {
@@ -258,8 +266,10 @@ function rankNumbers(spec: NumberSpec, cars: CompareInput[]): CompareRow {
   const allTie = enough && max === min;
 
   const better: Better = comparable ? spec.better : "none";
-  const hasBars = comparable && enough && (spec.better === "lower" ? min > 0 : max > 0);
-  const hasBest = hasBars && better !== "none" && !allTie;
+  // A scale needs a positive reference: the lowest figure when lower is better.
+  const scalable = comparable && enough && (spec.better === "lower" ? min > 0 : max > 0);
+  const hasBars = scalable && spec.showBar === true;
+  const hasBest = scalable && better !== "none" && !allTie;
 
   for (const cell of cells) {
     if (cell.value === null) continue;
@@ -523,6 +533,7 @@ function groupSpecs(
         {
           kind: "number",
           id: "performance.power",
+          showBar: true,
           label: "Power",
           better: "higher",
           hint: "As published: metric PS for most European makers, SAE net hp for US and Japanese makers. The two differ by about 1.4 %.",
@@ -539,6 +550,7 @@ function groupSpecs(
         {
           kind: "number",
           id: "performance.torque",
+          showBar: true,
           label: "Torque",
           better: "higher",
           value: ({ detail }) => detail.performance?.torque_nm ?? null,
@@ -548,6 +560,7 @@ function groupSpecs(
         {
           kind: "number",
           id: "performance.zero100",
+          showBar: true,
           label: "0–100 km/h",
           better: "lower",
           value: ({ detail }) => detail.performance?.zero_to_100_s ?? null,
@@ -556,6 +569,7 @@ function groupSpecs(
         {
           kind: "number",
           id: "performance.zero200",
+          showBar: true,
           label: "0–200 km/h",
           better: "lower",
           value: ({ detail }) => detail.performance?.zero_to_200_s ?? null,
@@ -572,6 +586,7 @@ function groupSpecs(
         {
           kind: "number",
           id: "performance.top",
+          showBar: true,
           label: "Top speed",
           better: "higher",
           value: ({ detail }) => detail.performance?.top_speed_kmh ?? null,
@@ -580,6 +595,7 @@ function groupSpecs(
         {
           kind: "number",
           id: "performance.ptw",
+          showBar: true,
           label: "Power-to-weight",
           better: "higher",
           hint: "Computed from published power and kerb weight. Absent where only a dry weight is published.",
@@ -686,6 +702,7 @@ function groupSpecs(
         {
           kind: "number",
           id: "electric.range",
+          showBar: true,
           label: "Electric range",
           better: "higher",
           applies: hasBattery,
@@ -798,8 +815,10 @@ function groupSpecs(
           kind: "number",
           id: "dimensions.kerb",
           label: "Kerb weight",
-          better: "lower",
-          hint: "Kerb weight as published. Makers that publish only a dry weight show a dash here.",
+          // Not ranked: a lighter car is not simply a better one (a heavier
+          // car may carry a battery, four seats or a bigger boot).
+          better: "none",
+          hint: "Kerb weight as published. Not ranked: a lighter car is not simply a better one. Makers that publish only a dry weight show a dash here.",
           value: ({ detail }) => detail.dimensions?.kerb_weight_kg ?? null,
           format: withUnit("kg"),
         },

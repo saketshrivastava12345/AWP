@@ -12,6 +12,7 @@ import {
 import { ChevronDown, LoaderCircle, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/format";
+import { buttonClasses } from "@/components/ui/Button";
 import type {
   FacetOption,
   FilterOptions,
@@ -113,22 +114,22 @@ function useHydrated(): boolean {
 }
 
 const SUMMARY =
-  "flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 text-left text-ink-200 " +
-  "transition-colors duration-(--duration-fast) hover:text-ink-50 lg:min-h-0 [&::-webkit-details-marker]:hidden";
+  "flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-2 text-left text-ink-50 " +
+  "transition-colors duration-(--duration-fast) hover:text-ink-50 [&::-webkit-details-marker]:hidden";
 
 function GroupSummary({ title, active }: { title: string; active: number }) {
   return (
     <summary className={SUMMARY}>
-      <span className="font-display text-micro tracking-hud uppercase">
+      <span className="font-display text-base font-medium">
         {title}
         {active > 0 ? (
-          <span className="ml-2 text-gold-300">
+          <span className="ml-1.5 text-body-s font-sans font-normal text-ink-400">
             ({active})<span className="sr-only"> selected</span>
           </span>
         ) : null}
       </span>
       <ChevronDown
-        className="size-3.5 shrink-0 text-ink-500 transition-transform duration-(--duration-fast) group-open/facet:rotate-180"
+        className="size-4 shrink-0 text-ink-400 transition-transform duration-(--duration-base) ease-standard group-open/facet:rotate-180"
         aria-hidden="true"
       />
     </summary>
@@ -148,19 +149,18 @@ function Checkbox({
   fromSearch: boolean;
   onChange: (checked: boolean) => void;
 }) {
-  const empty = option.count === 0 && !checked;
+  // A ticked option that no longer matches anything stays listed (so it can
+  // be unticked) but reads as spent.
+  const empty = option.count === 0;
   return (
     <label
       className={cn(
-        "group/option flex min-h-11 cursor-pointer items-center gap-3 py-1 text-sm lg:min-h-8 lg:text-xs",
-        checked
-          ? "text-gold-200"
-          : empty
-            ? "text-ink-500"
-            : "text-ink-300 hover:text-ink-50",
+        "group/option flex min-h-11 cursor-pointer items-center gap-3 text-body-s",
+        checked ? "text-ink-50" : "text-ink-200 hover:text-ink-50",
+        empty && "text-ink-400",
       )}
     >
-      <span className="relative grid size-4 shrink-0 place-items-center">
+      <span className="relative grid size-5 shrink-0 place-items-center">
         <input
           type="checkbox"
           name={name}
@@ -168,14 +168,14 @@ function Checkbox({
           checked={checked}
           onChange={(event) => onChange(event.target.checked)}
           className={cn(
-            "peer size-4 cursor-pointer appearance-none rounded-xs border bg-surface-1 transition-colors",
-            "border-line-strong checked:border-gold-500 checked:bg-gold-500 hover:border-ink-500",
+            "peer size-5 cursor-pointer appearance-none rounded-xs border bg-surface-1 transition-colors duration-(--duration-fast)",
+            "border-line-strong checked:border-gold-500 checked:bg-gold-500 hover:border-ink-400",
           )}
         />
         <svg
           viewBox="0 0 10 8"
           aria-hidden="true"
-          className="pointer-events-none absolute size-2 fill-void opacity-0 peer-checked:opacity-100"
+          className="pointer-events-none absolute size-2.5 fill-void opacity-0 peer-checked:opacity-100"
         >
           <path d="M3.7 7.5.2 4l1-1 2.5 2.5L8.8.2l1 1z" />
         </svg>
@@ -184,17 +184,12 @@ function Checkbox({
         <span className="truncate">{option.label}</span>
         {fromSearch && checked ? (
           <>
-            <Search className="size-3 shrink-0 text-gold-500" aria-hidden="true" />
+            <Search className="size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
             <span className="sr-only">(from your search)</span>
           </>
         ) : null}
       </span>
-      <span
-        className={cn(
-          "tabular shrink-0 font-mono text-[10px]",
-          empty ? "text-ink-600" : "text-ink-500",
-        )}
-      >
+      <span className="tabular shrink-0 text-caption text-ink-400">
         {formatNumber(option.count)}
         <span className="sr-only"> cars</span>
       </span>
@@ -219,6 +214,17 @@ function Group({ defaultOpen, children }: { defaultOpen: boolean; children: Reac
 
 const VISIBLE_OPTIONS = 8;
 
+/**
+ * Options worth offering: those that would show at least one car under the
+ * other filters, plus anything ticked (a spent filter must stay visible so it
+ * can be removed). "Coupe 0" is a dead end, not a choice.
+ */
+function visibleOptions(facet: ListFacet, selected: ReadonlySet<string>): FacetOption[] {
+  return facet.options.filter(
+    (option) => option.count > 0 || option.selected || selected.has(option.value),
+  );
+}
+
 function ListGroup({
   facet,
   values,
@@ -233,6 +239,7 @@ function ListGroup({
   onToggle: (value: string, checked: boolean) => void;
 }) {
   const selected = new Set(values);
+  const options = visibleOptions(facet, selected);
   // Which options sit above "show more" is decided once, at mount: the first
   // few plus anything already ticked (a ticked option is never hidden). Kept
   // stable afterwards, so ticking an option never moves it — which would
@@ -240,13 +247,13 @@ function ListGroup({
   const [pinned] = useState(
     () =>
       new Set(
-        facet.options
+        options
           .filter((option, index) => index < VISIBLE_OPTIONS || option.selected)
           .map((option) => option.value),
       ),
   );
-  const head = facet.options.filter((option) => pinned.has(option.value));
-  const tail = facet.options.filter((option) => !pinned.has(option.value));
+  const head = options.filter((option) => pinned.has(option.value));
+  const tail = options.filter((option) => !pinned.has(option.value));
 
   const row = (option: FacetOption) => (
     <li key={option.value}>
@@ -263,12 +270,12 @@ function ListGroup({
   return (
     <Group defaultOpen={defaultOpen}>
       <GroupSummary title={facet.title} active={selected.size} />
-      <fieldset className="pb-3">
+      <fieldset className="pb-4">
         <legend className="sr-only">{facet.title}</legend>
         <ul>{head.map(row)}</ul>
         {tail.length > 0 ? (
           <details className="group/more">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-ink-400 transition-colors hover:text-gold-300 lg:min-h-8 [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center text-body-s text-ink-100 underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink-50 hover:decoration-ink-400 [&::-webkit-details-marker]:hidden">
               <span className="group-open/more:hidden">Show {tail.length} more</span>
               <span className="hidden group-open/more:inline">Show fewer</span>
             </summary>
@@ -281,8 +288,10 @@ function ListGroup({
 }
 
 const NUMBER_INPUT =
-  "tabular h-11 w-full min-w-0 rounded-xs border border-line bg-surface-1 px-2.5 font-mono text-sm text-ink-100 " +
-  "placeholder:text-ink-600 hover:border-line-strong focus-visible:border-gold-500 lg:h-9 lg:text-xs";
+  "tabular h-11 w-full min-w-0 rounded-control border border-line-strong bg-surface-1 px-3 text-body-s text-ink-50 " +
+  "placeholder:text-ink-500 hover:border-ink-500 focus-visible:border-gold-500";
+
+const APPLY = buttonClasses("secondary", "sm", "mt-3 w-full");
 
 function RangeGroup({
   range,
@@ -343,7 +352,7 @@ function RangeGroup({
           </div>
           {range.maxParam ? (
             <>
-              <span aria-hidden="true" className="text-xs text-ink-600">
+              <span aria-hidden="true" className="text-body-s text-ink-400">
                 –
               </span>
               <div>
@@ -366,24 +375,21 @@ function RangeGroup({
             </>
           ) : null}
         </div>
-        <p className="mt-2 flex items-center justify-between gap-2 text-hud text-ink-500">
+        <p className="mt-2 flex items-center justify-between gap-2 text-caption text-ink-400">
           <span>
             {range.bounds
               ? `${format(range.bounds[0])} – ${format(range.bounds[1])}${range.unit ? ` ${range.unit}` : ""}`
               : "No car here publishes this"}
           </span>
           {fromSearch ? (
-            <span className="flex items-center gap-1 text-gold-500">
-              <Search className="size-3" aria-hidden="true" />
+            <span className="flex items-center gap-1 text-ink-300">
+              <Search className="size-3.5" aria-hidden="true" />
               from search
             </span>
           ) : null}
         </p>
         {showApply ? (
-          <button
-            type="submit"
-            className="mt-3 h-11 w-full rounded-xs border border-line font-display text-micro tracking-button text-ink-300 uppercase transition-colors hover:border-gold-600 hover:text-gold-300 lg:h-9"
-          >
+          <button type="submit" className={APPLY}>
             Apply {range.title.toLowerCase()}
           </button>
         ) : null}
@@ -419,7 +425,7 @@ function PriceGroup({
       <GroupSummary title="Price" active={options.currency ? 1 : 0} />
       <fieldset className="pb-4">
         <legend className="sr-only">Listed price</legend>
-        <label htmlFor={`${id}-currency`} className="text-hud text-ink-400">
+        <label htmlFor={`${id}-currency`} className="text-caption text-ink-400">
           Currency
         </label>
         <div className="relative mt-1.5">
@@ -428,7 +434,7 @@ function PriceGroup({
             name="priceCurrency"
             value={currency}
             onChange={(event) => onCurrency(event.target.value)}
-            className="h-11 w-full appearance-none rounded-xs border border-line bg-surface-1 pr-8 pl-2.5 text-sm text-ink-100 hover:border-line-strong focus-visible:border-gold-500 lg:h-9 lg:text-xs"
+            className="h-11 w-full appearance-none rounded-control border border-line-strong bg-surface-1 pr-9 pl-3 text-body-s text-ink-50 hover:border-ink-500 focus-visible:border-gold-500"
           >
             <option value="">Any — choose to filter</option>
             {options.currencies.map((option) => (
@@ -438,7 +444,7 @@ function PriceGroup({
             ))}
           </select>
           <ChevronDown
-            className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-ink-500"
+            className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-ink-400"
             aria-hidden="true"
           />
         </div>
@@ -461,7 +467,7 @@ function PriceGroup({
                 className={NUMBER_INPUT}
               />
             </div>
-            <span aria-hidden="true" className="text-xs text-ink-600">
+            <span aria-hidden="true" className="text-body-s text-ink-400">
               –
             </span>
             <div>
@@ -483,15 +489,12 @@ function PriceGroup({
           </div>
         ) : null}
 
-        <p className="mt-2.5 text-xs leading-relaxed text-ink-500">
+        <p className="mt-3 text-caption text-ink-400">
           Listed prices, in the currency they were published in. Prices are never
           converted, so a range always applies within one currency.
         </p>
         {showApply && currency ? (
-          <button
-            type="submit"
-            className="mt-3 h-11 w-full rounded-xs border border-line font-display text-micro tracking-button text-ink-300 uppercase transition-colors hover:border-gold-600 hover:text-gold-300 lg:h-9"
-          >
+          <button type="submit" className={APPLY}>
             Apply price
           </button>
         ) : null}
@@ -576,6 +579,7 @@ export function FilterPanel({
     const facet = listByKey.get(key);
     if (facet) {
       const values = draft.lists[facet.param] ?? [];
+      if (visibleOptions(facet, new Set(values)).length === 0) return null;
       return (
         <ListGroup
           key={key}
@@ -663,11 +667,11 @@ export function FilterPanel({
         <div
           aria-hidden={!pending}
           className={cn(
-            "pointer-events-none absolute -top-9 right-0 flex items-center gap-1.5 text-hud text-gold-400 transition-opacity",
+            "pointer-events-none absolute -top-10 right-0 flex items-center gap-1.5 text-caption text-ink-300 transition-opacity",
             pending ? "opacity-100" : "opacity-0",
           )}
         >
-          <LoaderCircle className="size-3 animate-spin" aria-hidden="true" />
+          <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
           Updating
         </div>
       ) : null}
@@ -682,22 +686,19 @@ export function FilterPanel({
           <button
             type="button"
             onClick={() => navigate({ lists: {}, numbers: {}, currency: "" })}
-            className="inline-flex h-12 flex-1 items-center justify-center rounded-xs border border-line-strong font-display text-micro tracking-button text-ink-200 uppercase transition-colors hover:border-gold-500 hover:text-gold-300"
+            className={buttonClasses("secondary", "md", "flex-1 px-4")}
           >
             Clear all
           </button>
           <button
             type="submit"
-            className="inline-flex h-12 flex-[1.4] items-center justify-center rounded-xs bg-gold-500 font-display text-micro tracking-button text-void uppercase transition-colors hover:bg-gold-400"
+            className={buttonClasses("primary", "md", "flex-[1.4] px-4")}
           >
             Show results
           </button>
         </div>
       ) : !hydrated ? (
-        <button
-          type="submit"
-          className="mt-5 h-11 w-full rounded-xs bg-gold-500 font-display text-micro tracking-button text-void uppercase hover:bg-gold-400"
-        >
+        <button type="submit" className={buttonClasses("primary", "md", "mt-5 w-full")}>
           Apply filters
         </button>
       ) : null}

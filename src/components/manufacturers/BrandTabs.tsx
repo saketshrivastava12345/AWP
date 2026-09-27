@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { chipClasses, chipCountClasses } from "./brand";
 
 export type BrandTab = {
   id: string;
@@ -47,7 +47,7 @@ export function BrandTabs({ tabs, label }: { tabs: BrandTab[]; label: string }) 
       <div
         role="tablist"
         aria-label={label}
-        className="flex [scrollbar-width:none] gap-1 overflow-x-auto border-b border-line"
+        className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-0.5 edge-fade-x sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:[mask-image:none]"
       >
         {tabs.map((tab, index) => {
           const selected = tab.id === active.id;
@@ -66,24 +66,10 @@ export function BrandTabs({ tabs, label }: { tabs: BrandTab[]; label: string }) 
               tabIndex={selected ? 0 : -1}
               onClick={() => setActiveId(tab.id)}
               onKeyDown={(event) => onKeyDown(event, index)}
-              className={cn(
-                "-mb-px inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-4",
-                "font-display text-micro tracking-hud whitespace-nowrap uppercase",
-                "transition-colors duration-(--duration-fast)",
-                selected
-                  ? "border-gold-500 text-gold-300"
-                  : "border-transparent text-ink-400 hover:text-ink-100",
-              )}
+              className={chipClasses(selected)}
             >
               {tab.label}
-              <span
-                className={cn(
-                  "tabular font-mono text-[11px] tracking-normal",
-                  selected ? "text-gold-400/80" : "text-ink-500",
-                )}
-              >
-                {tab.count}
-              </span>
+              <span className={chipCountClasses(selected)}>{tab.count}</span>
             </button>
           );
         })}
@@ -94,7 +80,7 @@ export function BrandTabs({ tabs, label }: { tabs: BrandTab[]; label: string }) 
         id={`${baseId}-panel`}
         aria-labelledby={`${baseId}-tab-${active.id}`}
         tabIndex={0}
-        className="pt-8"
+        className="pt-8 focus-visible:outline-offset-8"
       >
         {active.content}
       </div>

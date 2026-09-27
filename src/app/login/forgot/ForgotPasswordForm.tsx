@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { FormField, Input, describedBy } from "@/components/ui/Field";
 import { FormMessage } from "@/components/account/AuthShell";
 import { requestPasswordReset } from "@/app/auth/actions";
@@ -46,16 +45,12 @@ export function ForgotPasswordForm() {
         </Button>
       </form>
 
-      <p className="mt-7 text-xs leading-relaxed text-ink-500">
-        The link works once and expires after a short while. Remembered it after all?{" "}
-        <Link
-          href="/login"
-          className="text-gold-300 underline-offset-4 hover:text-gold-200 hover:underline"
-        >
-          Back to sign in
-        </Link>
-        .
+      <p className="mt-8 text-caption">
+        The link works once and expires after a short while.
       </p>
+      <ButtonLink href="/login" variant="link" size="sm" className="mt-4">
+        Back to sign in
+      </ButtonLink>
     </div>
   );
 }

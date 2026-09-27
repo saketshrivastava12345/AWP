@@ -27,7 +27,7 @@ export function SectionNav({ sections }: { sections: { id: string; title: string
       },
       // Bias the band toward the upper third so the highlight changes as a
       // heading reaches reading position, not when it leaves the screen.
-      { rootMargin: "-20% 0px -65% 0px", threshold: 0 },
+      { rootMargin: "-25% 0px -60% 0px", threshold: 0 },
     );
 
     for (const section of sections) {
@@ -40,19 +40,22 @@ export function SectionNav({ sections }: { sections: { id: string; title: string
   if (sections.length === 0) return null;
 
   return (
-    <nav aria-label="Specifications" className="sticky top-24">
-      <p className="mb-4 text-label">Specifications</p>
-      <ul className="space-y-px border-l border-line">
+    <nav
+      aria-label="Technical data"
+      className="sticky top-[calc(var(--nav-offset)+var(--subnav-offset)+2rem)]"
+    >
+      <ul className="border-l border-line">
         {sections.map((section) => (
           <li key={section.id}>
             <a
               href={`#${section.id}`}
               aria-current={section.id === activeId ? "true" : undefined}
               className={cn(
-                "-ml-px block border-l py-2 pl-4 text-xs transition-colors duration-200",
+                "-ml-px flex min-h-10 items-center border-l-2 py-1.5 pl-4 text-body-s",
+                "transition-colors duration-(--duration-fast)",
                 section.id === activeId
-                  ? "border-gold-500 text-gold-300"
-                  : "border-transparent text-ink-400 hover:text-ink-100",
+                  ? "border-gold-500 text-ink-50"
+                  : "border-transparent text-ink-400 hover:text-ink-50",
               )}
             >
               {section.title}

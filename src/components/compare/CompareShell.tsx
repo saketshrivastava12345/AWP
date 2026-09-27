@@ -1,13 +1,14 @@
 "use client";
 
 import {
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { Eraser } from "lucide-react";
+import { buttonClasses } from "@/components/ui/Button";
 import { Switch } from "@/components/ui/Switch";
 import type { ComparePickerOption } from "@/lib/queries/compare";
 import { CompareCombobox } from "./CompareCombobox";
@@ -106,29 +107,37 @@ export function CompareShell({
     };
   }, [paintedByServer, groupKey]);
 
+  // The table's sticky header row can wrap to two lines; publish its height
+  // so the group titles beside the rows stick just below it.
+  useEffect(() => {
+    const root = ref.current;
+    const head = root?.querySelector<HTMLElement>("[data-compare-head]");
+    if (!root || !head || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      root.style.setProperty("--cmp-head-h", `${head.getBoundingClientRect().height}px`);
+    });
+    observer.observe(head);
+    return () => observer.disconnect();
+  }, [groupKey]);
+
   const hidden = counts.total - counts.differing;
 
   return (
     <div ref={ref} data-diff={diff ? "on" : "off"} className="group/cmp">
-      <div className="flex flex-col gap-4 border-y border-line py-5 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+      <div className="flex flex-col gap-5 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
         <CompareCombobox
           options={options}
           truncated={truncated}
           anchor={anchor}
           variant="compact"
           label="Add a car"
-          className="w-full md:max-w-md lg:max-w-sm"
+          className="w-full md:max-w-md"
         />
 
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-0">
-            <Switch
-              checked={diff}
-              onChange={setDiff}
-              label="Differences only"
-              className="min-h-11"
-            />
-            <p aria-live="polite" className="tabular text-xs text-ink-500 lg:w-52">
+            <Switch checked={diff} onChange={setDiff} label="Differences only" />
+            <p aria-live="polite" className="text-caption tabular-nums lg:min-w-52">
               {diff
                 ? counts.differing === counts.total
                   ? `Every row differs (${counts.total})`
@@ -136,13 +145,12 @@ export function CompareShell({
                 : `${counts.total} rows · ${counts.differing} differ`}
             </p>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-5">
             <CopyLinkButton href={href} />
             <CompareLink
               to={[]}
-              className="inline-flex h-11 items-center gap-2 rounded-xs px-3 font-display text-micro tracking-button text-ink-300 uppercase transition-colors hover:bg-surface-2 hover:text-ink-50"
+              className={buttonClasses("link", "sm", "text-ink-300 hover:text-ink-50")}
             >
-              <Eraser className="size-3.5" aria-hidden="true" />
               Clear all
             </CompareLink>
           </div>
@@ -150,7 +158,7 @@ export function CompareShell({
       </div>
 
       {diff && counts.differing === 0 ? (
-        <p className="mt-8 rounded-sm border border-dashed border-line px-5 py-8 text-center text-sm text-ink-400">
+        <p className="mt-8 rounded-card bg-surface-1 px-5 py-8 text-center text-body-s text-ink-300">
           These cars are identical in every catalogued figure.
         </p>
       ) : null}

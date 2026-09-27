@@ -5,13 +5,15 @@ import { EM_DASH } from "@/lib/format";
 import type { CompareCell, CompareRow } from "@/lib/compare-rows";
 
 /**
- * One car's value in one row, in pieces the desktop table and the mobile
+ * One car's value in one row, in pieces the desktop table and the phone
  * cards arrange differently: the figure (ValueText), its secondary line
  * (ValueNote) and its bar (CompareBar). `CompareValue` stacks all three.
  *
  * Both layouts say exactly the same thing. "Best" is marked in words as well
- * as colour, and the three kinds of absence read differently: a dash is "not
- * published", a feature's dash is "not catalogued", "n/a" is "does not apply".
+ * as colour (gold is the one accent the page spends on it), and the kinds of
+ * absence read differently: a dash is "not published" (for a feature, "not
+ * catalogued"), and "Not applicable" is a figure that cannot exist for that
+ * powertrain.
  */
 export function ValueText({
   row,
@@ -24,16 +26,16 @@ export function ValueText({
 }) {
   if (cell.state === "not-applicable") {
     return (
-      <span className={cn("font-mono text-xs text-ink-600", className)}>
-        <span aria-hidden="true">n/a</span>
-        <span className="sr-only">Not applicable to this powertrain</span>
+      <span className={cn("text-caption", className)}>
+        Not applicable
+        <span className="sr-only"> to this powertrain</span>
       </span>
     );
   }
 
   if (cell.state === "missing") {
     return (
-      <span className={cn("font-mono text-sm text-ink-600", className)}>
+      <span className={cn("text-data text-ink-400", className)}>
         <span aria-hidden="true">{EM_DASH}</span>
         <span className="sr-only">
           {row.kind === "feature" ? "Not catalogued" : "Not published"}
@@ -45,7 +47,11 @@ export function ValueText({
   if (row.kind === "feature") {
     return (
       <span className={cn("inline-flex", className)}>
-        <Check className="size-4 text-gold-400" aria-hidden="true" />
+        <Check
+          className="size-[18px] text-ink-100"
+          strokeWidth={1.75}
+          aria-hidden="true"
+        />
         <span className="sr-only">Catalogued</span>
       </span>
     );
@@ -58,19 +64,14 @@ export function ValueText({
     >
       <span
         className={cn(
-          isText
-            ? "text-[13px] leading-snug text-ink-100"
-            : "tabular font-mono text-[13px] leading-tight text-ink-50",
-          row.kind === "price" && "text-gold-200",
-          cell.isBest && "text-signal-positive",
+          isText ? "text-body-s text-ink-50" : "text-data text-ink-50",
+          cell.isBest && "text-gold-300",
         )}
       >
         {cell.display}
       </span>
       {cell.isBest ? (
-        <span className="font-display text-nano tracking-hud text-signal-positive uppercase">
-          Best
-        </span>
+        <span className="font-sans text-xs font-medium text-ink-300">Best</span>
       ) : null}
     </span>
   );
@@ -84,11 +85,7 @@ export function ValueNote({
   className?: string;
 }) {
   if (cell.state !== "value" || !cell.note) return null;
-  return (
-    <span className={cn("block text-micro leading-snug text-ink-500", className)}>
-      {cell.note}
-    </span>
-  );
+  return <span className={cn("block text-caption", className)}>{cell.note}</span>;
 }
 
 /** Stagger for a bar's entrance, by its row and column. */
@@ -97,10 +94,10 @@ export function barDelay(rowIndex: number, carIndex: number): number {
 }
 
 /**
- * A figure's share of its row's scale. Grows in once when its group scrolls
- * into view (CompareShell arms and reveals it), and re-scales smoothly when
- * the set of cars changes. Server-rendered at full length, so it is correct
- * without JavaScript.
+ * A figure's share of its row's scale, on the headline performance rows
+ * only. Grows in once when its group scrolls into view (CompareShell arms
+ * and reveals it), and re-scales smoothly when the set of cars changes.
+ * Server-rendered at full length, so it is correct without JavaScript.
  */
 export function CompareBar({
   row,
@@ -123,22 +120,15 @@ export function CompareBar({
   return (
     <span
       aria-hidden="true"
-      className={cn(
-        "block h-[3px] w-full overflow-hidden rounded-full bg-line",
-        className,
-      )}
+      className={cn("block h-0.5 w-full overflow-hidden rounded-pill bg-line", className)}
     >
       <span
         style={style}
         className={cn(
-          "block h-full origin-left scale-x-(--bar) rounded-full",
-          "transition-[scale] delay-(--bar-delay) duration-(--duration-cinematic) ease-cinematic motion-reduce:delay-0",
+          "block h-full origin-left scale-x-(--bar) rounded-pill",
+          "transition-[scale] delay-(--bar-delay) duration-(--duration-cinematic) ease-standard motion-reduce:delay-0",
           "group-data-[bars=armed]/bars:scale-x-0",
-          cell.isBest
-            ? "bg-signal-positive"
-            : row.better !== "none"
-              ? "bg-gold-600/80"
-              : "bg-ink-500/70",
+          cell.isBest ? "bg-gold-500" : "bg-ink-400",
         )}
       />
     </span>
@@ -165,7 +155,7 @@ export function CompareValue({
         row={row}
         cell={cell}
         delay={barDelay(rowIndex, carIndex)}
-        className="mt-2"
+        className="mt-3"
       />
     </span>
   );

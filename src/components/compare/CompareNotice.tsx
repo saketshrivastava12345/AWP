@@ -25,18 +25,15 @@ export function CompareNotice({
     <section
       role="status"
       aria-label="Left out of this comparison"
-      className={cn(
-        "rounded-sm border border-gold-800 bg-gold-500/[0.04] px-5 py-4",
-        className,
-      )}
+      className={cn("rounded-card bg-surface-1 px-5 py-4", className)}
     >
       <div className="flex items-start gap-3">
         <CircleAlert
-          className="mt-0.5 size-4 shrink-0 text-gold-400"
+          className="mt-0.5 size-[18px] shrink-0 text-ink-200"
           aria-hidden="true"
         />
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-ink-100">
+          <p className="text-body-s text-ink-50">
             {count === 1
               ? "One entry in this link was left out of the comparison."
               : `${count} entries in this link were left out of the comparison.`}
@@ -46,7 +43,7 @@ export function CompareNotice({
               const shown = group.values.slice(0, LIST_LIMIT);
               const more = group.values.length - shown.length;
               return (
-                <li key={group.reason} className="text-xs leading-relaxed text-ink-400">
+                <li key={group.reason} className="text-caption">
                   <span className="text-ink-200">{capitalise(group.label)}:</span>{" "}
                   {shown.map((value, index) => (
                     <span key={value}>

@@ -23,11 +23,11 @@ const BENEFITS = [
 
 function Benefits() {
   return (
-    <ul className="space-y-4">
+    <ul className="divide-y divide-line-subtle border-y border-line-subtle">
       {BENEFITS.map(({ icon: Icon, text }) => (
-        <li key={text} className="flex items-start gap-3 text-sm text-ink-300">
+        <li key={text} className="flex items-center gap-4 py-4 text-body text-ink-300">
           <Icon
-            className="mt-0.5 size-4 shrink-0 text-gold-400"
+            className="size-5 shrink-0 text-ink-400"
             strokeWidth={1.5}
             aria-hidden="true"
           />
@@ -74,9 +74,8 @@ export default function LoginPage({
 }) {
   return (
     <AuthShell
-      overline="AURIX account"
-      title="YOUR GARAGE, EVERYWHERE"
-      description="Sign in to keep your saved cars with you, or create an account in a few seconds — just an email and a password."
+      title="Your garage, everywhere."
+      description="Sign in to keep your saved cars with you, or create an account in a few seconds. All it takes is an email and a password."
       aside={<Benefits />}
     >
       <Suspense fallback={null}>

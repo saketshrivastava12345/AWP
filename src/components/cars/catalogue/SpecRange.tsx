@@ -1,5 +1,5 @@
 import { formatNumber } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { StatCard } from "@/components/ui/StatCard";
 import type { NumberRange } from "@/lib/queries/models";
 
 /** "385–650", or a single figure when every variant publishes the same one. */
@@ -11,9 +11,10 @@ export function formatRange(range: NumberRange, decimals = 0): string {
 }
 
 /**
- * One figure's spread across a model's variants. Only rendered from published
- * figures; with none, it says so rather than disappearing, so a row of these
- * does not silently lose a column.
+ * One figure's spread across a model's variants, as a key figure in a
+ * StatRow: "450–650 hp" over "Power". Only rendered from published figures;
+ * with none, it shows a dash and "not published" rather than disappearing,
+ * so a row of these does not silently lose a column.
  */
 export function SpecRange({
   label,
@@ -27,24 +28,17 @@ export function SpecRange({
   range: NumberRange | null;
   unit: string;
   decimals?: number;
-  /** e.g. "3 of 4 variants publish this". */
+  /** e.g. "3 of 4 variants publish this" — shown behind an info hint. */
   note?: string;
   className?: string;
 }) {
   return (
-    <div className={cn("edge-light bg-surface-1/70 px-4 py-5 sm:px-5", className)}>
-      <dt className="text-label">{label}</dt>
-      <dd className="mt-3">
-        {range ? (
-          <p className="tabular font-display text-lg leading-none text-ink-50 sm:text-2xl">
-            <span className="whitespace-nowrap">{formatRange(range, decimals)}</span>
-            <span className="ml-1.5 font-sans text-xs text-ink-400">{unit}</span>
-          </p>
-        ) : (
-          <p className="text-sm leading-none text-ink-500 italic">Not available</p>
-        )}
-        {note ? <p className="mt-2 text-[11px] text-ink-500">{note}</p> : null}
-      </dd>
-    </div>
+    <StatCard
+      label={label}
+      value={range ? formatRange(range, decimals) : null}
+      unit={unit}
+      hint={note}
+      className={className}
+    />
   );
 }

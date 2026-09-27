@@ -17,6 +17,8 @@ import {
   STATUS_LABELS,
   TRANSMISSION_LABELS,
   optionLabel,
+  type FacetRow,
+  rowMatches,
   type FilterOptions,
   type ListFacetKey,
   type NumericFilterKey,
@@ -729,4 +731,134 @@ export function buildChips(state: CatalogueState, options: FilterOptions): Filte
 /** Number shown on "Filters (n)" — the chips a user can see, minus the free text. */
 export function countFilterChips(chips: readonly FilterChip[]): number {
   return chips.filter((chip) => chip.source !== "text").length;
+}
+
+// ---------------------------------------------------------------------------
+// Page title for a filtered view
+// ---------------------------------------------------------------------------
+
+/** "German cars". Keyed by country slug; any other country reads "Cars from X". */
+const COUNTRY_ADJECTIVES: Record<string, string> = {
+  china: "Chinese",
+  france: "French",
+  germany: "German",
+  india: "Indian",
+  italy: "Italian",
+  japan: "Japanese",
+  "south-korea": "South Korean",
+  sweden: "Swedish",
+  "united-kingdom": "British",
+  "united-states": "American",
+};
+
+const FUEL_ADJECTIVES: Record<string, string> = {
+  petrol: "petrol",
+  diesel: "diesel",
+  hybrid: "hybrid",
+  phev: "plug-in hybrid",
+  electric: "electric",
+  hydrogen: "hydrogen",
+};
+
+/** Plural nouns for body styles, as they read mid-sentence. */
+const BODY_NOUNS: Record<string, string> = {
+  hatchback: "hatchbacks",
+  sedan: "sedans",
+  coupe: "coupés",
+  convertible: "convertibles",
+  roadster: "roadsters",
+  suv: "SUVs",
+  wagon: "wagons",
+  mpv: "MPVs",
+  pickup: "pickups",
+  off_road: "off-roaders",
+};
+
+/** Plural nouns for the recorded segments (category slugs). */
+const SEGMENT_NOUNS: Record<string, string> = {
+  coupe: "coupés",
+  hatchback: "hatchbacks",
+  hypercar: "hypercars",
+  "off-road": "off-roaders",
+  pickup: "pickups",
+  sedan: "sedans",
+  "sports-car": "sports cars",
+  supercar: "supercars",
+  suv: "SUVs",
+  wagon: "wagons",
+  mpv: "MPVs",
+};
+
+function only<T>(values: readonly T[] | undefined): T | undefined {
+  return values && values.length === 1 ? values[0] : undefined;
+}
+
+function sentence(words: readonly (string | undefined)[]): string {
+  const text = words.filter(Boolean).join(" ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * The /cars heading for the current view: "All cars", or one built from the
+ * filters that read naturally as a title — "German cars", "Electric SUVs",
+ * "Porsche", "Japanese sports cars". It names only single values of brand,
+ * country, powertrain and body style or segment; anything else it cannot say
+ * in a phrase falls back to "Cars matching your filters" (the chips below the
+ * heading list every filter either way).
+ */
+export function catalogueTitle(state: CatalogueState, options: FilterOptions): string {
+  const filters = state.effective;
+  const active = (Object.keys(filters) as (keyof CarFilters)[]).filter((key) => {
+    const value = filters[key];
+    return Array.isArray(value) ? value.length > 0 : value !== undefined;
+  });
+  if (active.length === 0) return "All cars";
+
+  const maker = only(filters.manufacturer);
+  const country = only(filters.country);
+  const fuel = only(filters.fuel);
+  const body = only(filters.body);
+  const segment = only(filters.category);
+
+  const makerName = maker ? optionLabel(options, "manufacturer", maker) : undefined;
+  const countryWord = country ? COUNTRY_ADJECTIVES[country] : undefined;
+  const countryName =
+    country && !countryWord ? optionLabel(options, "country", country) : undefined;
+  let fuelWord = fuel ? FUEL_ADJECTIVES[fuel] : undefined;
+  // The "EV" segment says the same as the electric powertrain.
+  if (segment === "ev" && !fuelWord) fuelWord = "electric";
+  const noun =
+    (body ? BODY_NOUNS[body] : undefined) ??
+    (segment && segment !== "ev" ? SEGMENT_NOUNS[segment] : undefined);
+
+  if (!makerName && !countryWord && !countryName && !fuelWord && !noun) {
+    if (active.length === 1 && filters.text && state.query) {
+      return `Results for “${state.query}”`;
+    }
+    return "Cars matching your filters";
+  }
+
+  // "Porsche" on its own reads as the brand's catalogue.
+  if (makerName && !fuelWord && !noun) return makerName;
+  if (countryName && !makerName) {
+    return sentence([fuelWord, noun ?? "cars", `from ${countryName}`]);
+  }
+  return sentence([fuelWord, makerName ?? countryWord, noun ?? "cars"]);
+}
+
+/** Distinct brands and countries among the rows a view matches, for its lead line. */
+export function matchingSpread(
+  rows: readonly FacetRow[],
+  filters: CarFilters,
+): { cars: number; brands: number; countries: number } {
+  const brands = new Set<string>();
+  const countries = new Set<string>();
+  let cars = 0;
+  for (const row of rows) {
+    if (!rowMatches(row, filters)) continue;
+    cars += 1;
+    if (row.manufacturer_slug) brands.add(row.manufacturer_slug);
+    if (row.country_slug) countries.add(row.country_slug);
+  }
+  return { cars, brands: brands.size, countries: countries.size };
 }

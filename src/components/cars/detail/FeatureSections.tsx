@@ -59,52 +59,42 @@ export function FeatureGroup({
       <DetailHeading
         id={headingId}
         level={headingLevel}
-        eyebrow="Features"
-        title={title ?? chapter.title}
-        meta={`${entries.length} catalogued`}
+        title={title ?? sentenceCase(chapter.title)}
+        note={`${entries.length} catalogued`}
       />
-      {/* Every cell draws its own hairline box, overlapped by a pixel, so an
-          odd count simply ends — no grey filler, no stray edge. */}
-      <ul className="mt-6 grid pt-px pl-px md:grid-cols-2">
+      <ul className="mt-8 grid gap-x-16 md:grid-cols-2">
         {entries.map(({ feature, detail }) => (
-          <li
-            key={feature.id}
-            className="-mt-px -ml-px flex flex-col border border-line bg-surface-1/60 px-5 py-5 sm:px-6"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <h4 className="text-[15px] leading-snug font-medium text-ink-50">
-                {feature.name}
-              </h4>
+          <li key={feature.id} className="border-t border-line py-6">
+            <div className="flex items-baseline justify-between gap-4">
+              <h4 className="text-h4">{feature.name}</h4>
               {feature.category ? (
-                <span className="mt-0.5 shrink-0 text-hud text-ink-600">
-                  {feature.category}
-                </span>
+                <span className="shrink-0 text-caption">{feature.category}</span>
               ) : null}
             </div>
             {detail?.trim() ? (
-              <p className="mt-3 flex gap-2.5 text-sm leading-relaxed text-ink-200">
-                <span aria-hidden="true" className="mt-2 h-px w-3 shrink-0 bg-gold-500" />
-                <span>
-                  <span className="sr-only">On this car: </span>
-                  {detail}
-                </span>
+              <p className="mt-2 text-body-s text-ink-100">
+                <span className="sr-only">On this car: </span>
+                {detail}
               </p>
             ) : null}
             {feature.description?.trim() ? (
-              <p
-                className={cn(
-                  "text-xs leading-relaxed text-ink-400",
-                  detail?.trim() ? "mt-2 pl-[1.375rem]" : "mt-3",
-                )}
-              >
-                {feature.description}
-              </p>
+              <p className="mt-2 text-body-s text-ink-400">{feature.description}</p>
             ) : null}
           </li>
         ))}
       </ul>
     </section>
   );
+}
+
+/** "Chassis & Brakes" → "Chassis & brakes": headings are sentence case. */
+function sentenceCase(text: string): string {
+  return text
+    .split(" ")
+    .map((word, index) =>
+      index === 0 || word === word.toUpperCase() ? word : word.toLowerCase(),
+    )
+    .join(" ");
 }
 
 export function FeatureSections({

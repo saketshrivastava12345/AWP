@@ -5,6 +5,7 @@ import { useTransition, type MouseEvent } from "react";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
+import { buttonClasses } from "@/components/ui/Button";
 import { useFavorites, useIsFavorite } from "@/lib/favorites/hooks";
 import { setFavorite, type ToggleResult } from "@/lib/favorites/store";
 import { MAX_GUEST_FAVORITES } from "@/lib/favorites/constants";
@@ -116,19 +117,20 @@ export function FavoriteToggle({
         onClick={onClick}
         aria-label={label}
         data-favorite-toggle=""
+        data-saved={saved ? "" : undefined}
         className={cn(
-          "relative grid size-11 shrink-0 place-items-center rounded-full border backdrop-blur-sm",
-          "transition-colors duration-(--duration-fast)",
+          "relative grid size-11 shrink-0 place-items-center rounded-pill backdrop-blur-md",
+          "transition-colors duration-(--duration-fast) ease-standard",
           "outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2 focus-visible:ring-offset-void",
           saved
-            ? "border-gold-600 bg-void/70 text-gold-300 hover:bg-void/85"
-            : "border-line-strong bg-void/55 text-ink-100 hover:border-gold-600 hover:text-gold-200",
+            ? "bg-void/70 text-gold-400 hover:bg-void/85"
+            : "bg-void/60 text-ink-50 hover:bg-void/85",
           className,
         )}
       >
         <Heart
           className={cn(
-            "size-4 transition-transform duration-(--duration-fast)",
+            "size-[18px] transition-transform duration-(--duration-fast)",
             saved && "fill-current",
           )}
           aria-hidden="true"
@@ -142,18 +144,14 @@ export function FavoriteToggle({
       type="button"
       onClick={onClick}
       data-favorite-toggle=""
-      className={cn(
-        "inline-flex h-11 min-w-11 items-center justify-center gap-2.5 rounded-xs border px-4",
-        "font-display text-micro tracking-button uppercase",
-        "transition-colors duration-(--duration-fast)",
-        "outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-2 focus-visible:ring-offset-void",
-        saved
-          ? "border-gold-500 bg-gold-800/20 text-gold-300 hover:bg-gold-800/30"
-          : "border-line-strong text-ink-200 hover:border-gold-600 hover:text-gold-200",
-        className,
+      data-saved={saved ? "" : undefined}
+      className={buttonClasses(
+        "secondary",
+        "md",
+        cn(saved && "border-gold-500 hover:border-gold-400", className),
       )}
     >
-      <Heart className={cn("size-3.5", saved && "fill-current")} aria-hidden="true" />
+      <Heart className={cn(saved && "fill-current text-gold-400")} aria-hidden="true" />
       {/* The visible word is part of the accessible name (WCAG 2.5.3), and
           the rest names the car and what pressing will do. */}
       {saved ? (
@@ -186,7 +184,7 @@ export function FavoriteHint({
   const { ready, signedIn } = useFavorites();
   if (!ready || !saved) return null;
   return (
-    <p className={cn("text-xs text-ink-400", className)}>
+    <p className={cn("text-caption text-ink-400", className)}>
       {signedIn ? (
         "Saved to your account."
       ) : (
@@ -194,7 +192,7 @@ export function FavoriteHint({
           Saved on this device.{" "}
           <Link
             href={signInHref}
-            className="text-gold-300 underline-offset-4 hover:underline"
+            className="text-ink-100 underline underline-offset-4 hover:text-ink-50"
           >
             Sign in
           </Link>{" "}

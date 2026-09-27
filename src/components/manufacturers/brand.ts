@@ -179,10 +179,10 @@ const TAB_DEFINITIONS: {
     label: "Performance",
     test: (car) => PERFORMANCE_CATEGORIES.has(car.category_slug ?? ""),
   },
-  { id: "ev", label: "EV", test: (car) => car.fuel_type === "electric" },
+  { id: "ev", label: "Electric", test: (car) => car.fuel_type === "electric" },
   {
     id: "suv",
-    label: "SUV",
+    label: "SUVs",
     test: (car) => car.body_type === "suv" || car.body_type === "off_road",
   },
   {
@@ -412,4 +412,67 @@ export function websiteLink(
   } catch {
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Hero
+// ---------------------------------------------------------------------------
+
+type HeroCar = Pick<CatalogCar, "primary_image_url" | "body_type" | "fuel_type">;
+
+/**
+ * What a brand hero shows: the first car in the list (callers pass them most
+ * powerful first) that has a photograph, else the first car's body style as a
+ * labelled drawing. Null for a maker with no published cars. A photograph is
+ * never borrowed from another maker or invented.
+ */
+export function heroVisual<T extends HeroCar>(
+  cars: readonly T[],
+): { kind: "photo"; car: T; src: string } | { kind: "drawing"; car: T } | null {
+  const pictured = cars.find((car) => Boolean(car.primary_image_url?.trim()));
+  if (pictured?.primary_image_url) {
+    return { kind: "photo", car: pictured, src: pictured.primary_image_url.trim() };
+  }
+  const first = cars[0];
+  return first ? { kind: "drawing", car: first } : null;
+}
+
+/**
+ * The lowest and highest figure as a compact range, "450–761", or the single
+ * figure when they are equal. En dash, never a hyphen.
+ */
+export function rangeLabel(
+  range: { min: number; max: number },
+  format: (value: number) => string,
+): string {
+  return range.min === range.max
+    ? format(range.min)
+    : `${format(range.min)}–${format(range.max)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Chips
+// ---------------------------------------------------------------------------
+
+/**
+ * The filter-chip look shared by the brand tabs, the directory's segment
+ * filter and the parts categories: a sentence-case pill, 40px drawn with a
+ * 44px hit area, and a gold border only on the active chip. A plain string so
+ * server components (category links) and client components (radio chips,
+ * tabs) can both use it.
+ */
+export function chipClasses(active: boolean): string {
+  return [
+    "relative inline-flex h-10 shrink-0 items-center gap-2 rounded-pill border px-4",
+    "text-body-s whitespace-nowrap transition-colors duration-(--duration-fast)",
+    "after:absolute after:inset-x-0 after:-inset-y-0.5 after:content-['']",
+    active
+      ? "border-gold-500 bg-white/4 text-ink-50"
+      : "border-line text-ink-300 hover:border-ink-500 hover:text-ink-50",
+  ].join(" ");
+}
+
+/** The count inside a chip. */
+export function chipCountClasses(active: boolean): string {
+  return `text-caption tabular-nums ${active ? "text-ink-300" : "text-ink-400"}`;
 }

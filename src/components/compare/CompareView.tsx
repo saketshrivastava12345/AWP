@@ -4,6 +4,7 @@ import { CompareCards } from "./CompareCards";
 import { CompareHeader } from "./CompareHeader";
 import { CompareShell } from "./CompareShell";
 import { CompareTable } from "./CompareTable";
+import { CompareLegend } from "./parts";
 
 /**
  * Two to four cars side by side. Server-rendered: the table (768px and up)
@@ -34,11 +35,13 @@ export function CompareView({
     >
       <h2 className="sr-only">Specifications side by side</h2>
 
-      <div className="mt-6 md:mt-8">
+      <CompareLegend layout="line" className="mt-6 lg:hidden" />
+
+      <div className="mt-8 lg:mt-12">
         <CompareHeader cars={cars} />
       </div>
 
-      <div className="mt-8 md:hidden">
+      <div className="mt-6 md:hidden">
         <CompareCards cars={cars} groups={groups} />
       </div>
 

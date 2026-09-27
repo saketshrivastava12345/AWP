@@ -15,12 +15,16 @@ import {
 } from "@/lib/queries/manufacturers";
 import { getPartsIndex, type PartsIndexCategory } from "@/lib/queries/parts";
 import { getComparePickerOptions } from "@/lib/queries/compare";
+import { getFacetRows } from "@/lib/queries/filters";
 import { quickStarts, type QuickStart } from "@/components/compare/picker-logic";
 import { pickHeroBeats, type HeroBeat } from "@/components/home/hero-beats";
 import {
   pickHeroCandidate,
+  pickSegments,
   type DimensionRow,
   type HeroDimensions,
+  type HomeSegment,
+  type SegmentPhotoRow,
 } from "@/components/home/home-data";
 
 /**
@@ -185,6 +189,69 @@ export async function getHeroCar(
 }
 
 // ---------------------------------------------------------------------------
+// Shop by segment
+// ---------------------------------------------------------------------------
+
+type PhotoRow = {
+  manufacturer_name: string | null;
+  model_name: string | null;
+  variant_name: string | null;
+  category_slug: string | null;
+  body_type: SegmentPhotoRow["body_type"];
+  fuel_type: SegmentPhotoRow["fuel_type"];
+  primary_image_url: string | null;
+};
+
+/** Catalogued photographs, most powerful car first, for the segment tiles. */
+async function readSegmentPhotos(): Promise<SegmentPhotoRow[]> {
+  try {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("car_catalog")
+      .select(
+        "manufacturer_name, model_name, variant_name, category_slug, body_type, fuel_type, primary_image_url",
+      )
+      .not("primary_image_url", "is", null)
+      .order("power_hp", { ascending: false, nullsFirst: false })
+      .order("variant_id", { ascending: true })
+      .limit(200)
+      .returns<PhotoRow[]>();
+    if (error) {
+      reportQueryError("segment photos failed:", error.message);
+      return [];
+    }
+    return (data ?? []).flatMap((row) =>
+      row.primary_image_url
+        ? [
+            {
+              name: carDisplayName(row.manufacturer_name, row.model_name, row.variant_name),
+              image_url: row.primary_image_url,
+              category_slug: row.category_slug,
+              body_type: row.body_type,
+              fuel_type: row.fuel_type,
+            },
+          ]
+        : [],
+    );
+  } catch (error) {
+    reportQueryError("segment photos threw:", error);
+    return [];
+  }
+}
+
+/**
+ * The segment tiles, counted over the same facet rows the /cars filter rail
+ * counts. Empty when the catalogue cannot be read; a missing photograph only
+ * means the tile shows its body-style drawing.
+ */
+export async function getHomeSegments(): Promise<HomeSegment[]> {
+  if (!isConfigured()) return [];
+  const [{ rows, ok }, photos] = await Promise.all([getFacetRows(), readSegmentPhotos()]);
+  if (!ok) return [];
+  return pickSegments(rows, photos);
+}
+
+// ---------------------------------------------------------------------------
 // Everything
 // ---------------------------------------------------------------------------
 
@@ -197,20 +264,24 @@ export type HomePageData = {
   parts: PartsIndexCategory[];
   /** Ready-made comparisons: closest published power, different makers. */
   rivals: QuickStart[];
+  /** Ways into the collection by kind of car. */
+  segments: HomeSegment[];
 };
 
 /** Featured cars on the page; the hero car is chosen from these. */
 export const FEATURED_COUNT = 6;
 
 export async function getHomePageData(): Promise<HomePageData> {
-  const [counts, featured, countries, manufacturers, parts, picker] = await Promise.all([
-    getHomeCounts(),
-    getFeaturedCars(FEATURED_COUNT),
-    listCountries(),
-    listManufacturers(),
-    getPartsIndex(),
-    getComparePickerOptions(),
-  ]);
+  const [counts, featured, countries, manufacturers, parts, picker, segments] =
+    await Promise.all([
+      getHomeCounts(),
+      getFeaturedCars(FEATURED_COUNT),
+      listCountries(),
+      listManufacturers(),
+      getPartsIndex(),
+      getComparePickerOptions(),
+      getHomeSegments(),
+    ]);
 
   const hero = await getHeroCar(featured, parts);
 
@@ -222,5 +293,6 @@ export async function getHomePageData(): Promise<HomePageData> {
     manufacturers,
     parts,
     rivals: picker.reachable ? quickStarts(picker.options, 2) : [],
+    segments,
   };
 }

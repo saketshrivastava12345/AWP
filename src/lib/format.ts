@@ -226,3 +226,44 @@ export function distinctVariantName(
   if (!name || name.toLowerCase() === (model?.trim().toLowerCase() ?? "")) return null;
   return name;
 }
+
+/** "2019–2024", "2021–present" or "2019": the compact, en-dash form for cards and meta lines. */
+export function formatYearSpan(start: number | Nullish, end: number | Nullish): string {
+  if (!isPresent(start)) return NOT_AVAILABLE;
+  if (!isPresent(end)) return `${start}–present`;
+  return start === end ? String(start) : `${start}–${end}`;
+}
+
+/** "450–761", or one figure when both ends agree. En dash, never a hyphen. */
+export function formatNumberRange(
+  min: number | Nullish,
+  max: number | Nullish,
+  decimals = 0,
+  placeholder: string = NOT_AVAILABLE,
+): string {
+  if (!isPresent(min) || !isPresent(max)) return placeholder;
+  const format = (value: number) =>
+    decimals > 0 ? value.toFixed(decimals) : numberFormatter.format(value);
+  return min === max ? format(min) : `${format(min)}–${format(max)}`;
+}
+
+/**
+ * The model-and-variant line a card shows under the brand: "911 GT3". A
+ * variant that only restates the model ("SF90 Stradale" / "SF90 Stradale",
+ * "Civic Type R" / "Type R") is dropped, and one that already contains the
+ * model name ("M3" / "M3 Competition") is shown on its own.
+ */
+export function modelVariantName(
+  model: string | Nullish,
+  variant: string | Nullish,
+): string {
+  const modelName = model?.trim() ?? "";
+  const variantName = variant?.trim() ?? "";
+  if (!variantName) return modelName;
+  if (!modelName) return variantName;
+  const m = modelName.toLowerCase();
+  const v = variantName.toLowerCase();
+  if (m.includes(v)) return modelName;
+  if (v.includes(m)) return variantName;
+  return `${modelName} ${variantName}`;
+}

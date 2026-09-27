@@ -301,11 +301,12 @@ describe("lower is better (inverted scale)", () => {
     expect(sprint.scale).toMatch(/inverted/);
   });
 
-  it("treats kerb weight as lower-is-better", () => {
+  it("never ranks kerb weight, and draws no bar for it", () => {
     const weight = findRow(groups, "dimensions.kerb");
-    expect(weight.cells.map((cell) => cell.isBest)).toEqual([true, false]);
-    expect(weight.cells[0]?.bar).toBe(1);
-    expect(weight.cells[1]?.bar).toBeCloseTo(0.75);
+    expect(weight.better).toBe("none");
+    expect(weight.hasBest).toBe(false);
+    expect(weight.hasBars).toBe(false);
+    expect(weight.cells.every((cell) => !cell.isBest && cell.bar === null)).toBe(true);
   });
 });
 
@@ -349,7 +350,7 @@ describe("best-in-row rules", () => {
     expect(row.cells.map((cell) => cell.bar)).toEqual([1, 1]);
   });
 
-  it("never ranks a neutral figure, but still scales it", () => {
+  it("never ranks a neutral figure, and draws no bar for a dimension", () => {
     const row = findRow(
       buildCompareRows([
         car({ id: "a", dimensions: { length_mm: 4000 } }),
@@ -359,8 +360,45 @@ describe("best-in-row rules", () => {
     );
     expect(row.better).toBe("none");
     expect(row.hasBest).toBe(false);
-    expect(row.cells.map((cell) => cell.bar)).toEqual([0.8, 1]);
+    expect(row.hasBars).toBe(false);
+    expect(row.cells.map((cell) => cell.bar)).toEqual([null, null]);
     expect(row.cells[0]?.display).toBe("4,000 mm");
+  });
+
+  it("marks the best on a ranked row without bars", () => {
+    const row = findRow(
+      buildCompareRows([
+        car({ id: "a", dimensions: { boot_capacity_l: 300 } }),
+        car({ id: "b", dimensions: { boot_capacity_l: 450 } }),
+      ]),
+      "dimensions.boot",
+    );
+    expect(row.hasBars).toBe(false);
+    expect(row.hasBest).toBe(true);
+    expect(row.cells.map((cell) => cell.isBest)).toEqual([false, true]);
+    expect(row.cells.every((cell) => cell.bar === null)).toBe(true);
+  });
+
+  it("draws bars only on the headline performance rows", () => {
+    const groups = buildCompareRows([
+      car({
+        id: "a",
+        performance: { power_hp: 500, torque_nm: 600 },
+        engine: { redline_rpm: 9000 },
+        dimensions: { seating_capacity: 2, length_mm: 4500 },
+      }),
+      car({
+        id: "b",
+        performance: { power_hp: 400, torque_nm: 500 },
+        engine: { redline_rpm: 7000 },
+        dimensions: { seating_capacity: 4, length_mm: 4800 },
+      }),
+    ]);
+    const barred = groups
+      .flatMap((group) => group.rows)
+      .filter((row) => row.hasBars)
+      .map((row) => row.id);
+    expect(barred).toEqual(["performance.power", "performance.torque"]);
   });
 
   it("neither ranks nor scales figures from different test cycles", () => {

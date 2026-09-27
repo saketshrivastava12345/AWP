@@ -4,6 +4,7 @@ import { formatFigure, formatNatural, ordinal, toFinite } from "@/lib/detail/fig
 import { compareRange, RANGE_STANDARD_NOTES, type RangeSample } from "@/lib/detail/ev";
 import { powertrainKind, type VariantDetail } from "@/types/domain";
 import { InfoHint } from "@/components/ui/Tooltip";
+import { Badge } from "@/components/ui/Badge";
 import { CatalogueScale } from "./CatalogueScale";
 import { DetailHeading } from "./DetailHeading";
 
@@ -77,25 +78,21 @@ export function EvPanel({
       <DetailHeading
         id={headingId}
         level={headingLevel}
-        eyebrow={isElectric ? "Electric drivetrain" : "Electric assist"}
         title={
-          isElectric ? "Battery, range & charging" : "Hybrid battery & electric range"
+          isElectric ? "Battery, range and charging" : "Hybrid battery and electric range"
         }
-        meta="ev_specs"
       />
 
-      <div className="mt-8 grid gap-px overflow-hidden rounded-xs border border-line bg-line lg:grid-cols-[1.35fr_1fr]">
+      <div className="mt-10 grid gap-x-16 gap-y-12 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         {/* ------------------------------------------------------ Range */}
-        <div className="bg-surface-1/60 px-5 py-6 sm:px-7">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-hud text-ink-400">
+        <div className="flex flex-col border-t border-line pt-6">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p className="text-body-s text-ink-300">
               {isElectric ? "Range" : "Electric-only range"}
             </p>
             {standardLabel && standard ? (
               <span className="inline-flex items-center gap-1">
-                <span className="rounded-xs border border-line-strong px-1.5 py-0.5 font-mono text-micro tracking-hud text-ink-200">
-                  {standardLabel}
-                </span>
+                <Badge>{standardLabel}</Badge>
                 <InfoHint label={`About the ${standardLabel} test standard`}>
                   {RANGE_STANDARD_NOTES[standard]}
                 </InfoHint>
@@ -104,34 +101,31 @@ export function EvPanel({
           </div>
 
           {range !== null ? (
-            <p className="mt-4 flex items-baseline gap-2">
-              <span className="font-display text-4xl leading-none text-ink-50 tabular-nums sm:text-5xl">
-                {formatFigure(range)}
-              </span>
-              <span className="font-mono text-xs text-ink-400 uppercase">km</span>
+            <p className="mt-3 flex items-baseline gap-2">
+              <span className="text-figure-xl text-ink-50">{formatFigure(range)}</span>
+              <span className="text-lead text-ink-300">km</span>
             </p>
           ) : (
-            <p className="mt-4 text-sm text-ink-500 italic">{NOT_AVAILABLE}</p>
+            <p className="mt-3 text-lead text-ink-400">{NOT_AVAILABLE}</p>
           )}
 
-          <div className="mt-6">
+          <p className="mt-2 min-h-5 text-caption">
+            {comparison.status === "ranked"
+              ? `${ordinal(comparison.standing.rank)} of ${comparison.standing.count} ${isElectric ? "electric cars" : "hybrids"} rated to ${standardLabel}`
+              : null}
+          </p>
+
+          <div className="mt-5">
             {comparison.status === "ranked" ? (
-              <>
-                <CatalogueScale
-                  standing={comparison.standing}
-                  label={isElectric ? "Range" : "Electric-only range"}
-                  unit="km"
-                  noun={`${isElectric ? "electric cars" : "hybrids"} rated to ${standardLabel}`}
-                  better="Further"
-                />
-                <p className="mt-2 text-micro leading-snug text-ink-400">
-                  {ordinal(comparison.standing.rank)} of {comparison.standing.count}{" "}
-                  {isElectric ? "electric cars" : "hybrids"} in the catalogue rated to{" "}
-                  {standardLabel} · {ordinal(comparison.standing.percentile)} percentile
-                </p>
-              </>
+              <CatalogueScale
+                standing={comparison.standing}
+                label={isElectric ? "Range" : "Electric-only range"}
+                unit="km"
+                noun={`${isElectric ? "electric cars" : "hybrids"} rated to ${standardLabel}`}
+                better="Further"
+              />
             ) : (
-              <p className="text-micro leading-snug text-ink-500">
+              <p className="text-caption">
                 {comparison.reason === "no-standard"
                   ? "The test standard for this range is not recorded, so it is not ranked: figures from different standards are not comparable."
                   : comparison.reason === "too-few-peers"
@@ -141,7 +135,7 @@ export function EvPanel({
             )}
           </div>
 
-          <p className="mt-5 border-t border-line-subtle pt-4 text-xs leading-relaxed text-ink-500">
+          <p className="mt-6 max-w-[64ch] text-caption">
             Ranges measured to different test standards (WLTP, EPA, ARAI, NEDC, CLTC) are
             not comparable, so each car is only ever ranked against cars rated to the same
             one.
@@ -149,26 +143,16 @@ export function EvPanel({
         </div>
 
         {/* ------------------------------------------ Battery + charging */}
-        <div className="grid gap-px bg-line">
-          <StatGroup title="Battery & motors" stats={battery} />
+        <div className="space-y-10">
+          <StatGroup title="Battery and motors" stats={battery} />
           <StatGroup title="Charging" stats={charging} />
         </div>
       </div>
 
       {ev?.notes?.trim() || ev?.source?.trim() ? (
-        <div className="mt-6 grid gap-2 text-xs leading-relaxed text-ink-500 sm:grid-cols-[auto_1fr] sm:gap-x-6">
-          {ev?.notes?.trim() ? (
-            <>
-              <p className="text-hud text-ink-600">Note</p>
-              <p>{ev.notes}</p>
-            </>
-          ) : null}
-          {ev?.source?.trim() ? (
-            <>
-              <p className="text-hud text-ink-600">Source</p>
-              <p>{ev.source}</p>
-            </>
-          ) : null}
+        <div className="mt-10 max-w-[72ch] space-y-1.5 text-caption">
+          {ev?.notes?.trim() ? <p>Note: {ev.notes}</p> : null}
+          {ev?.source?.trim() ? <p>Source: {ev.source}</p> : null}
         </div>
       ) : null}
     </section>
@@ -184,28 +168,28 @@ type Stat = {
 
 function StatGroup({ title, stats }: { title: string; stats: Stat[] }) {
   return (
-    <div className="bg-surface-1/60 px-5 py-5 sm:px-6">
-      <p className="text-hud text-ink-600">{title}</p>
-      <dl className="mt-3 divide-y divide-line-subtle">
+    <div>
+      <h4 className="text-h4">{title}</h4>
+      <dl className="mt-3 border-t border-line">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="flex items-baseline justify-between gap-4 py-2.5"
+            className="flex items-baseline justify-between gap-4 border-b border-line-subtle py-3"
           >
-            <dt className="flex items-center gap-1 text-sm text-ink-300">
+            <dt className="flex items-center gap-1 text-body-s text-ink-300">
               {stat.label}
               {stat.hint ? (
                 <InfoHint label={`About ${stat.label}`}>{stat.hint}</InfoHint>
               ) : null}
             </dt>
-            <dd className="font-mono text-sm tabular-nums">
+            <dd className="text-right">
               {stat.value === null ? (
-                <span className="text-ink-500 italic">{NOT_AVAILABLE}</span>
+                <span className="text-body-s text-ink-400">{NOT_AVAILABLE}</span>
               ) : (
-                <>
-                  <span className="text-ink-50">{formatNatural(stat.value)}</span>{" "}
-                  <span className="text-micro text-ink-400">{stat.unit}</span>
-                </>
+                <span className="text-data text-ink-50">
+                  {formatNatural(stat.value)}{" "}
+                  <span className="text-ink-300">{stat.unit}</span>
+                </span>
               )}
             </dd>
           </div>

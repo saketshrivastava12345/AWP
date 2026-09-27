@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activeChapterId,
   chapterPosition,
+  detailSubNav,
   placementOf,
   type ChapterPlacement,
 } from "./chapters";
@@ -75,5 +76,30 @@ describe("chapterPosition", () => {
     expect(chapterPosition(chapters, "performance")).toBe("02 / 07");
     expect(chapterPosition(chapters, null)).toBeNull();
     expect(chapterPosition(chapters, "missing")).toBeNull();
+  });
+});
+
+describe("detailSubNav", () => {
+  it("lists every section in reading order, as in-page links", () => {
+    expect(detailSubNav().map((item) => `${item.label} ${item.href}`)).toEqual([
+      "Overview #overview",
+      "Performance #performance",
+      "Engineering #engineering",
+      "Design #design",
+      "Technical data #technical-data",
+      "Price #pricing",
+      "Compare #compare",
+    ]);
+  });
+
+  it("drops a section the page leaves out and keeps the rest in order", () => {
+    expect(detailSubNav({ engineering: false }).map((item) => item.id)).toEqual([
+      "overview",
+      "performance",
+      "design",
+      "technical-data",
+      "pricing",
+      "compare",
+    ]);
   });
 });

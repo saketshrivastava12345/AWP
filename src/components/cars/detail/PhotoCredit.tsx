@@ -20,10 +20,10 @@ export function PhotoCredit({
   tone?: "muted" | "bright";
 }) {
   const link =
-    "inline-flex items-center gap-1 underline decoration-line-strong underline-offset-2 transition-colors hover:text-gold-300 hover:decoration-gold-600";
+    "inline-flex items-center gap-1 underline decoration-line-strong underline-offset-2 transition-colors hover:text-ink-50 hover:decoration-ink-400";
   const base = cn(
-    "flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-micro leading-relaxed",
-    tone === "bright" ? "text-ink-300" : "text-ink-500",
+    "flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs leading-relaxed",
+    tone === "bright" ? "text-ink-300" : "text-ink-400",
     className,
   );
 
@@ -34,7 +34,7 @@ export function PhotoCredit({
   if (credit.text && !credit.author && !credit.license) {
     return (
       <p className={base}>
-        <span className="text-hud text-ink-600">Credit</span>
+        <span>Photo</span>
         <span>{credit.text}</span>
       </p>
     );
@@ -42,7 +42,7 @@ export function PhotoCredit({
 
   return (
     <p className={base}>
-      <span className="text-hud text-ink-600">Credit</span>
+      <span>Photo</span>
       {credit.author ? (
         <span className={tone === "bright" ? "text-ink-100" : "text-ink-300"}>
           {credit.author}

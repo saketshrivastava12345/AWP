@@ -68,20 +68,16 @@ export async function generateMetadata({
  */
 export default function ComparePage({ searchParams }: PageProps<"/compare">) {
   return (
-    <Container className="py-12 sm:py-16">
+    <Container className="pt-12 pb-24 sm:pt-16 lg:pt-24 lg:pb-32">
       <header className="max-w-3xl">
-        <p className="text-label">Side by side</p>
-        <h1 className="mt-4 font-display text-2xl tracking-[0.06em] text-ink-50 uppercase sm:text-3xl">
-          Compare
-        </h1>
-        <p className="mt-4 text-sm leading-relaxed text-ink-300">
-          Up to {MAX_COMPARE} cars, figure by figure. The best in each row is marked only
-          when at least two cars publish it, and anything a maker does not publish shows
-          as a dash — never an estimate.
+        <h1 className="text-h1">Compare cars</h1>
+        <p className="mt-4 max-w-[60ch] text-lead">
+          Up to {MAX_COMPARE} cars side by side, figure by figure — every gap marked,
+          nothing estimated.
         </p>
       </header>
 
-      <div className="mt-10">
+      <div className="mt-12 lg:mt-16">
         <Suspense fallback={<CompareSkeleton />}>
           <CompareContent searchParams={searchParams as SearchParams} />
         </Suspense>

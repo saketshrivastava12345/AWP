@@ -5,18 +5,18 @@ import { Badge, fuelTone } from "@/components/ui/Badge";
 import type { CompareCarSummary } from "@/lib/compare-rows";
 import { CarThumb } from "./CarThumb";
 import { CompareLink } from "./CompareState";
-import { CarMarker } from "./parts";
+import { CarMarker, CompareLegend } from "./parts";
 
 /**
- * The cars across the top of the comparison: photograph, powertrain, status,
- * generation and years.
+ * The cars across the top of the comparison: photograph and remove control,
+ * plus make, name, powertrain and years on phones.
  *
  * One set of cards serves both layouts, so each photograph is downloaded
  * once. Below 768px it is a strip of cards (two in view, swipe for more),
- * each with its name and remove control. From 768px it becomes a grid whose
- * columns match the table's (LABEL_COLUMN, then equal shares), so each
- * photograph sits over its column; the names and remove controls then live
- * in the table's sticky header instead.
+ * each with its make and name. From 768px it becomes a grid whose columns
+ * match the table's (see LABEL_COLUMN), so each photograph sits over its
+ * column and the make and name follow directly underneath, in the table's
+ * sticky header row. The first cell holds the legend from lg.
  */
 export function CompareHeader({ cars }: { cars: CompareCarSummary[] }) {
   const others = (slug: string) => cars.map((car) => car.slug).filter((s) => s !== slug);
@@ -27,76 +27,71 @@ export function CompareHeader({ cars }: { cars: CompareCarSummary[] }) {
       aria-label="Cars in this comparison"
       style={style}
       className={
-        "-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto overscroll-x-contain px-5 pb-2 " +
+        "-mx-5 no-scrollbar flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto overscroll-x-contain px-5 pb-2 " +
         "sm:-mx-8 sm:scroll-px-8 sm:px-8 " +
-        "md:mx-0 md:grid md:snap-none md:grid-cols-[7rem_repeat(var(--cars),minmax(0,1fr))] md:gap-0 md:overflow-visible md:px-0 md:pb-4 " +
-        "lg:grid-cols-[13rem_repeat(var(--cars),minmax(0,1fr))]"
+        "md:mx-0 md:grid md:snap-none md:grid-cols-[8rem_repeat(var(--cars),minmax(0,1fr))] md:gap-0 md:overflow-visible md:px-0 md:pb-0 " +
+        "lg:grid-cols-[20rem_repeat(var(--cars),minmax(0,1fr))] xl:grid-cols-[23rem_repeat(var(--cars),minmax(0,1fr))]"
       }
     >
-      <li aria-hidden="true" className="hidden self-end pr-4 md:block">
-        <p className="text-micro leading-relaxed text-ink-500">
-          Bars compare each row on its own scale.{" "}
-          <span className="text-signal-positive">Best</span> is marked only when at least
-          two cars publish the figure.
-        </p>
+      <li className="hidden self-end pr-10 pb-6 lg:block">
+        <CompareLegend layout="list" />
       </li>
+      <li aria-hidden="true" className="hidden md:block lg:hidden" />
 
-      {cars.map((car, index) => (
-        <li
-          key={car.slug}
-          className={
-            "w-[calc((100%-0.75rem)/2)] shrink-0 snap-start overflow-hidden rounded-sm border border-line bg-surface-1/60 " +
-            "md:w-auto md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:px-2 lg:px-3"
-          }
-        >
-          <CarThumb
-            src={car.photo?.src ?? null}
-            alt={car.photo?.alt ?? car.fullName}
-            credit={car.photo?.credit ?? null}
-            reserveCredit
-            eager
-            bodyType={car.bodyType}
-            powertrain={car.powertrain}
-            sizes="(min-width: 1280px) 280px, (min-width: 768px) 22vw, 48vw"
-            caption
-            frameClassName="aspect-[16/10] w-full md:max-h-52 md:rounded-xs md:border md:border-line"
-            className="[&>p]:px-3 md:[&>p]:px-0"
-          />
-          <div className="p-3 pt-2 md:mt-1 md:p-0">
-            {/* Name and remove: here on phones, in the sticky table header from 768px. */}
-            <div className="mb-2.5 flex items-start gap-2 md:hidden">
-              <CarMarker index={index} className="mt-0.5" />
-              <div className="min-w-0 flex-1">
-                <span className="block truncate font-display text-micro tracking-[0.12em] text-ink-400 uppercase">
-                  {car.manufacturer}
-                </span>
-                <Link
-                  href={car.href}
-                  className="mt-1 block font-display text-[11px] leading-snug tracking-[0.04em] text-ink-50"
-                >
-                  {car.shortName}
-                </Link>
-              </div>
+      {cars.map((car, index) => {
+        const meta = [car.generation, car.years, car.statusLabel].filter(Boolean);
+        return (
+          <li
+            key={car.slug}
+            className="w-[calc((100%-0.75rem)/2)] shrink-0 snap-start md:w-auto md:px-3"
+          >
+            <div className="relative">
+              <CarThumb
+                src={car.photo?.src ?? null}
+                alt={car.photo?.alt ?? car.fullName}
+                credit={car.photo?.credit ?? null}
+                reserveCredit
+                eager
+                bodyType={car.bodyType}
+                powertrain={car.powertrain}
+                sizes="(min-width: 1440px) 460px, (min-width: 768px) 30vw, 48vw"
+                caption
+                frameClassName="aspect-video w-full rounded-card"
+              />
               <CompareLink
                 to={others(car.slug)}
                 aria-label={`Remove ${car.fullName} from the comparison`}
-                className="-mt-2.5 -mr-2.5 grid size-11 shrink-0 place-items-center rounded-sm text-ink-500 transition-colors hover:text-signal-negative"
+                className={
+                  "absolute top-2 right-2 grid size-9 place-items-center rounded-pill bg-void/60 text-ink-50 backdrop-blur-md " +
+                  "transition-colors duration-(--duration-fast) hover:bg-void/85 " +
+                  "after:absolute after:-inset-1 after:rounded-pill after:content-['']"
+                }
               >
                 <X className="size-4" aria-hidden="true" />
               </CompareLink>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              <Badge tone={fuelTone(car.fuelType)}>{car.fuelLabel}</Badge>
-              {car.statusLabel ? <Badge tone="gold">{car.statusLabel}</Badge> : null}
+
+            {/* Make and name: here on phones, in the sticky table header from 768px. */}
+            <div className="mt-3 flex items-start gap-2.5 md:hidden">
+              <CarMarker index={index} className="mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <span className="block text-caption">{car.manufacturer}</span>
+                <Link href={car.href} className="mt-0.5 block text-h4">
+                  {car.shortName}
+                </Link>
+              </div>
             </div>
-            {car.generation || car.years ? (
-              <p className="mt-2 text-xs text-ink-400">
-                {[car.generation, car.years].filter(Boolean).join(" · ")}
-              </p>
-            ) : null}
-          </div>
-        </li>
-      ))}
+
+            {/* From 768px the Identity rows carry these, right below. */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 md:hidden">
+              <Badge tone={fuelTone(car.fuelType)}>{car.fuelLabel}</Badge>
+              {meta.length > 0 ? (
+                <span className="text-caption">{meta.join(" · ")}</span>
+              ) : null}
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }

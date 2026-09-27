@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
-import { Button } from "@/components/ui/Button";
-import { FormField, Input, describedBy } from "@/components/ui/Field";
+import { Button, ButtonLink } from "@/components/ui/Button";
+import { FormField, describedBy } from "@/components/ui/Field";
+import { PasswordInput } from "@/components/account/PasswordInput";
 import { FormMessage } from "@/components/account/AuthShell";
 import { changePassword } from "@/app/account/actions";
 import { INITIAL_FORM_STATE } from "@/app/auth/form-state";
@@ -29,12 +29,9 @@ export function PasswordForm({
     return (
       <div className="space-y-6">
         <FormMessage tone="success">{state.message}</FormMessage>
-        <Link
-          href="/account"
-          className="inline-flex min-h-11 items-center text-sm text-gold-300 underline-offset-4 hover:underline"
-        >
+        <ButtonLink href="/account" variant="link">
           Back to your account
-        </Link>
+        </ButtonLink>
       </div>
     );
   }
@@ -59,10 +56,9 @@ export function PasswordForm({
           label="Current password"
           error={errors.current_password}
         >
-          <Input
+          <PasswordInput
             id="current_password"
             name="current_password"
-            type="password"
             autoComplete="current-password"
             required
             invalid={Boolean(errors.current_password)}
@@ -81,10 +77,9 @@ export function PasswordForm({
         hint={hint}
         error={errors.new_password}
       >
-        <Input
+        <PasswordInput
           id="new_password"
           name="new_password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={PASSWORD_MIN}
@@ -99,10 +94,9 @@ export function PasswordForm({
         label="Confirm new password"
         error={errors.confirm_password}
       >
-        <Input
+        <PasswordInput
           id="confirm_password"
           name="confirm_password"
-          type="password"
           autoComplete="new-password"
           required
           minLength={PASSWORD_MIN}

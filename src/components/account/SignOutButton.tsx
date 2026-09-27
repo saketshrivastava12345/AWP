@@ -18,7 +18,7 @@ export function SignOutButton({
   const { pending } = useFormStatus();
   return (
     <Button type="submit" variant={variant} loading={pending} className={className}>
-      {pending ? null : <LogOut className="size-3.5" aria-hidden="true" />}
+      {pending ? null : <LogOut aria-hidden="true" />}
       Sign out
     </Button>
   );

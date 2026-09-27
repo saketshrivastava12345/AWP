@@ -176,14 +176,16 @@ export const LIST_FACETS: readonly ListFacetDefinition[] = [
   {
     key: "manufacturer",
     param: "manufacturer",
-    title: "Manufacturer",
+    title: "Brand",
     column: "manufacturer_slug",
     labelColumn: "manufacturer_name",
   },
   {
     key: "category",
     param: "category",
-    title: "Category",
+    // "Segment", not "Category": the data mixes powertrain segments (EV)
+    // with body-led ones (SUV, supercar), so it is not a body-style list.
+    title: "Segment",
     column: "category_slug",
     labelColumn: "category_name",
   },
