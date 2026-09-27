@@ -26,10 +26,10 @@ function Stat({
 }) {
   const body = (
     <>
-      <dt className="font-display text-micro tracking-[0.1em] text-ink-400 uppercase sm:tracking-label">
+      <dt className="text-caption">
         {label}
       </dt>
-      <dd className="tabular mt-3 font-display text-2xl leading-none text-ink-50">
+      <dd className="mt-2 text-figure text-ink-50">
         {value}
       </dd>
       {detail ? <dd className="mt-2 text-xs text-ink-500">{detail}</dd> : null}
@@ -77,7 +77,7 @@ function QualityRow({
           <TriangleAlert
             className={cn(
               "mt-0.5 size-4 shrink-0",
-              unknown ? "text-ink-500" : "text-gold-400",
+              unknown ? "text-ink-500" : "text-signal-hybrid",
             )}
             aria-hidden="true"
           />
@@ -90,14 +90,14 @@ function QualityRow({
         </span>
         <span
           className={cn(
-            "tabular font-mono text-sm",
-            clear ? "text-signal-positive" : unknown ? "text-ink-500" : "text-gold-300",
+            "text-body-s tabular-nums",
+            clear ? "text-signal-positive" : unknown ? "text-ink-500" : "text-ink-50",
           )}
         >
           {unknown ? "—" : formatNumber(count)}
         </span>
         <ArrowUpRight
-          className="mt-0.5 size-3.5 shrink-0 text-ink-600 transition-colors group-hover:text-gold-300"
+          className="mt-0.5 size-3.5 shrink-0 text-ink-500 transition-colors group-hover:text-ink-50"
           aria-hidden="true"
         />
       </Link>
@@ -268,7 +268,7 @@ export default async function AdminDashboardPage() {
                     </span>
                     <time
                       dateTime={edit.at}
-                      className="shrink-0 font-mono text-xs text-ink-400"
+                      className="shrink-0 text-caption tabular-nums"
                     >
                       {formatDate(edit.at)}
                     </time>

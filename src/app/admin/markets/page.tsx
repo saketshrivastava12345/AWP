@@ -28,7 +28,7 @@ function CityRow({ city, regionId }: { city: AdminCity; regionId: string }) {
       <span className="min-w-0 flex-1 text-sm text-ink-100">
         {city.name} <span className="font-mono text-xs text-ink-500">{city.slug}</span>
       </span>
-      <span className="font-mono text-xs text-ink-500">
+      <span className="text-caption tabular-nums">
         {city.priceCount} price{city.priceCount === 1 ? "" : "s"}
       </span>
       <FormDialog
@@ -71,7 +71,7 @@ function RegionBlock({ region, countryId }: { region: AdminRegion; countryId: st
     <details className="group border-b border-line-subtle last:border-b-0">
       <summary className="flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-2 px-4 py-2 marker:hidden hover:bg-surface-2/40 sm:px-5">
         <span
-          className="text-gold-500 transition-transform group-open:rotate-90"
+          className="text-ink-400 transition-transform group-open:rotate-90"
           aria-hidden="true"
         >
           ›
@@ -80,7 +80,7 @@ function RegionBlock({ region, countryId }: { region: AdminRegion; countryId: st
           {region.name}{" "}
           <span className="font-mono text-xs text-ink-500">{region.slug}</span>
         </span>
-        <span className="font-mono text-xs text-ink-500">
+        <span className="text-caption tabular-nums">
           {region.cities.length} cit{region.cities.length === 1 ? "y" : "ies"} ·{" "}
           {region.priceCount} price{region.priceCount === 1 ? "" : "s"}
         </span>
@@ -165,18 +165,18 @@ export default async function MarketsPage() {
           <section
             key={country.id}
             aria-labelledby={`country-${country.slug}`}
-            className="rounded-md border border-line bg-surface-1/60"
+            className="rounded-card border border-line-subtle bg-surface-1"
           >
             <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line-subtle px-4 py-4 sm:px-5">
               <div>
                 <h2
                   id={`country-${country.slug}`}
-                  className="font-display text-xs tracking-hud text-ink-50 uppercase"
+                  className="text-h4"
                 >
                   {country.flag_emoji ? `${country.flag_emoji} ` : ""}
                   {country.name}
                 </h2>
-                <p className="mt-1 font-mono text-xs text-ink-500">
+                <p className="mt-1 text-caption tabular-nums">
                   {country.regions.length} state{country.regions.length === 1 ? "" : "s"}{" "}
                   · {country.priceCount} price{country.priceCount === 1 ? "" : "s"}
                 </p>
@@ -212,7 +212,7 @@ export default async function MarketsPage() {
               </p>
             )}
             <details className="group/add border-t border-line-subtle">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 text-sm text-gold-300 sm:px-5">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 text-body-s text-ink-50 hover:underline hover:underline-offset-4 sm:px-5">
                 <span
                   aria-hidden="true"
                   className="leading-none transition-transform group-open/add:rotate-45"
