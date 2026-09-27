@@ -2,6 +2,11 @@
 
 import Image from "next/image";
 import { useCallback, useState } from "react";
+import {
+  AI_ILLUSTRATION_BADGE,
+  AI_ILLUSTRATION_NOTE,
+  isAiIllustrationUrl,
+} from "@/lib/media-kind";
 import { cn } from "@/lib/utils";
 import type { PowertrainKind } from "@/types/domain";
 import { CarSilhouette } from "./CarSilhouette";
@@ -61,7 +66,7 @@ export function CarThumb({
           <Image
             ref={checkAlreadyFailed}
             src={src}
-            alt={alt}
+            alt={isAiIllustrationUrl(src) ? `${alt} (${AI_ILLUSTRATION_NOTE})` : alt}
             fill
             sizes={sizes}
             loading={eager ? "eager" : "lazy"}
@@ -71,6 +76,14 @@ export function CarThumb({
         ) : (
           <CarSilhouette bodyType={bodyType} powertrain={powertrain} caption={caption} />
         )}
+        {showPhoto && isAiIllustrationUrl(src) ? (
+          <span
+            title={AI_ILLUSTRATION_NOTE}
+            className="pointer-events-none absolute bottom-2 left-2 z-[3] rounded-[3px] border border-violet-400/50 bg-void/85 px-1.5 py-0.5 font-mono text-[10px] tracking-wider text-ink-50 uppercase"
+          >
+            {AI_ILLUSTRATION_BADGE}
+          </span>
+        ) : null}
       </div>
       {showPhoto && credit ? (
         <p

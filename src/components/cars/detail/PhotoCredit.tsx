@@ -31,6 +31,29 @@ export function PhotoCredit({
     return <p className={base}>No credit recorded for this photograph.</p>;
   }
 
+  // Never "Photo …" for an illustration: say what it is, and where it came from.
+  if (credit.aiGenerated) {
+    return (
+      <p className={base}>
+        <span className={tone === "bright" ? "text-ink-100" : "text-ink-300"}>
+          AI-generated illustration
+        </span>
+        <span aria-hidden="true" className="text-ink-600">
+          ·
+        </span>
+        <span>not a photograph</span>
+        {credit.sourceName ? (
+          <>
+            <span aria-hidden="true" className="text-ink-600">
+              ·
+            </span>
+            <span>{credit.sourceName}</span>
+          </>
+        ) : null}
+      </p>
+    );
+  }
+
   if (credit.text && !credit.author && !credit.license) {
     return (
       <p className={base}>

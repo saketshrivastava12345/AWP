@@ -1,5 +1,6 @@
 "use client";
 
+import { AI_ILLUSTRATION_BADGE, AI_ILLUSTRATION_NOTE } from "@/lib/media-kind";
 import Image from "next/image";
 import { useCallback, useState, type CSSProperties } from "react";
 import { Maximize2 } from "lucide-react";
@@ -230,8 +231,21 @@ function Tile({
         sizes={sizes}
         unoptimized={!item.optimize}
         onError={() => onFail(item.id)}
-        className="object-cover transition-transform duration-(--duration-normal) ease-standard group-hover/tile:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover/tile:scale-100"
+        className={cn(
+          // A very wide image (a panoramic crop) is letterboxed rather than
+          // cropped to the frame and blown up past its resolution.
+          isPanoramic(item) ? "object-contain" : "object-cover",
+          "transition-transform duration-(--duration-normal) ease-standard group-hover/tile:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover/tile:scale-100",
+        )}
       />
+      {item.credit?.aiGenerated ? (
+        <span
+          title={AI_ILLUSTRATION_NOTE}
+          className="pointer-events-none absolute bottom-2 left-2 z-[3] rounded-[3px] border border-violet-400/50 bg-void/85 px-1.5 py-0.5 font-mono text-[10px] tracking-wider text-ink-50 uppercase"
+        >
+          {AI_ILLUSTRATION_BADGE}
+        </span>
+      ) : null}
       {more > 0 ? (
         <span
           aria-hidden="true"
@@ -249,4 +263,9 @@ function Tile({
       )}
     </button>
   );
+}
+
+/** Wider than about 2:1, where cropping to a 4:3 or 16:10 frame loses most of the car. */
+function isPanoramic(item: { width: number | null; height: number | null }): boolean {
+  return item.width !== null && item.height !== null && item.width / item.height > 1.9;
 }

@@ -46,3 +46,17 @@ Car photographs are from [Wikimedia Commons](https://commons.wikimedia.org) unde
 - **Toyota Corolla 1.8 Hybrid** — Photo: Alexander-93 / Wikimedia Commons (CC BY-SA 4.0)
 - **Volvo Cars EX30 Twin Motor Performance** — Photo: Alexander-93 / Wikimedia Commons (CC BY-SA 4.0)
 - **Volvo Cars XC90 T8 Recharge** — Photo: © M 93 / Wikimedia Commons (CC BY-SA 3.0 de)
+
+## AI-generated illustrations (`cars/ai/`)
+
+These are **not photographs**. They were cropped from AI-generated
+infographics supplied by the site owner, and the site labels every one of
+them "AI illustration" wherever it appears. The specification tables printed
+on those infographics were not used: they disagree with each other and with
+the published figures.
+
+| File                                                                                                                      | Car                   |
+| ------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `porsche-911-carrera-s-front-three-quarter.webp`, `-rear-three-quarter`, `-side`, `-interior`, `-red-front-three-quarter` | Porsche 911 Carrera S |
+| `porsche-911-turbo-s-front-three-quarter.webp`, `-rear-three-quarter`, `-side`, `-interior`                               | Porsche 911 Turbo S   |
+| `lamborghini-revuelto-front-three-quarter.webp`, `-rear-three-quarter`, `-side`, `-interior`                              | Lamborghini Revuelto  |

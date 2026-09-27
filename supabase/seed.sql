@@ -2053,3 +2053,52 @@ begin
   end if;
 end;
 $do$;
+
+-- ---------------------------------------------------------------------------
+-- AI-generated illustrations supplied by the site owner
+-- ---------------------------------------------------------------------------
+-- Views cropped from infographics the owner supplied, committed under
+-- public/images/cars/ai/. They are illustrations, not photographs, and are
+-- recorded as such: the licence column says "AI-generated illustration",
+-- which (with the folder) is what makes every card, gallery tile and credit
+-- label them (src/lib/media-kind.ts). None is primary, so a real photograph
+-- always wins; a car with no photograph shows the first one, labelled.
+-- The spec tables printed on those infographics are NOT imported: they
+-- disagree with each other and with the published figures.
+do $do$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'car_media'
+               and column_name = 'license') then
+    insert into public.car_media (variant_id, type, url, alt, is_primary, display_order,
+                                  credit, shot, source, license, author, width, height,
+                                  file_size_bytes)
+    select v.id, 'image', '/images/cars/ai/' || p.file || '.webp',
+           p.alt || ' (AI-generated illustration)', false, p.display_order,
+           'AI-generated illustration supplied by the site owner; not a photograph',
+           p.shot::public.media_shot, 'Supplied by the site owner',
+           'AI-generated illustration', null, p.width, p.height, p.bytes
+    from (values
+      ('porsche',     '911',      'carrera-s', 'porsche-911-carrera-s-front-three-quarter',     'three_quarter', 'Porsche 911 Carrera S, front three-quarter',       10, 492, 220, 19596),
+      ('porsche',     '911',      'carrera-s', 'porsche-911-carrera-s-rear-three-quarter',      'rear',          'Porsche 911 Carrera S, rear three-quarter',        11, 520, 220, 18736),
+      ('porsche',     '911',      'carrera-s', 'porsche-911-carrera-s-side',                    'side',          'Porsche 911 Carrera S, side profile',              12, 500, 207, 16688),
+      ('porsche',     '911',      'carrera-s', 'porsche-911-carrera-s-interior',                'interior',      'Porsche 911 Carrera S, interior',                  13, 522, 220, 19750),
+      ('porsche',     '911',      'carrera-s', 'porsche-911-carrera-s-red-front-three-quarter', 'three_quarter', 'Porsche 911 Carrera S in red, front three-quarter', 14, 632, 215, 27708),
+      ('porsche',     '911',      'turbo-s',   'porsche-911-turbo-s-front-three-quarter',       'three_quarter', 'Porsche 911 Turbo S, front three-quarter',         10, 800, 237, 35428),
+      ('porsche',     '911',      'turbo-s',   'porsche-911-turbo-s-rear-three-quarter',        'rear',          'Porsche 911 Turbo S, rear three-quarter',          11, 347, 188, 12094),
+      ('porsche',     '911',      'turbo-s',   'porsche-911-turbo-s-side',                      'side',          'Porsche 911 Turbo S, side profile',                12, 795, 170, 26274),
+      ('porsche',     '911',      'turbo-s',   'porsche-911-turbo-s-interior',                  'interior',      'Porsche 911 Turbo S, interior',                    13, 465, 195, 17092),
+      ('lamborghini', 'revuelto', 'revuelto',  'lamborghini-revuelto-front-three-quarter',      'three_quarter', 'Lamborghini Revuelto, front three-quarter',        10, 740, 245, 34224),
+      ('lamborghini', 'revuelto', 'revuelto',  'lamborghini-revuelto-rear-three-quarter',       'rear',          'Lamborghini Revuelto, rear three-quarter',         11, 740, 192, 26838),
+      ('lamborghini', 'revuelto', 'revuelto',  'lamborghini-revuelto-side',                     'side',          'Lamborghini Revuelto, side profile',               12, 740, 124, 17696),
+      ('lamborghini', 'revuelto', 'revuelto',  'lamborghini-revuelto-interior',                 'interior',      'Lamborghini Revuelto, interior',                   13, 740, 150, 25232)
+    ) as p (manufacturer, model, variant, file, shot, alt, display_order, width, height, bytes)
+    join public.manufacturers mf on mf.slug = p.manufacturer
+    join public.car_models m on m.manufacturer_id = mf.id and m.slug = p.model
+    join public.car_variants v on v.model_id = m.id and v.slug = p.variant
+    where not exists (select 1 from public.car_media cm
+                      where cm.variant_id = v.id
+                        and cm.url = '/images/cars/ai/' || p.file || '.webp');
+  end if;
+end;
+$do$;

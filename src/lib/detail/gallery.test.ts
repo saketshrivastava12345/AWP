@@ -74,8 +74,27 @@ describe("credits", () => {
       sourceName: "Wikimedia Commons",
       sourceUrl: "https://commons.wikimedia.org/wiki/File:A.jpg",
       text: null,
+      aiGenerated: false,
     });
     expect(creditLine(credit)).toBe("Photo: Jane Doe · Wikimedia Commons · CC BY 4.0");
+  });
+
+  it("never credits an AI-generated illustration as a photograph", () => {
+    const credit = mediaCredit(
+      makeMedia({
+        id: "ai",
+        url: "/images/cars/ai/lamborghini-revuelto-side.webp",
+        author: null,
+        license: "AI-generated illustration",
+        source: "Supplied by the site owner",
+        source_url: null,
+        credit: null,
+      }),
+    );
+    expect(credit?.aiGenerated).toBe(true);
+    expect(creditLine(credit)).toBe(
+      "AI-generated illustration, not a photograph · Supplied by the site owner",
+    );
   });
 
   it("falls back to the legacy text, parsed when possible and verbatim otherwise", () => {

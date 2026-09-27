@@ -2,6 +2,11 @@
 
 import Image from "next/image";
 import { useCallback, useState, type ReactNode } from "react";
+import {
+  AI_ILLUSTRATION_BADGE,
+  AI_ILLUSTRATION_NOTE,
+  isAiIllustrationUrl,
+} from "@/lib/media-kind";
 import { cn } from "@/lib/utils";
 
 /**
@@ -45,19 +50,33 @@ export function CarPhoto({
 
   if (failed) return <>{fallback}</>;
 
+  // An AI-generated illustration always says so on the image itself, so it
+  // can never be read as a photograph of the car (see lib/media-kind.ts).
+  const illustration = isAiIllustrationUrl(src);
+
   return (
-    <Image
-      ref={checkAlreadyFailed}
-      src={src}
-      alt={alt}
-      fill
-      sizes={sizes}
-      // `preload` and `loading` must not be combined (Next 16).
-      {...(loading === "preload"
-        ? { preload: true }
-        : { loading: loading === "eager" ? ("eager" as const) : ("lazy" as const) })}
-      onError={() => setFailed(true)}
-      className={cn("object-cover", className)}
-    />
+    <>
+      <Image
+        ref={checkAlreadyFailed}
+        src={src}
+        alt={illustration ? `${alt} (${AI_ILLUSTRATION_NOTE})` : alt}
+        fill
+        sizes={sizes}
+        // `preload` and `loading` must not be combined (Next 16).
+        {...(loading === "preload"
+          ? { preload: true }
+          : { loading: loading === "eager" ? ("eager" as const) : ("lazy" as const) })}
+        onError={() => setFailed(true)}
+        className={cn("object-cover", className)}
+      />
+      {illustration ? (
+        <span
+          title={AI_ILLUSTRATION_NOTE}
+          className="pointer-events-none absolute bottom-2 left-2 z-[3] rounded-[3px] border border-violet-400/50 bg-void/85 px-1.5 py-0.5 font-mono text-[10px] tracking-wider text-ink-50 uppercase"
+        >
+          {AI_ILLUSTRATION_BADGE}
+        </span>
+      ) : null}
+    </>
   );
 }

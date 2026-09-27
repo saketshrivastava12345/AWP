@@ -1,4 +1,5 @@
 import type { CarMedia, MediaShot } from "@/types/domain";
+import { AI_ILLUSTRATION_NOTE, isAiIllustration } from "@/lib/media-kind";
 import { safeExternalUrl } from "./provenance";
 
 /**
@@ -71,6 +72,8 @@ export type GalleryCredit = {
   sourceUrl: string | null;
   /** The legacy free-text credit, shown verbatim when it could not be read. */
   text: string | null;
+  /** An AI-generated illustration, not a photograph (see lib/media-kind.ts). */
+  aiGenerated: boolean;
 };
 
 /**
@@ -127,7 +130,9 @@ function clean(value: string | null | undefined): string | null {
  * Null only when nothing at all is recorded.
  */
 export function mediaCredit(
-  media: Pick<CarMedia, "author" | "license" | "source" | "source_url" | "credit">,
+  media: Pick<CarMedia, "author" | "license" | "source" | "source_url" | "credit"> & {
+    url?: string | null;
+  },
 ): GalleryCredit | null {
   const legacy = parseLegacyCredit(media.credit);
   const author = clean(media.author) ?? legacy?.author ?? null;
@@ -141,8 +146,11 @@ export function mediaCredit(
   // The free text is only needed when it could not be read into fields.
   const text = legacy ? null : clean(media.credit);
 
-  if (!author && !license && !sourceName && !sourceUrl && !text) return null;
+  const aiGenerated = isAiIllustration({ url: media.url, license });
+  if (!author && !license && !sourceName && !sourceUrl && !text && !aiGenerated)
+    return null;
   return {
+    aiGenerated,
     author,
     license,
     licenseUrl: licenseUrl(license),
@@ -155,6 +163,9 @@ export function mediaCredit(
 /** One line of plain text, for alt-adjacent captions and aria labels. */
 export function creditLine(credit: GalleryCredit | null): string | null {
   if (!credit) return null;
+  if (credit.aiGenerated) {
+    return [AI_ILLUSTRATION_NOTE, credit.sourceName].filter(Boolean).join(" · ");
+  }
   if (credit.text && !credit.author && !credit.license) return credit.text;
   const parts = [
     credit.author ? `Photo: ${credit.author}` : null,
