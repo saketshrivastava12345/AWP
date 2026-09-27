@@ -202,7 +202,14 @@ export function LoadingScreen() {
       <div aria-hidden="true" className="relative z-10 w-full max-w-sm px-8">
         <div className="relative mx-auto size-40">
           <svg viewBox="0 0 120 120" className="absolute inset-0 size-full -rotate-90">
-            <circle cx="60" cy="60" r="54" fill="none" stroke="var(--color-surface-4)" strokeWidth="1" />
+            <circle
+              cx="60"
+              cy="60"
+              r="54"
+              fill="none"
+              stroke="var(--color-surface-4)"
+              strokeWidth="1"
+            />
             <circle
               cx="60"
               cy="60"
@@ -216,7 +223,10 @@ export function LoadingScreen() {
               className="drop-shadow-[0_0_6px_var(--color-cyan-400)]"
             />
           </svg>
-          <svg viewBox="0 0 120 120" className="absolute inset-0 size-full animate-spin-slow">
+          <svg
+            viewBox="0 0 120 120"
+            className="absolute inset-0 size-full animate-spin-slow"
+          >
             <circle
               cx="60"
               cy="60"
@@ -243,7 +253,7 @@ export function LoadingScreen() {
 
         <div className="relative mt-8 h-1 w-full overflow-hidden bg-surface-3">
           <div
-            className="hud-segments absolute inset-y-0 left-0 bg-cyan-400 shadow-[0_0_10px_var(--color-cyan-400)]"
+            className="absolute inset-y-0 left-0 bg-cyan-400 hud-segments shadow-[0_0_10px_var(--color-cyan-400)]"
             style={{ width: `${rounded}%` }}
           />
         </div>
@@ -251,7 +261,9 @@ export function LoadingScreen() {
         <ul className="mt-5 space-y-1.5 font-mono text-xs tracking-[0.12em] uppercase">
           {log.map((line) => (
             <li key={line.label} className="flex items-center justify-between gap-4">
-              <span className={line.done ? "text-ink-200" : "text-ink-400"}>{line.label}</span>
+              <span className={line.done ? "text-ink-200" : "text-ink-400"}>
+                {line.label}
+              </span>
               <span className={line.done ? "text-cyan-300" : "text-ink-400"}>
                 {line.done ? "[ OK ]" : "[ .. ]"}
               </span>

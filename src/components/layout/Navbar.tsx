@@ -195,7 +195,10 @@ export function Navbar({
                 "xl:hover:border-cyan-400/50 xl:hover:shadow-[0_0_16px_-6px_var(--color-cyan-400)]",
               )}
             >
-              <Search className="size-[18px] shrink-0 group-hover:text-cyan-300" aria-hidden="true" />
+              <Search
+                className="size-[18px] shrink-0 group-hover:text-cyan-300"
+                aria-hidden="true"
+              />
               {/* Always the accessible name; visible from xl. */}
               <span className="font-mono text-xs tracking-[0.14em] uppercase max-xl:sr-only xl:mr-3">
                 Search

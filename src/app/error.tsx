@@ -38,7 +38,7 @@ export default function ErrorPage({
           <p
             aria-hidden="true"
             data-text="ERR"
-            className="fx-glitch mb-6 w-fit font-hud text-[clamp(4rem,14vw,8rem)] leading-none text-transparent [-webkit-text-stroke:1px_var(--color-signal-negative)] [filter:drop-shadow(0_0_16px_oklch(0.7_0.18_15/40%))]"
+            className="fx-glitch mb-6 w-fit font-hud text-[clamp(4rem,14vw,8rem)] leading-none text-transparent [filter:drop-shadow(0_0_16px_oklch(0.7_0.18_15/40%))] [-webkit-text-stroke:1px_var(--color-signal-negative)]"
           >
             ERR
           </p>

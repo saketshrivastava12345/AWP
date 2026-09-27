@@ -33,7 +33,7 @@ export default function NotFound() {
           <p
             aria-hidden="true"
             data-text="404"
-            className="fx-glitch mb-6 w-fit font-hud text-[clamp(4.5rem,16vw,10rem)] leading-none text-transparent [-webkit-text-stroke:1px_var(--color-cyan-300)] [filter:drop-shadow(0_0_18px_oklch(0.8_0.14_210/45%))]"
+            className="fx-glitch mb-6 w-fit font-hud text-[clamp(4.5rem,16vw,10rem)] leading-none text-transparent [filter:drop-shadow(0_0_18px_oklch(0.8_0.14_210/45%))] [-webkit-text-stroke:1px_var(--color-cyan-300)]"
           >
             404
           </p>

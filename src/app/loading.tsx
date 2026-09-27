@@ -39,7 +39,10 @@ export default function Loading() {
 
         <div className="mt-16 grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
           {Array.from({ length: 3 }, (_, index) => (
-            <div key={index} className="overflow-hidden rounded-card border border-line bg-surface-1">
+            <div
+              key={index}
+              className="overflow-hidden rounded-card border border-line bg-surface-1"
+            >
               <Skeleton className="aspect-[16/10] w-full rounded-none" />
               <div className="p-5">
                 <Skeleton className="h-3 w-1/4" />

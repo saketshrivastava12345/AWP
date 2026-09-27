@@ -8,17 +8,18 @@ import { MARK_PATHS, MARK_STROKES, MARK_VIEWBOX } from "@/components/layout/bran
  * It replaces the entire document, so it renders its own <html> and <body>
  * and relies on nothing the layout provides — no stylesheet, no webfonts, no
  * providers. Hence inline styles, system fonts and a plain <a> home. Colours
- * are the design tokens' values (void, ink, gold).
+ * are the design tokens' values (void, ink, gold, cyan).
  */
 
 const COLORS = {
-  void: "#06060a",
-  line: "rgba(255,255,255,0.1)",
-  lineStrong: "rgba(255,255,255,0.18)",
-  gold: "#c8a34a",
-  ink50: "#f7f7f8",
-  ink300: "#a1a1ae",
-  ink400: "#8a8a96",
+  void: "#04060b",
+  line: "rgba(200,225,245,0.12)",
+  lineStrong: "rgba(111,230,248,0.45)",
+  gold: "#d4a849",
+  cyan: "#2ed3ee",
+  ink50: "#f5f8fc",
+  ink300: "#a3afc0",
+  ink400: "#909cae",
 } as const;
 
 const eyebrow = {
@@ -133,8 +134,9 @@ export default function GlobalError({
               style={{
                 ...button,
                 border: "none",
-                backgroundColor: COLORS.gold,
+                backgroundColor: COLORS.cyan,
                 color: COLORS.void,
+                boxShadow: "0 0 18px rgba(46,211,238,0.45)",
               }}
             >
               Try again

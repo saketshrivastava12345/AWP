@@ -101,7 +101,10 @@ export async function Footer() {
           {FOOTER_SECTIONS.map((section) => (
             <nav key={section.title} aria-label={section.title}>
               <h2 className="flex items-center gap-2 text-eyebrow">
-                <span aria-hidden="true" className="size-1 bg-cyan-400 shadow-[0_0_6px_var(--color-cyan-400)]" />
+                <span
+                  aria-hidden="true"
+                  className="size-1 bg-cyan-400 shadow-[0_0_6px_var(--color-cyan-400)]"
+                />
                 {section.title}
               </h2>
               <ul className="mt-3">
