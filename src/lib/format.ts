@@ -113,7 +113,29 @@ export function formatPriceCompact(
   }
 }
 
-/** "2026-09-12" (or an ISO timestamp) -> "12 Sep 2026". Dates are shown in UTC. */
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+/**
+ * "2026-09-12" (or an ISO timestamp) -> "12 Sep 2026", in UTC.
+ *
+ * Built by hand rather than with Intl: ICU versions disagree on the short
+ * month ("Sep" in one, "Sept" in another), and a date rendered on the server
+ * by Node and again in the browser must come out identical or React reports
+ * a hydration mismatch.
+ */
 export function formatDate(
   value: string | Nullish,
   placeholder: string = NOT_AVAILABLE,
@@ -121,12 +143,7 @@ export function formatDate(
   if (!value) return placeholder;
   const date = new Date(value.length === 10 ? `${value}T00:00:00Z` : value);
   if (Number.isNaN(date.getTime())) return placeholder;
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+  return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
 
 /** "2019 – 2024", "2019 – present", or just "2019". */
@@ -176,4 +193,33 @@ export function formatEnumLabel(
   if (!value) return placeholder;
   if (UPPERCASE_ENUMS.has(value)) return value.toUpperCase();
   return humanizeEnum(value, placeholder);
+}
+
+/**
+ * The name a person would say: "Porsche 911 GT3". Many single-variant models
+ * repeat the model name as the variant name (F8 Tributo / F8 Tributo, M3 /
+ * M3), so a variant that only restates the model is dropped rather than
+ * printed twice. Blank parts are skipped.
+ */
+export function carDisplayName(
+  manufacturer: string | Nullish,
+  model: string | Nullish,
+  variant?: string | Nullish,
+): string {
+  const parts = [manufacturer, model].map((part) => part?.trim() ?? "");
+  const variantName = variant?.trim() ?? "";
+  if (variantName && variantName.toLowerCase() !== parts[1]?.toLowerCase()) {
+    parts.push(variantName);
+  }
+  return parts.filter(Boolean).join(" ");
+}
+
+/** The variant line under a model name, or null when it only repeats it. */
+export function distinctVariantName(
+  model: string | Nullish,
+  variant: string | Nullish,
+): string | null {
+  const name = variant?.trim() ?? "";
+  if (!name || name.toLowerCase() === (model?.trim().toLowerCase() ?? "")) return null;
+  return name;
 }

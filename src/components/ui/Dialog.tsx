@@ -10,6 +10,21 @@ export type DialogPlacement = "center" | "right" | "left" | "bottom" | "full";
 const FOCUSABLE =
   'a[href], area[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), iframe, [contenteditable="true"], [tabindex]:not([tabindex="-1"])';
 
+type DialogLayer = "modal" | "palette";
+
+/**
+ * Open dialogs in the order they opened. The topmost is the most recently
+ * opened one on the highest layer — not the last one in the DOM, which
+ * depends on where each dialog happens to be rendered in the tree.
+ */
+const openDialogs: { panel: HTMLElement; layer: DialogLayer }[] = [];
+
+function isTopmost(panel: HTMLElement): boolean {
+  const onPalette = openDialogs.filter((entry) => entry.layer === "palette");
+  const candidates = onPalette.length > 0 ? onPalette : openDialogs;
+  return candidates[candidates.length - 1]?.panel === panel;
+}
+
 /**
  * The one modal primitive. Sheets, the lightbox, the mobile menu and the admin
  * confirmations are all built on it, so they share the behaviour a hand-rolled
@@ -52,7 +67,7 @@ export function Dialog({
   /** Extra control rendered in the header, before the close button. */
   headerAction?: ReactNode;
   /** The search palette sits above ordinary modals. */
-  layer?: "modal" | "palette";
+  layer?: DialogLayer;
   children: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -65,12 +80,14 @@ export function Dialog({
     if (!open) return;
     const restoreTo = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
-    (initialFocusRef?.current ?? panel)?.focus({ preventScroll: true });
+    if (!panel) return;
+    const entry = { panel, layer };
+    openDialogs.push(entry);
+    (initialFocusRef?.current ?? panel).focus({ preventScroll: true });
 
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      // Only the most recently opened dialog reacts.
-      const dialogs = document.querySelectorAll("[data-aurix-dialog]");
-      if (dialogs[dialogs.length - 1] !== panel) return;
+      // Only the topmost dialog reacts.
+      if (!isTopmost(panel)) return;
 
       if (event.key === "Escape") {
         event.preventDefault();
@@ -78,7 +95,7 @@ export function Dialog({
         onClose();
         return;
       }
-      if (event.key !== "Tab" || !panel) return;
+      if (event.key !== "Tab") return;
 
       const focusable = [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
         (element) => element.offsetParent !== null || element === document.activeElement,
@@ -105,18 +122,20 @@ export function Dialog({
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
+      const index = openDialogs.indexOf(entry);
+      if (index !== -1) openDialogs.splice(index, 1);
       // Restore only if focus is still inside (or lost), never steal it back
       // from something the user moved to deliberately.
       if (
         restoreTo &&
         (!document.activeElement ||
-          panel?.contains(document.activeElement) ||
+          panel.contains(document.activeElement) ||
           document.activeElement === document.body)
       ) {
         restoreTo.focus({ preventScroll: true });
       }
     };
-  }, [open, onClose, initialFocusRef]);
+  }, [open, onClose, initialFocusRef, layer]);
 
   if (!open) return null;
 

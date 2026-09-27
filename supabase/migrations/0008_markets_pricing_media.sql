@@ -658,7 +658,10 @@ begin
   return query
   (
     select 'car'::text, v.id,
-           mf.name || ' ' || m.name || ' ' || v.name,
+           -- "Ferrari F8 Tributo", not "Ferrari F8 Tributo F8 Tributo": many
+           -- single-variant models repeat the model name as the variant name.
+           mf.name || ' ' || m.name
+             || case when lower(v.name) = lower(m.name) then '' else ' ' || v.name end,
            concat_ws(' · ', cat.name, v.year_start::text),
            '/cars/' || mf.slug || '/' || m.slug || '/' || v.slug,
            coalesce(
