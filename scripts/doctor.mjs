@@ -87,7 +87,33 @@ for (const line of readFileSync(envPath, "utf8").replace(/^﻿/, "").split(/\r?\
   process.env[match[1]] ??= value;
 }
 
-const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
+/**
+ * Same rules as src/lib/supabase-url.ts (the app applies them too): the
+ * project URL is a bare origin, so a pasted "/rest/v1" suffix, a trailing
+ * slash or a dashboard link is reduced to it.
+ */
+function normalizeSupabaseUrl(raw) {
+  const trimmed = raw.trim();
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return trimmed;
+  }
+  if (/^(?:www\.)?supabase\.com$/i.test(parsed.hostname)) {
+    const ref = /^\/dashboard\/project\/([a-z0-9]{20})(?:\/.*)?$/i.exec(
+      parsed.pathname,
+    )?.[1];
+    if (ref) return `https://${ref.toLowerCase()}.supabase.co`;
+  }
+  const path = parsed.pathname
+    .replace(/\/(?:rest|auth|storage|realtime|graphql|functions)\/v1(?:\/.*)?$/i, "")
+    .replace(/\/+$/, "");
+  return `${parsed.origin}${path}`;
+}
+
+const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const url = normalizeSupabaseUrl(rawUrl);
 const key = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
 const dbUrl = (process.env.SUPABASE_DB_URL ?? "").trim();
 
@@ -105,7 +131,7 @@ try {
   const parsed = new URL(url);
   if (!/^https?:$/.test(parsed.protocol)) throw new Error("not http(s)");
   host = parsed.host;
-  pass("Project URL parses", host);
+  pass("Project URL parses", url);
 } catch {
   fail(
     "NEXT_PUBLIC_SUPABASE_URL is not a valid URL",
@@ -125,6 +151,13 @@ if (
     "Replace NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY with your own project's values (Supabase → Project Settings → Data API and API Keys).",
   );
   finish();
+}
+if (url !== rawUrl.trim().replace(/\/+$/, "")) {
+  fail(
+    "NEXT_PUBLIC_SUPABASE_URL has extra text after the project address",
+    rawUrl.trim(),
+    `Set it to exactly ${url} in .env.local — no /rest/v1 or other path on the end — then restart \`npm run dev\`. (The app now strips it by itself, but other tools may not.)`,
+  );
 }
 pass("Publishable key present", `${key.slice(0, 15)}… (${key.length} characters)`);
 if (key.length < 30) {
@@ -213,6 +246,14 @@ if (health.status === 401 || health.status === 403) {
     "The project rejected the API key",
     health.text.slice(0, 120),
     "NEXT_PUBLIC_SUPABASE_ANON_KEY does not match this project. Copy the publishable key again, in one piece, from Project Settings → API Keys.",
+  );
+  finish();
+}
+if (health.status === 404) {
+  fail(
+    "No Supabase API answered at that address",
+    `auth health HTTP 404 ${health.json?.message ?? health.text.slice(0, 80)}`,
+    `Check NEXT_PUBLIC_SUPABASE_URL is exactly the Project URL from Supabase → Project Settings → Data API (like https://abcdefghijkl.supabase.co), and that the project still exists in the dashboard.`,
   );
   finish();
 }

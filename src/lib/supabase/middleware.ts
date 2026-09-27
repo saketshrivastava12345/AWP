@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
+import { getPublicEnv } from "@/lib/env";
 
 /**
  * Refresh the Supabase session on every matched request.
@@ -13,14 +14,12 @@ import type { Database } from "@/types/database";
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
   let response = NextResponse.next({ request });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   // Unconfigured is a valid state: the catalogue still renders, so the
   // middleware must not throw the whole site down.
-  if (!url || !key) return response;
+  const env = getPublicEnv();
+  if (!env) return response;
 
-  const supabase = createServerClient<Database>(url, key, {
+  const supabase = createServerClient<Database>(env.supabaseUrl, env.supabaseAnonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
