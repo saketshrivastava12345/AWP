@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- The AURIX mark (src/components/layout/brand-mark.ts), gold on void. -->
+  <defs>
+    <linearGradient id="g" x1="16" y1="5" x2="16" y2="27" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e8d19a"/>
+      <stop offset="0.55" stop-color="#c8a34a"/>
+      <stop offset="1" stop-color="#a88534"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="#06060a"/>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" stroke="#c8a34a" stroke-opacity="0.28"/>
+  <g transform="translate(16 16.4) scale(0.74) translate(-16 -16)" stroke="url(#g)">
+    <path d="M5 26.5 16 5.5l11 21" stroke-width="3.2" stroke-linejoin="miter" stroke-miterlimit="10"/>
+    <path d="M11.2 20h9.6" stroke-width="2.4"/>
+  </g>
+</svg>

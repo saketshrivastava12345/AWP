@@ -30,7 +30,7 @@ export function EmptyState({
       )}
     >
       {icon ? <div className="mb-5 text-ink-500">{icon}</div> : null}
-      <h3 className="font-display text-sm tracking-[0.14em] text-ink-100 uppercase">
+      <h3 className="font-display text-sm tracking-button text-ink-100 uppercase">
         {title}
       </h3>
       {description ? (

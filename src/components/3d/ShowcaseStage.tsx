@@ -1,21 +1,28 @@
 "use client";
 
-import { useMemo, useRef, type RefObject } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import type * as THREE from "three";
 import type { CarBuild } from "@/lib/car-build";
 import type { TourStop } from "@/lib/anatomy-tour";
+import { VOID } from "@/lib/viewer-colors";
 import { Lighting, StudioFloor } from "./Lighting";
-import { ProceduralCar, useCarLayout, type CarMotion } from "./ProceduralCar";
+import { ProceduralCar, type CarMotion } from "./ProceduralCar";
+import { useCarLayout } from "./layout-cache";
 import { tourShots } from "./tour-cameras";
 import { Director, Road, type TourProgress } from "./StageDirector";
 
 /**
  * The 3D stage behind the anatomy tour. The page writes the scroll position
  * into `progressRef`; the Director (shared with the home page story) turns it
- * into camera moves every frame, so scrolling never causes a React render.
- * Only the stop index, which changes a handful of times per page, is state.
+ * into camera moves, so scrolling never causes a React render. Only the stop
+ * index, which changes a handful of times per page, is state.
+ *
+ * Rendering is on demand: a scroll asks for a frame, and the Director keeps
+ * asking until the camera has caught up. Reading a card with the page still
+ * costs nothing. The layout — and through it the car's geometry — is the one
+ * the interactive viewer further down the page uses.
  */
 
 const smoothstep = (t: number) => {
@@ -60,6 +67,46 @@ function Callout({
   );
 }
 
+/** A frame for every scroll event; the Director takes it from there. */
+function ScrollFrames() {
+  const invalidate = useThree((state) => state.invalidate);
+  useEffect(() => {
+    const onScroll = () => invalidate();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [invalidate]);
+  return null;
+}
+
+/** Calls back after the first frame has really been drawn (not on creation). */
+function FirstFrame({ onFrame }: { onFrame?: () => void }) {
+  const frames = useRef(0);
+  const invalidate = useThree((state) => state.invalidate);
+  useEffect(() => {
+    invalidate();
+  }, [invalidate]);
+  useFrame(() => {
+    if (frames.current > 1) return;
+    frames.current += 1;
+    if (frames.current === 2) onFrame?.();
+    else invalidate();
+  });
+  return null;
+}
+
+/** Leaving the "never" loop: draw once so the frame is current. */
+function Wake({ running }: { running: boolean }) {
+  const invalidate = useThree((state) => state.invalidate);
+  useEffect(() => {
+    if (running) invalidate();
+  }, [running, invalidate]);
+  return null;
+}
+
 export function ShowcaseStage({
   build,
   stops,
@@ -78,8 +125,9 @@ export function ShowcaseStage({
   active: number;
   reducedMotion: boolean;
   lowDetail: boolean;
-  /** False when the tour is off-screen — stops the render loop entirely. */
+  /** False when off screen or another scene holds the render slot. */
   running: boolean;
+  /** The first frame has been drawn. */
   onReady?: () => void;
 }) {
   const layout = useCarLayout(build);
@@ -99,9 +147,9 @@ export function ShowcaseStage({
 
   return (
     <Canvas
-      frameloop={running ? "always" : "never"}
+      frameloop={running ? "demand" : "never"}
       dpr={lowDetail ? [1, 1.5] : [1, 1.75]}
-      shadows={!lowDetail}
+      shadows={lowDetail ? false : "percentage"}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       camera={{
         position: shots[0]?.position.toArray() ?? [5, 1.5, 6],
@@ -109,17 +157,18 @@ export function ShowcaseStage({
         near: 0.05,
         far: 140,
       }}
-      onCreated={() => onReady?.()}
       aria-hidden="true"
       // The canvas is scenery for the text beside it. It must never swallow
       // the scroll that drives it.
       style={{ pointerEvents: "none" }}
     >
-      <color attach="background" args={["#06060a"]} />
-      <fog attach="fog" args={["#06060a", 11, 32]} />
+      <color attach="background" args={[VOID]} />
+      <fog attach="fog" args={[VOID, 11, 32]} />
 
       <Lighting lowDetail={lowDetail} />
-      <StudioFloor lowDetail={lowDetail} />
+      {/* The tour's car never comes apart, so its contact shadow is captured
+          once rather than re-rendered every frame. */}
+      <StudioFloor lowDetail={lowDetail} contactFrames={1} />
       <Road layout={layout} motionRef={motionRef} />
 
       <ProceduralCar
@@ -127,6 +176,7 @@ export function ShowcaseStage({
         ghost={shot?.ghost ?? 0}
         highlightGroup={shot?.highlight ?? null}
         lowDetail={lowDetail}
+        surfaceDetail={!lowDetail}
         reducedMotion={reducedMotion}
         motion={motionRef}
       />
@@ -149,6 +199,9 @@ export function ShowcaseStage({
         reducedMotion={reducedMotion}
         drive={drive}
       />
+      <ScrollFrames />
+      <Wake running={running} />
+      <FirstFrame onFrame={onReady} />
     </Canvas>
   );
 }

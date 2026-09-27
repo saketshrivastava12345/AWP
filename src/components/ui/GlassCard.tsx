@@ -11,6 +11,14 @@ type GlassCardOwnProps = {
   interactive?: boolean;
   /** Brushed-metal highlight along the top edge. */
   edgeLight?: boolean;
+  /**
+   * Frosts whatever is behind the card. Off by default: every backdrop-filter
+   * is its own compositing layer, a grid of fifty cards would stack fifty of
+   * them (expensive on phones), and over the flat void ground the blur has
+   * nothing to show anyway. Turn it on only for a card that floats over
+   * imagery, a canvas or moving content.
+   */
+  blur?: boolean;
 };
 
 /**
@@ -31,6 +39,7 @@ export function GlassCard<T extends ElementType = "div">({
   as,
   interactive = false,
   edgeLight = true,
+  blur = false,
   ...rest
 }: GlassCardProps<T>) {
   // See the note in Container.tsx: R3F v9 poisons a bare ElementType render.
@@ -41,11 +50,12 @@ export function GlassCard<T extends ElementType = "div">({
   return (
     <Component
       className={cn(
-        "relative rounded-md border border-line bg-surface-1/70 backdrop-blur-md",
+        "relative rounded-md border border-line",
+        blur ? "bg-surface-1/70 backdrop-blur-md" : "bg-surface-1/80",
         edgeLight && "edge-light",
         interactive &&
-          "transition-colors hover:border-line-strong hover:bg-surface-2/70 " +
-            "duration-300 ease-[var(--ease-cinematic)]",
+          "transition-colors duration-(--duration-fast) ease-cinematic " +
+            "hover:border-line-strong hover:bg-surface-2/80",
         className,
       )}
       {...rest}

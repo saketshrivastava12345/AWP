@@ -1,0 +1,70 @@
+/* Chrome-only CSS that Tailwind utilities cannot express: keyframes and a
+   scroll-driven animation. Scoped as a CSS module so the names never collide
+   with the global stylesheet. */
+
+/* --- Navbar scroll progress ------------------------------------------------
+   The bar is driven by the scroll position without React. Where the browser
+   supports scroll-driven animations the compositor runs it outright; the
+   ScrollProgress component only attaches a (ref-based, rAF-coalesced) scroll
+   listener where it does not. */
+.progress {
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  will-change: transform;
+}
+
+@keyframes progress-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  .progress {
+    animation: progress-grow linear both;
+    animation-duration: auto;
+    animation-timeline: scroll(root block);
+  }
+}
+
+/* --- Command palette: indeterminate "searching" hairline ------------------- */
+@keyframes sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.sweep {
+  width: 40%;
+  animation: sweep 1.1s var(--ease-metal) infinite;
+}
+
+/* --- Loading screen failsafe ------------------------------------------------
+   The screen is server-rendered and normally dismissed by React. If the
+   JavaScript never runs (blocked, failed to load, crashed during hydration) a
+   <noscript> rule cannot help, so the overlay also fades itself out after a
+   generous delay. React's own exit (data-leaving) replaces this animation. */
+@keyframes failsafe-hide {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.loadingFailsafe {
+  animation: failsafe-hide 0.6s ease-out 6s forwards;
+}
+
+/* Once React has hydrated the screen it owns the exit, so the failsafe is
+   cancelled — otherwise a slow first load could see it fade out on the timer
+   and then reappear for React's own exit animation. (The exit rule in
+   globals.css targets the id, so it still wins over this.) */
+.loadingFailsafe[data-hydrated] {
+  animation: none;
+}

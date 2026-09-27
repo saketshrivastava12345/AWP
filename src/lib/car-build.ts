@@ -40,6 +40,11 @@ export type CarBuild = {
   rightHandDrive: boolean;
   /** A rear wing is catalogued for this variant (variant_parts), so draw one. */
   rearWing: boolean;
+  /**
+   * The car charges from the grid (electric or plug-in hybrid), so it has a
+   * charging inlet. A self-charging hybrid does not.
+   */
+  plugIn: boolean;
 };
 
 /**
@@ -81,6 +86,7 @@ export function carBuildFromDetail(detail: VariantDetail): CarBuild {
     seats: dimensions?.seating_capacity ?? null,
     rightHandDrive: RIGHT_HAND_DRIVE_MARKETS.has(country.iso_code.toUpperCase()),
     rearWing: parts.some(({ part }) => part.slug === "rear-spoiler"),
+    plugIn: variant.fuel_type === "electric" || variant.fuel_type === "phev",
   };
 }
 
@@ -108,4 +114,5 @@ export const GENERIC_BUILD: CarBuild = {
   seats: 2,
   rightHandDrive: false,
   rearWing: false,
+  plugIn: false,
 };

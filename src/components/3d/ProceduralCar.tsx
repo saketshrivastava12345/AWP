@@ -1,19 +1,36 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import gsap from "gsap";
 import * as THREE from "three";
 import type { ViewerGroup } from "@/types/domain";
-import type { CarBuild } from "@/lib/car-build";
-import { EXPLODE_VECTORS, VIEWER_GROUPS, groupsForPowertrain } from "./viewer-config";
-import { computeLayout, type CarLayout } from "./car-layout";
+import { GOLD } from "@/lib/viewer-colors";
+import { offsetAt, planExplode, type GroupExtent } from "@/lib/viewer-explode";
 import {
-  DEFAULT_PAINT,
+  DISC_PARAMS,
+  WHEEL_FINISH_PARAMS,
+  type DiscType,
+  type WheelFinish,
+  type WheelStyle,
+} from "@/lib/viewer-paint";
+import { VIEWER_GROUPS, drawnGroups } from "./viewer-config";
+import type { CarLayout } from "./car-layout";
+import {
+  DEFAULT_SURFACE,
   MaterialKit,
+  blendSurface,
   setDim,
   setHighlight,
-  type PaintId,
+  type PaintSurface,
 } from "./car-materials";
 import {
   caliperGeometry,
@@ -23,16 +40,13 @@ import {
   spokesGeometry,
   tyreGeometry,
 } from "./car-parts";
-import {
-  buildBattery,
-  buildElectronics,
-  buildEngine,
-  buildInterior,
-  buildSuspension,
-  buildTransmission,
-  type Part,
-} from "./car-systems";
+import { buildSystems, type Part } from "./car-systems";
+import { buildBodyGeometry } from "./body-geometry";
+import { useCachedGeometry } from "./geometry-cache";
 import { CarBody } from "./CarBody";
+import { wheelDefaults } from "./wheel-defaults";
+
+export { useCarLayout } from "./layout-cache";
 
 /**
  * The procedural car.
@@ -42,140 +56,325 @@ import { CarBody } from "./CarBody";
  * lofted surface drawn from the variant's real dimensions (car-shape.ts); the
  * mechanical layout follows its real engine, drivetrain and seating
  * (car-layout.ts). Every subsystem is its own named group, which is what the
- * exploded view animates, the anatomy tour highlights, and a click selects.
+ * exploded view moves, the anatomy tour highlights, and a click selects.
+ *
+ * Rendering is on demand: every animation here (explode, fades, highlights,
+ * paint) asks for frames while it runs and stops asking when it settles, so
+ * a still car costs nothing.
  */
 
 /** Distance travelled, in metres. The tour drives it; the wheels roll to match. */
 export type CarMotion = { distance: number };
 
+/** How the car is finished. Every field is presentation, never catalogue data. */
+export type CarAppearance = {
+  paint: PaintSurface;
+  /** Spoke pattern; null keeps the body style's own. */
+  wheelStyle: WheelStyle | null;
+  /** Rim finish; null keeps the body style's own. */
+  wheelFinish: WheelFinish | null;
+  /** Caliper colour, hex. */
+  caliper: string;
+  disc: DiscType;
+};
+
+/** A point that rides on part of the car, for hotspots and callouts. */
+export type AnchorPoint = { object: THREE.Object3D; local: THREE.Vector3 };
+export type AnchorRegistry = Map<string, AnchorPoint>;
+
 export type ProceduralCarProps = {
   /** From `useCarLayout(build)`, shared with whatever frames the camera. */
   layout: CarLayout;
-  paint?: PaintId;
+  appearance?: Partial<CarAppearance>;
   /** 0 = assembled, 1 = fully exploded. */
   explode?: number;
   /** Group chosen by the visitor. */
   selectedGroup?: ViewerGroup | null;
   /** Group the page is pointing at (the tour, or a part's page). */
   highlightGroup?: ViewerGroup | null;
+  /** Group under the pointer. */
+  hoveredGroup?: ViewerGroup | null;
+  /** X-ray: these groups glow and the others (bar the body) step back. */
+  emphasis?: readonly ViewerGroup[] | null;
   onSelectGroup?: (group: ViewerGroup) => void;
+  /** Pointer over a group (with its position on the canvas) or off it. */
+  onHoverGroup?: (group: ViewerGroup | null, point?: { x: number; y: number }) => void;
   /** Fewer segments and fewer details on small devices. */
   lowDetail?: boolean;
+  /** Procedural surface textures (flake, weave, brushed metal). */
+  surfaceDetail?: boolean;
+  /** Physically transmissive windscreen glass. */
+  glassTransmission?: boolean;
   /** 0 = solid bodywork, 1 = translucent shell showing the systems inside. */
   ghost?: number;
-  /** Skips the explode tween and snaps instead. */
+  /** Snaps the explode and paint changes instead of animating them. */
   reducedMotion?: boolean;
   motion?: RefObject<CarMotion | null>;
+  /** Filled with hotspot and callout anchors while mounted. */
+  anchors?: AnchorRegistry;
+  /** True while parts are moving apart or together. */
+  onExplodeMotion?: (moving: boolean) => void;
+  /** The geometry is built and in the scene. */
+  onReady?: () => void;
 };
 
-/** The layout of a car, memoised on its build. */
-export function useCarLayout(build: CarBuild): CarLayout {
-  return useMemo(() => computeLayout(build), [build]);
+// ---------------------------------------------------------------------------
+// Material transitions
+// ---------------------------------------------------------------------------
+
+type Tint = { color: string; metalness: number; roughness: number };
+
+const TWEEN = { duration: 0.6, ease: "power2.inOut" } as const;
+
+const scratchColor = new THREE.Color();
+
+/** One step of a tint change; returns what the material now shows. */
+function tintStep(
+  material: THREE.MeshStandardMaterial,
+  from: Tint,
+  to: Tint,
+  t: number,
+): Tint {
+  material.color.set(from.color).lerp(scratchColor.set(to.color), t);
+  material.metalness = THREE.MathUtils.lerp(from.metalness, to.metalness, t);
+  material.roughness = THREE.MathUtils.lerp(from.roughness, to.roughness, t);
+  return {
+    color: `#${material.color.getHexString()}`,
+    metalness: material.metalness,
+    roughness: material.roughness,
+  };
+}
+
+/** One step of a paint change, flake included; returns what is now shown. */
+function paintStep(
+  kit: MaterialKit,
+  material: THREE.MeshPhysicalMaterial,
+  from: PaintSurface,
+  to: PaintSurface,
+  t: number,
+): PaintSurface {
+  blendSurface(material, from, to, t);
+  const flake = THREE.MathUtils.lerp(from.flake, to.flake, t);
+  kit.setFlake(flake);
+  return {
+    color: `#${material.color.getHexString()}`,
+    metalness: material.metalness,
+    roughness: material.roughness,
+    clearcoat: material.clearcoat,
+    clearcoatRoughness: material.clearcoatRoughness,
+    flake,
+    iridescence: t >= 1 ? to.iridescence : material.iridescence,
+  };
 }
 
 /**
- * A subsystem group: its own explode offset, highlight and pointer handling.
- *
- * The explode offset is tweened with GSAP and staggered by index so the car
- * comes apart in sequence rather than all at once.
+ * Ease a material's colour and finish to a new value over ~600 ms. An
+ * interrupted change continues from wherever the material had got to.
  */
-function Subsystem({
-  name,
-  index,
-  explode,
-  explodeScale,
-  kit,
-  highlighted,
-  dimmed,
-  reducedMotion,
-  onSelect,
-  children,
-}: {
-  name: ViewerGroup;
-  index: number;
-  explode: number;
-  explodeScale: number;
-  kit: MaterialKit;
-  highlighted: boolean;
-  /** Another subsystem is the subject: fade this one so it can be seen. */
-  dimmed: boolean;
-  reducedMotion: boolean;
-  onSelect?: (group: ViewerGroup) => void;
-  children: ReactNode;
-}) {
-  const ref = useRef<THREE.Group>(null);
-  const vector = EXPLODE_VECTORS[name];
+function useTint(
+  material: THREE.MeshStandardMaterial,
+  tint: Tint,
+  reducedMotion: boolean,
+) {
   const invalidate = useThree((state) => state.invalidate);
+  const shown = useRef<Tint | null>(null);
+  const { color, metalness, roughness } = tint;
 
   useEffect(() => {
-    const group = ref.current;
-    if (!group) return;
-    const target = {
-      x: vector[0] * explode * explodeScale,
-      y: vector[1] * explode * explodeScale,
-      z: vector[2] * explode * explodeScale,
-    };
-    if (reducedMotion) {
-      group.position.set(target.x, target.y, target.z);
+    const to: Tint = { color, metalness, roughness };
+    const from = shown.current;
+    if (!from || reducedMotion) {
+      shown.current = tintStep(material, to, to, 1);
       invalidate();
       return;
     }
-    const tween = gsap.to(group.position, {
-      ...target,
-      duration: 0.9,
-      delay: index * 0.045,
-      ease: "power3.inOut",
-      onUpdate: invalidate,
+    if (
+      from.color === to.color &&
+      from.metalness === to.metalness &&
+      from.roughness === to.roughness
+    )
+      return;
+    const state = { t: 0 };
+    const tween = gsap.to(state, {
+      t: 1,
+      ...TWEEN,
+      onUpdate: () => {
+        shown.current = tintStep(material, from, to, state.t);
+        invalidate();
+      },
     });
     return () => {
       tween.kill();
     };
-  }, [explode, explodeScale, vector, index, invalidate, reducedMotion]);
+  }, [material, color, metalness, roughness, reducedMotion, invalidate]);
+}
 
-  // The subsystem being discussed keeps its materials and gains a faint
-  // warmth; the rest fade back. Both eased, so a change of subject dissolves.
+/** The same for the car paint, which also has clear coat, flake and pearl. */
+function usePaint(kit: MaterialKit, paint: PaintSurface, reducedMotion: boolean) {
+  const invalidate = useThree((state) => state.invalidate);
+  const shown = useRef<PaintSurface | null>(null);
+  const material = kit.get("paint");
+  const {
+    color,
+    metalness,
+    roughness,
+    clearcoat,
+    clearcoatRoughness,
+    flake,
+    iridescence,
+  } = paint;
+
+  useEffect(() => {
+    const to: PaintSurface = {
+      color,
+      metalness,
+      roughness,
+      clearcoat,
+      clearcoatRoughness,
+      flake,
+      iridescence,
+    };
+    const from = shown.current;
+    if (!from || reducedMotion) {
+      shown.current = paintStep(kit, material, to, to, 1);
+      invalidate();
+      return;
+    }
+    const state = { t: 0 };
+    const tween = gsap.to(state, {
+      t: 1,
+      ...TWEEN,
+      onUpdate: () => {
+        shown.current = paintStep(kit, material, from, to, state.t);
+        invalidate();
+      },
+    });
+    return () => {
+      tween.kill();
+    };
+  }, [
+    kit,
+    material,
+    color,
+    metalness,
+    roughness,
+    clearcoat,
+    clearcoatRoughness,
+    flake,
+    iridescence,
+    reducedMotion,
+    invalidate,
+  ]);
+}
+
+// ---------------------------------------------------------------------------
+// Subsystem
+// ---------------------------------------------------------------------------
+
+/** Pointer travel (px) beyond which a press is a drag, not a click. */
+const CLICK_TOLERANCE = 5;
+
+/**
+ * A subsystem group: its highlight, fade and pointer handling. The explode
+ * offset is set on the group by ProceduralCar's timeline.
+ */
+function Subsystem({
+  name,
+  kit,
+  highlight,
+  dim,
+  pickable,
+  onHover,
+  onSelect,
+  register,
+  children,
+}: {
+  name: ViewerGroup;
+  kit: MaterialKit;
+  /** 0–1: how warmly the group is tinted. */
+  highlight: number;
+  /** 0–1: how far the group steps back. */
+  dim: number;
+  /** Takes part in hover and click. */
+  pickable: boolean;
+  onHover?: ProceduralCarProps["onHoverGroup"];
+  onSelect?: (group: ViewerGroup) => void;
+  register: (name: ViewerGroup, group: THREE.Group | null) => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const invalidate = useThree((state) => state.invalidate);
+
+  useLayoutEffect(() => {
+    register(name, ref.current);
+    return () => register(name, null);
+  }, [name, register]);
+
+  // Changes of subject dissolve rather than switch.
   const amount = useRef(0);
-  const dim = useRef(0);
+  const faded = useRef(0);
+  useEffect(() => {
+    invalidate();
+  }, [highlight, dim, invalidate]);
+
   useFrame((_, delta) => {
     const step = Math.min(delta, 0.1);
-    const target = highlighted ? 1 : 0;
-    if (amount.current !== target) {
-      const next = THREE.MathUtils.damp(amount.current, target, 5, step);
-      amount.current = Math.abs(next - target) < 0.01 ? target : next;
+    let moving = false;
+    if (amount.current !== highlight) {
+      const next = THREE.MathUtils.damp(amount.current, highlight, 6, step);
+      amount.current = Math.abs(next - highlight) < 0.01 ? highlight : next;
       setHighlight(kit, amount.current);
+      moving = moving || amount.current !== highlight;
     }
-    const dimTarget = dimmed ? 1 : 0;
-    if (dim.current !== dimTarget) {
-      const next = THREE.MathUtils.damp(dim.current, dimTarget, 5, step);
-      dim.current = Math.abs(next - dimTarget) < 0.01 ? dimTarget : next;
-      setDim(kit, dim.current);
+    if (faded.current !== dim) {
+      const next = THREE.MathUtils.damp(faded.current, dim, 5, step);
+      faded.current = Math.abs(next - dim) < 0.01 ? dim : next;
+      setDim(kit, faded.current);
+      moving = moving || faded.current !== dim;
     }
+    if (moving) invalidate();
+  });
+
+  const interactive = pickable && (onHover !== undefined || onSelect !== undefined);
+  const point = (event: ThreeEvent<PointerEvent>) => ({
+    x: event.nativeEvent.offsetX,
+    y: event.nativeEvent.offsetY,
   });
 
   return (
     <group
       ref={ref}
       name={name}
-      onPointerDown={
-        onSelect
+      onPointerOver={
+        interactive
           ? (event) => {
               event.stopPropagation();
-              onSelect(name);
+              onHover?.(name, point(event));
             }
           : undefined
       }
-      onPointerOver={
-        onSelect
+      onPointerMove={
+        interactive
           ? (event) => {
               event.stopPropagation();
-              document.body.style.cursor = "pointer";
+              onHover?.(name, point(event));
             }
           : undefined
       }
       onPointerOut={
-        onSelect
+        interactive
           ? () => {
-              document.body.style.cursor = "";
+              onHover?.(null);
+            }
+          : undefined
+      }
+      onClick={
+        interactive
+          ? (event) => {
+              // A drag to orbit that happens to end over the car is not a click.
+              if (event.delta > CLICK_TOLERANCE) return;
+              event.stopPropagation();
+              onSelect?.(name);
             }
           : undefined
       }
@@ -208,89 +407,54 @@ function PartList({
   );
 }
 
-/**
- * Eases each corner outward to its own side in the exploded view. A single
- * explode vector per group would push all four wheels the same way.
- */
-function useSpread(
-  layout: CarLayout,
-  explode: number,
-  distance: number,
-  reducedMotion: boolean,
-) {
-  const groups = useRef<(THREE.Group | null)[]>([]);
-  const current = useRef(0);
-  const invalidate = useThree((state) => state.invalidate);
-  useFrame((_, delta) => {
-    const target = explode * distance * (layout.spec.length / 4.5);
-    if (current.current === target) return;
-    const next = reducedMotion
-      ? target
-      : THREE.MathUtils.damp(current.current, target, 4, Math.min(delta, 0.1));
-    current.current = Math.abs(next - target) < 0.001 ? target : next;
-    layout.wheels.forEach(({ position, side }, index) => {
-      const group = groups.current[index];
-      if (group) group.position.x = position.x + side * current.current;
-    });
-    invalidate();
-  });
-  return groups;
-}
+type Corners = { wheels: (THREE.Group | null)[]; brakes: (THREE.Group | null)[] };
 
 /** Road wheels. The rolling parts turn with `motion.distance`. */
 function Wheels({
   layout,
   kit,
   lowDetail,
+  style,
   motion,
-  explode,
-  reducedMotion,
+  corners,
 }: {
   layout: CarLayout;
   kit: MaterialKit;
   lowDetail: boolean;
+  style: WheelStyle;
   motion?: RefObject<CarMotion | null>;
-  explode: number;
-  reducedMotion: boolean;
+  corners: RefObject<Corners>;
 }) {
-  const corners = useSpread(layout, explode, 1.25, reducedMotion);
   const { spec } = layout;
   const geometry = useMemo(() => {
     const segments = lowDetail ? 28 : 56;
     return {
       tyre: tyreGeometry(spec.wheelRadius, spec.tyreWidth, spec.rimRadius, segments),
       barrel: rimBarrelGeometry(spec.rimRadius, spec.tyreWidth, segments),
-      spokes: spokesGeometry(spec.def.spokes, spec.rimRadius, spec.tyreWidth),
+      spokes: spokesGeometry(style, spec.rimRadius, spec.tyreWidth),
       hub: hubDetailGeometry(spec.tyreWidth),
     };
-  }, [spec, lowDetail]);
+  }, [spec, lowDetail, style]);
   useEffect(() => () => Object.values(geometry).forEach((g) => g.dispose()), [geometry]);
 
   const spinners = useRef<(THREE.Group | null)[]>([]);
   useFrame(() => {
-    const distance = motion?.current?.distance ?? 0;
-    const angle = distance / spec.wheelRadius;
+    if (!motion) return;
+    const angle = (motion.current?.distance ?? 0) / spec.wheelRadius;
     layout.wheels.forEach(({ side }, index) => {
       const group = spinners.current[index];
       if (group) group.rotation.x = side === 1 ? angle : -angle;
     });
   });
 
-  // Dark wheels on the performance styles, bright alloys elsewhere.
-  const dark =
-    spec.style === "supercar" ||
-    spec.style === "sports-rear" ||
-    spec.style === "gt" ||
-    spec.style === "electric-sedan";
-  const rim = kit.get(dark ? "rimDark" : "rim");
-
+  const rim = kit.get("rim");
   return (
     <>
       {layout.wheels.map(({ position, side }, index) => (
         <group
           key={index}
           ref={(node) => {
-            corners.current[index] = node;
+            corners.current.wheels[index] = node;
           }}
           position={position}
           rotation={[0, side === 1 ? 0 : Math.PI, 0]}
@@ -316,16 +480,13 @@ function Brakes({
   layout,
   kit,
   motion,
-  explode,
-  reducedMotion,
+  corners,
 }: {
   layout: CarLayout;
   kit: MaterialKit;
   motion?: RefObject<CarMotion | null>;
-  explode: number;
-  reducedMotion: boolean;
+  corners: RefObject<Corners>;
 }) {
-  const corners = useSpread(layout, explode, 0.7, reducedMotion);
   const { spec } = layout;
   const geometry = useMemo(
     () => ({
@@ -338,7 +499,8 @@ function Brakes({
 
   const spinners = useRef<(THREE.Group | null)[]>([]);
   useFrame(() => {
-    const angle = (motion?.current?.distance ?? 0) / spec.wheelRadius;
+    if (!motion) return;
+    const angle = (motion.current?.distance ?? 0) / spec.wheelRadius;
     layout.wheels.forEach(({ side }, index) => {
       const group = spinners.current[index];
       if (group) group.rotation.x = side === 1 ? angle : -angle;
@@ -352,7 +514,7 @@ function Brakes({
         <group
           key={index}
           ref={(node) => {
-            corners.current[index] = node;
+            corners.current.brakes[index] = node;
           }}
           position={position}
           rotation={[0, side === 1 ? 0 : Math.PI, 0]}
@@ -377,21 +539,36 @@ function Brakes({
   );
 }
 
+// ---------------------------------------------------------------------------
+// The car
+// ---------------------------------------------------------------------------
+
 export function ProceduralCar({
   layout,
-  paint = DEFAULT_PAINT,
+  appearance,
   explode = 0,
   selectedGroup = null,
   highlightGroup = null,
+  hoveredGroup = null,
+  emphasis = null,
   onSelectGroup,
+  onHoverGroup,
   lowDetail = false,
+  surfaceDetail = true,
+  glassTransmission = false,
   ghost = 0,
   reducedMotion = false,
   motion,
+  anchors,
+  onExplodeMotion,
+  onReady,
 }: ProceduralCarProps) {
-  const { build } = layout;
+  const { build, spec } = layout;
+  const invalidate = useThree((state) => state.invalidate);
 
   // One material kit per subsystem, so a highlight tints only its own group.
+  // Created once; quality changes are applied to the live kits, before the
+  // first frame (layout effect), so no frame is drawn with the wrong recipe.
   const kits = useMemo(
     () =>
       Object.fromEntries(
@@ -400,69 +577,289 @@ export function ProceduralCar({
     [],
   );
   useEffect(() => () => Object.values(kits).forEach((kit) => kit.dispose()), [kits]);
+  useLayoutEffect(() => {
+    for (const kit of Object.values(kits)) kit.setSurfaceDetail(surfaceDetail);
+    kits.body.setGlassTransmission(glassTransmission);
+    invalidate();
+  }, [kits, surfaceDetail, glassTransmission, invalidate]);
 
-  const systems = useMemo(
-    () => ({
-      engine: buildEngine(layout, lowDetail),
-      transmission: buildTransmission(layout, lowDetail),
-      suspension: buildSuspension(layout, lowDetail),
-      battery: buildBattery(layout, lowDetail),
-      interior: buildInterior(layout, lowDetail),
-      electronics: buildElectronics(layout, lowDetail),
-    }),
-    [layout, lowDetail],
+  // Geometry, built once per car and level of detail and shared with any
+  // other canvas showing the same car.
+  const body = useCachedGeometry(layout, `body:${lowDetail}`, () =>
+    buildBodyGeometry(layout, lowDetail),
   );
-  useEffect(
-    () => () => {
-      for (const parts of Object.values(systems))
-        for (const part of parts) part.geometry.dispose();
-    },
-    [systems],
+  const systems = useCachedGeometry(layout, `systems:${lowDetail}`, () =>
+    buildSystems(layout, lowDetail, body.exhaustTips),
   );
 
   // Groups follow the powertrain: an EV has a battery and no engine, a hybrid
   // both. An engine whose position is not recorded is not drawn at all.
-  const active = groupsForPowertrain(build.powertrain).filter(
-    (group) => group !== "engine" || layout.engine !== null,
-  );
-  const explodeScale = layout.spec.length / 4.5;
+  const active = useMemo(() => drawnGroups(build), [build]);
   const shadows = !lowDetail;
+
+  // --- appearance -------------------------------------------------------------
+  const paint = appearance?.paint ?? DEFAULT_SURFACE;
+  const wheels = wheelDefaults(spec.style);
+  const wheelStyle = appearance?.wheelStyle ?? wheels.style;
+  const wheelFinish: WheelFinish = appearance?.wheelFinish ?? wheels.finish;
+  usePaint(kits.body, paint, reducedMotion);
+  useTint(kits.wheels.get("rim"), WHEEL_FINISH_PARAMS[wheelFinish], reducedMotion);
+  useTint(
+    kits.brakes.get("caliper"),
+    { color: appearance?.caliper ?? GOLD, metalness: 0.35, roughness: 0.32 },
+    reducedMotion,
+  );
+  useTint(
+    kits.brakes.get("disc"),
+    DISC_PARAMS[appearance?.disc ?? "steel"],
+    reducedMotion,
+  );
+
+  // --- groups, corners, explode ------------------------------------------------
+  const rootRef = useRef<THREE.Group>(null);
+  const groups = useRef(new Map<ViewerGroup, THREE.Group>());
+  const corners = useRef<Corners>({ wheels: [], brakes: [] });
+  const register = useCallback((name: ViewerGroup, group: THREE.Group | null) => {
+    if (group) groups.current.set(name, group);
+    else groups.current.delete(name);
+  }, []);
+
+  const onExplodeMotionRef = useRef(onExplodeMotion);
+  useLayoutEffect(() => {
+    onExplodeMotionRef.current = onExplodeMotion;
+  }, [onExplodeMotion]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    // Measure every group as assembled, then plan where each goes. Measured
+    // rather than assumed, so the floor rule holds for any car.
+    let plan = null;
+    if (explode > 0) {
+      root.updateWorldMatrix(true, true);
+      const inverse = root.matrixWorld.clone().invert();
+      const extents: GroupExtent[] = [];
+      for (const name of active) {
+        const node = groups.current.get(name);
+        if (!node) continue;
+        const box = new THREE.Box3().setFromObject(node);
+        if (box.isEmpty()) continue;
+        box.applyMatrix4(inverse);
+        box.translate(node.position.clone().negate());
+        // The engine group also carries the radiator in the nose, so its
+        // position along the car comes from the layout, not its bounds.
+        const centerZ =
+          name === "engine" && layout.engine
+            ? layout.engine.center.z
+            : name === "transmission" && layout.gearbox
+              ? layout.gearbox.center.z
+              : (box.min.z + box.max.z) / 2;
+        extents.push({ group: name, minY: box.min.y, centerZ });
+      }
+      plan = planExplode({
+        groups: extents,
+        powertrain: build.powertrain,
+        enginePosition: layout.engine ? build.enginePosition : null,
+        length: spec.length,
+      });
+    }
+
+    const timeline = gsap.timeline({
+      paused: true,
+      onUpdate: invalidate,
+      onComplete: () => {
+        onExplodeMotionRef.current?.(false);
+        invalidate();
+      },
+    });
+    let moves = 0;
+    const move = (
+      target: THREE.Vector3,
+      to: { x?: number; y?: number; z?: number },
+      at: number,
+    ) => {
+      const changed =
+        (to.x !== undefined && Math.abs(target.x - to.x) > 1e-4) ||
+        (to.y !== undefined && Math.abs(target.y - to.y) > 1e-4) ||
+        (to.z !== undefined && Math.abs(target.z - to.z) > 1e-4);
+      if (!changed) return;
+      moves += 1;
+      timeline.to(target, { ...to, duration: 0.9, ease: "power3.inOut" }, at);
+    };
+    active.forEach((name, index) => {
+      const node = groups.current.get(name);
+      if (!node) return;
+      const [x, y, z] = plan ? offsetAt(plan, name, explode) : [0, 0, 0];
+      move(node.position, { x, y, z }, index * 0.045);
+    });
+    const spread = plan ? plan.spread : { wheels: 0, brakes: 0 };
+    layout.wheels.forEach(({ position, side }, index) => {
+      const wheel = corners.current.wheels[index];
+      if (wheel)
+        move(wheel.position, { x: position.x + side * spread.wheels * explode }, 0.08);
+      const brake = corners.current.brakes[index];
+      if (brake)
+        move(brake.position, { x: position.x + side * spread.brakes * explode }, 0.08);
+    });
+
+    if (moves === 0) {
+      timeline.kill();
+      return;
+    }
+    onExplodeMotionRef.current?.(true);
+    if (reducedMotion) {
+      timeline.progress(1);
+      timeline.kill();
+      return;
+    }
+    timeline.play();
+    return () => {
+      timeline.kill();
+    };
+  }, [
+    explode,
+    active,
+    layout,
+    build,
+    spec.length,
+    body,
+    systems,
+    reducedMotion,
+    invalidate,
+  ]);
+
+  // --- anchors for hotspots and callouts -----------------------------------------
+  useLayoutEffect(() => {
+    if (!anchors) return;
+    const entries: [string, AnchorPoint][] = [];
+    const add = (
+      id: string,
+      group: ViewerGroup,
+      local: THREE.Vector3 | null | undefined,
+    ) => {
+      const object = groups.current.get(group);
+      if (object && local) entries.push([id, { object, local: local.clone() }]);
+    };
+    const corner = (
+      id: string,
+      list: (THREE.Group | null)[],
+      index: number,
+      local: THREE.Vector3,
+    ) => {
+      const object = list[index];
+      if (object) entries.push([id, { object, local }]);
+    };
+
+    add("headlights", "body", body.points.headlight);
+    add("aero", "body", body.points.aero);
+    add("charging", "body", body.points.charging);
+    add("engine", "engine", layout.anchors.engine);
+    add("suspension", "suspension", layout.anchors.frontSuspension);
+    add(
+      "battery",
+      "battery",
+      layout.battery
+        ? layout.battery.center
+            .clone()
+            .setY(layout.battery.center.y + layout.battery.size.y / 2)
+        : (layout.motors[0]?.position ?? null),
+    );
+    const tip = [...body.exhaustTips].sort((a, b) => b.x - a.x)[0];
+    add("exhaust", "exhaust", tip);
+    // Wheels 0 and 2 are the +x (left-hand) corners, the side the default
+    // views look at. Corner space: +x is the wheel's outer face.
+    const { tyreWidth, rimRadius } = spec;
+    corner(
+      "brakes",
+      corners.current.brakes,
+      0,
+      new THREE.Vector3(tyreWidth * 0.5 + 0.02, rimRadius * 0.5, -rimRadius * 0.3),
+    );
+    corner(
+      "wheels",
+      corners.current.wheels,
+      2,
+      new THREE.Vector3(tyreWidth * 0.5 + 0.03, 0, 0),
+    );
+
+    // Engineering callouts.
+    add(
+      "callout:engine",
+      "engine",
+      layout.engine?.center.clone().setY(layout.engine.center.y + 0.1),
+    );
+    add(
+      "callout:transmission",
+      "transmission",
+      layout.gearbox?.center ?? layout.differentials[0] ?? null,
+    );
+    add("callout:battery", "battery", layout.battery?.center ?? null);
+    add("callout:motor", "battery", layout.motors[0]?.position ?? null);
+    add("callout:suspension", "suspension", layout.anchors.frontSuspension);
+    add("callout:exhaust", "exhaust", tip);
+
+    for (const [id, point] of entries) anchors.set(id, point);
+    invalidate();
+    return () => {
+      for (const [id] of entries) anchors.delete(id);
+    };
+  }, [anchors, body, layout, spec, active, invalidate]);
+
+  // The model is built and mounted: say so once per build.
+  const onReadyRef = useRef(onReady);
+  useLayoutEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
+  useEffect(() => {
+    onReadyRef.current?.();
+  }, [body, systems]);
+
+  // --- rendering -----------------------------------------------------------------
+  const emphasised = (group: ViewerGroup) => emphasis?.includes(group) ?? false;
+  const highlightOf = (group: ViewerGroup) =>
+    Math.max(
+      selectedGroup === group || highlightGroup === group ? 1 : 0,
+      emphasised(group) ? 0.75 : 0,
+      hoveredGroup === group ? 0.6 : 0,
+    );
+  const dimOf = (group: ViewerGroup) => {
+    if (group === "body" || selectedGroup === group) return 0;
+    // The tour points at one system: everything else steps back.
+    if (highlightGroup !== null && highlightGroup !== group) return 1;
+    // X-ray: the powertrain stands out, the cabin and wiring recede.
+    if (emphasis && emphasis.length > 0 && !emphasised(group)) return 0.7;
+    return 0;
+  };
 
   const sub = (group: ViewerGroup, children: ReactNode) =>
     active.includes(group) ? (
       <Subsystem
         key={group}
         name={group}
-        index={active.indexOf(group)}
-        explode={explode}
-        explodeScale={explodeScale}
         kit={kits[group]}
-        highlighted={selectedGroup === group || highlightGroup === group}
-        // The body has its own ghosting; every other system steps back when
-        // the page is pointing at a different one.
-        dimmed={
-          group !== "body" &&
-          highlightGroup !== null &&
-          highlightGroup !== group &&
-          selectedGroup !== group
-        }
-        reducedMotion={reducedMotion}
+        highlight={highlightOf(group)}
+        dim={dimOf(group)}
+        // A ghosted shell must not catch the pointer meant for what is inside.
+        pickable={group !== "body" || ghost < 0.5}
+        onHover={onHoverGroup}
         onSelect={onSelectGroup}
+        register={register}
       >
         {children}
       </Subsystem>
     ) : null;
 
   return (
-    <group name="procedural-car">
+    <group ref={rootRef} name="procedural-car">
       {sub(
         "body",
         <CarBody
           layout={layout}
+          geometry={body}
           kit={kits.body}
-          lowDetail={lowDetail}
           ghost={ghost}
-          paint={paint}
+          glassTransmission={glassTransmission}
         />,
       )}
       {sub(
@@ -471,20 +868,14 @@ export function ProceduralCar({
           layout={layout}
           kit={kits.wheels}
           lowDetail={lowDetail}
+          style={wheelStyle}
           motion={motion}
-          explode={explode}
-          reducedMotion={reducedMotion}
+          corners={corners}
         />,
       )}
       {sub(
         "brakes",
-        <Brakes
-          layout={layout}
-          kit={kits.brakes}
-          motion={motion}
-          explode={explode}
-          reducedMotion={reducedMotion}
-        />,
+        <Brakes layout={layout} kit={kits.brakes} motion={motion} corners={corners} />,
       )}
       {sub(
         "suspension",
@@ -505,6 +896,10 @@ export function ProceduralCar({
       {sub(
         "battery",
         <PartList parts={systems.battery} kit={kits.battery} shadows={shadows} />,
+      )}
+      {sub(
+        "exhaust",
+        <PartList parts={systems.exhaust} kit={kits.exhaust} shadows={shadows} />,
       )}
       {sub(
         "interior",

@@ -1,86 +1,46 @@
 import "server-only";
 
-import { createServerSupabaseClient, isConfigured } from "@/lib/supabase/server";
-import type { CatalogCar } from "@/types/domain";
+import {
+  createServerSupabaseClient,
+  createStaticClient,
+  isConfigured,
+} from "@/lib/supabase/server";
+import { CARD_COLUMNS, type CatalogCardRow } from "@/lib/queries/catalog-columns";
 
-const FAVORITE_CAR_COLUMNS = [
-  "variant_id",
-  "variant_slug",
-  "variant_name",
-  "model_slug",
-  "model_name",
-  "manufacturer_slug",
-  "manufacturer_name",
-  "country_slug",
-  "country_name",
-  "country_flag_emoji",
-  "category_name",
-  "category_slug",
-  "body_type",
-  "fuel_type",
-  "drive_type",
-  "power_hp",
-  "top_speed_kmh",
-  "zero_to_100_s",
-  "base_price",
-  "price_currency",
-  "year_start",
-  "year_end",
-  "primary_image_url",
-  "has_glb",
-  "engine_configuration",
-].join(",");
+/*
+ * Saved cars on the server.
+ *
+ * No function here takes a user id, and none needs one: the `favorites` RLS
+ * policies restrict every read and write to `auth.uid() = user_id`, so a query
+ * on the cookie-aware client can only ever see the caller's own rows. The
+ * database is the access control, not these functions. Writes (which must
+ * name the user_id column) take it from `getUser()` in the server action.
+ */
 
 /**
- * The signed-in user's saved cars.
- *
- * No user id is passed in and none is needed: the `favorites` RLS policy
- * restricts the table to `auth.uid() = user_id`, so this query can only ever
- * return the caller's own rows. The database is the access control, not this
- * function.
+ * The signed-in user's saved variant ids, most recently saved first.
+ * `null` means the read failed — distinct from "nothing saved".
  */
-export async function listFavorites(): Promise<CatalogCar[]> {
+export async function listFavoriteIds(): Promise<string[] | null> {
   if (!isConfigured()) return [];
 
   try {
     const supabase = await createServerSupabaseClient();
-
-    const { data: rows, error } = await supabase
+    const { data, error } = await supabase
       .from("favorites")
       .select("variant_id, created_at")
       .order("created_at", { ascending: false })
+      .order("variant_id")
       .returns<{ variant_id: string; created_at: string }[]>();
 
     if (error) {
-      console.error("listFavorites failed:", error.message);
-      return [];
+      console.error("listFavoriteIds failed:", error.message);
+      return null;
     }
-    if (!rows || rows.length === 0) return [];
-
-    const { data: cars, error: carsError } = await supabase
-      .from("car_catalog")
-      .select(FAVORITE_CAR_COLUMNS)
-      .in(
-        "variant_id",
-        rows.map((row) => row.variant_id),
-      )
-      .returns<CatalogCar[]>();
-
-    if (carsError) {
-      console.error("listFavorites cars failed:", carsError.message);
-      return [];
-    }
-
-    // Preserve the "most recently saved first" order from the favorites table,
-    // which the catalogue query does not know about.
-    const order = new Map(rows.map((row, index) => [row.variant_id, index]));
-    return (cars ?? []).sort(
-      (a, b) =>
-        (order.get(a.variant_id ?? "") ?? 0) - (order.get(b.variant_id ?? "") ?? 0),
-    );
+    return (data ?? []).map((row) => row.variant_id);
   } catch (error) {
-    console.error("listFavorites threw:", error);
-    return [];
+    console.error("listFavoriteIds threw:", error);
+    return null;
   }
 }
 
@@ -97,8 +57,13 @@ export async function isFavorited(variantId: string): Promise<boolean> {
       .returns<{ variant_id: string }[]>()
       .maybeSingle();
 
-    return !error && data !== null;
-  } catch {
+    if (error) {
+      console.error("isFavorited failed:", error.message);
+      return false;
+    }
+    return data !== null;
+  } catch (error) {
+    console.error("isFavorited threw:", error);
     return false;
   }
 }
@@ -108,11 +73,84 @@ export async function countFavorites(): Promise<number> {
   if (!isConfigured()) return 0;
   try {
     const supabase = await createServerSupabaseClient();
-    const { count } = await supabase
+    const { count, error } = await supabase
       .from("favorites")
       .select("variant_id", { count: "exact", head: true });
+    if (error) {
+      console.error("countFavorites failed:", error.message);
+      return 0;
+    }
     return count ?? 0;
-  } catch {
+  } catch (error) {
+    console.error("countFavorites threw:", error);
     return 0;
+  }
+}
+
+/**
+ * Card rows for the given variant ids, in the order asked for.
+ *
+ * Reads the public catalogue as `anon` through the cached static client, so
+ * drafts are invisible (car_catalog is security_invoker) and ids that are
+ * unknown or unpublished simply do not come back. `null` means the read
+ * failed, which a caller must not mistake for "none of these exist".
+ */
+export async function getCatalogCardsByIds(
+  ids: readonly string[],
+): Promise<CatalogCardRow[] | null> {
+  if (ids.length === 0) return [];
+  if (!isConfigured()) return null;
+
+  try {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("car_catalog")
+      .select(CARD_COLUMNS)
+      .in("variant_id", [...ids])
+      .returns<CatalogCardRow[]>();
+
+    if (error) {
+      console.error("getCatalogCardsByIds failed:", error.message);
+      return null;
+    }
+
+    const byId = new Map((data ?? []).map((row) => [row.variant_id, row]));
+    return ids.flatMap((id) => {
+      const row = byId.get(id);
+      return row ? [row] : [];
+    });
+  } catch (error) {
+    console.error("getCatalogCardsByIds threw:", error);
+    return null;
+  }
+}
+
+/**
+ * Which of these ids are published catalogue variants, as the signed-in
+ * user's client sees them. Used to validate input before a write.
+ * `null` means the check failed.
+ */
+export async function filterCatalogueIds(
+  ids: readonly string[],
+): Promise<string[] | null> {
+  if (ids.length === 0) return [];
+
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data, error } = await supabase
+      .from("car_catalog")
+      .select("variant_id")
+      .in("variant_id", [...ids])
+      .returns<{ variant_id: string | null }[]>();
+
+    if (error) {
+      console.error("filterCatalogueIds failed:", error.message);
+      return null;
+    }
+    const found = new Set((data ?? []).map((row) => row.variant_id));
+    return ids.filter((id) => found.has(id));
+  } catch (error) {
+    console.error("filterCatalogueIds threw:", error);
+    return null;
   }
 }

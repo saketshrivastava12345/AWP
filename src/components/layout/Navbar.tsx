@@ -2,169 +2,255 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Menu, Search, X } from "lucide-react";
+import {
+  Suspense,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { Menu, Search } from "lucide-react";
+import { ShortcutHint } from "@/components/ui/Kbd";
+import { PRIMARY_NAV, activeNavHref } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
-import { PRIMARY_NAV, isActivePath } from "@/lib/navigation";
-import { useScrollPosition } from "@/hooks/useScrollPosition";
-import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { SCROLLBAR_GAP_VAR } from "@/hooks/useLockBodyScroll";
+import { useScrolledPast } from "@/hooks/useScrollPosition";
+import { Wordmark } from "./BrandMark";
+import { FavoritesLink } from "./FavoritesLink";
+import { MobileMenu } from "./MobileMenu";
+import { ScrollProgress } from "./ScrollProgress";
 import { useSearchOverlay } from "./SearchProvider";
-import type { ReactNode } from "react";
+
+/** Tailwind's `lg`: the desktop bar takes over from the mobile menu here. */
+const DESKTOP_QUERY = "(min-width: 1024px)";
 
 /**
- * `accountSlot` is rendered by the server (see AccountMenu) and passed through
- * as a child. A client component cannot read the session itself, and making
- * the whole navbar a server component would cost the mobile menu and scroll
- * progress their interactivity.
+ * The fixed site header.
+ *
+ * The session-dependent pieces (saved-cars count, account control, the mobile
+ * account block) arrive as server-rendered slots from the root layout, each in
+ * its own Suspense boundary: a client component cannot read the session, and
+ * keeping them out of this component keeps every page's shell static.
+ *
+ * The current path is read only where it is needed — the desktop links, in
+ * their own Suspense boundary, and the mobile menu's content, which exists
+ * only while the menu is open. Under Cache Components usePathname() suspends
+ * during prerendering on any route whose params are only known at request
+ * time; read here, in the root layout, outside a boundary, it would fail the
+ * build for every such route.
+ *
+ * Nothing here re-renders while scrolling. The solid state flips once, on a
+ * threshold; the progress rule is driven by CSS (or a ref) — see
+ * ScrollProgress.
  */
-export function Navbar({ accountSlot }: { accountSlot?: ReactNode }) {
-  const pathname = usePathname();
-  const { isScrolled, progress } = useScrollPosition();
+export function Navbar({
+  favoritesCount,
+  account,
+  mobileAccount,
+}: {
+  favoritesCount?: ReactNode;
+  account?: ReactNode;
+  mobileAccount?: ReactNode;
+}) {
+  const scrolled = useScrolledPast();
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const { open: openSearch } = useSearchOverlay();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [lastPathname, setLastPathname] = useState(pathname);
 
-  useLockBodyScroll(menuOpen);
+  // The window growing past `lg` closes the menu (the panel would otherwise
+  // stay open, invisibly holding the scroll lock). Adjusting state during
+  // render is React's pattern for "reset when an input changes"; an effect
+  // would paint the stale state for a frame first. Navigating closes it too —
+  // see MobileMenu.
+  if (menuOpen && isDesktop) setMenuOpen(false);
 
-  // Navigating from inside the mobile menu must close it, and the route can
-  // change without this component unmounting. Adjusting state during render
-  // (React's documented pattern for "reset when a prop changes") rather than
-  // in an effect avoids rendering the stale open menu for a frame first.
-  if (pathname !== lastPathname) {
-    setLastPathname(pathname);
-    setMenuOpen(false);
-  }
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   return (
-    <header
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-colors duration-500",
-        "ease-[var(--ease-cinematic)]",
-        isScrolled || menuOpen
-          ? "border-b border-line bg-void/85 backdrop-blur-xl"
-          : "border-b border-transparent bg-transparent",
-      )}
-    >
-      {/* Scroll progress: a one-pixel gold rule along the very top. */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-px origin-left bg-gold-500"
-        style={{ transform: `scaleX(${progress})` }}
-      />
-
-      <nav
-        aria-label="Primary"
-        className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-5 sm:px-8"
+    <>
+      <header
+        data-scrolled={scrolled ? "" : undefined}
+        style={{ paddingRight: `var(${SCROLLBAR_GAP_VAR}, 0px)` }}
+        className={cn(
+          "group/header fixed inset-x-0 top-0 z-(--z-nav) border-b",
+          "transition-[background-color,border-color,backdrop-filter,-webkit-backdrop-filter]",
+          "duration-(--duration-normal) ease-cinematic",
+          scrolled
+            ? "border-line bg-void/80 backdrop-blur-xl backdrop-saturate-150"
+            : "border-transparent bg-void/0 backdrop-blur-[0px] backdrop-saturate-100",
+        )}
       >
-        <Link
-          href="/"
-          className="font-display text-base tracking-[0.3em] text-ink-50 transition-colors duration-300 hover:text-gold-300"
+        <ScrollProgress />
+
+        <nav
+          aria-label="Primary"
+          className="mx-auto grid h-16 w-full max-w-7xl grid-cols-[1fr_auto] items-center gap-4 px-5 sm:px-8 lg:grid-cols-[1fr_auto_1fr]"
         >
-          AURIX
-        </Link>
+          <div className="flex items-center">
+            <Wordmark />
+          </div>
 
-        <ul className="hidden items-center gap-1 lg:flex">
-          {PRIMARY_NAV.map((link) => {
-            const active = isActivePath(pathname, link.href);
-            return (
-              <li key={link.href}>
-                <Link
-                  href={link.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "relative px-4 py-2 font-display text-[10px] tracking-[0.18em] uppercase",
-                    "transition-colors duration-200",
-                    active ? "text-gold-300" : "text-ink-300 hover:text-ink-50",
-                  )}
-                >
-                  {link.label}
-                  {active ? (
-                    <span
-                      aria-hidden="true"
-                      className="absolute inset-x-4 -bottom-px h-px bg-gold-500"
-                    />
-                  ) : null}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+          {/* Without a known path (a route whose params resolve at request
+              time) the links prerender with no active item and the
+              indicator arrives as the boundary resolves. */}
+          <Suspense fallback={<DesktopLinks pathname={null} />}>
+            <CurrentDesktopLinks />
+          </Suspense>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={openSearch}
-            className={cn(
-              "border-line text-ink-400 hover:border-line-strong hover:text-ink-100",
-              "flex items-center gap-3 rounded-xs border py-2 pr-2 pl-3 transition-colors duration-200",
-            )}
-            aria-label="Search cars, manufacturers and parts"
-          >
-            <Search className="size-3.5" aria-hidden="true" />
-            <span className="hidden text-xs sm:inline">Search</span>
-            <kbd
-              aria-hidden="true"
-              className="hidden rounded-xs border border-line bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] text-ink-500 sm:inline"
+          <div className="flex items-center justify-end gap-1.5 lg:gap-2">
+            <button
+              type="button"
+              onClick={openSearch}
+              aria-keyshortcuts="Control+K Meta+K /"
+              className={cn(
+                "group flex h-11 items-center gap-2.5 rounded-sm text-ink-300 transition-colors duration-(--duration-fast)",
+                "hover:text-ink-50 max-sm:w-11 max-sm:justify-center",
+                "sm:border sm:border-line sm:pr-2 sm:pl-3 sm:hover:border-line-strong lg:h-10",
+              )}
             >
-              ⌘K
-            </kbd>
-          </button>
+              <Search className="size-4 shrink-0" aria-hidden="true" />
+              <span className="text-sm max-sm:sr-only lg:max-xl:sr-only">Search</span>
+              <ShortcutHint keyName="K" className="max-sm:hidden" />
+            </button>
 
-          {accountSlot}
+            <div className="hidden items-center gap-1.5 lg:flex">
+              <FavoritesLink count={favoritesCount} />
+              {account}
+            </div>
 
-          <button
-            type="button"
-            onClick={() => setMenuOpen((previous) => !previous)}
-            className="p-2 text-ink-200 transition-colors hover:text-ink-50 lg:hidden"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            aria-expanded={menuOpen}
-            aria-controls="mobile-menu"
-          >
-            {menuOpen ? (
-              <X className="size-5" aria-hidden="true" />
-            ) : (
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={menuOpen}
+              aria-label="Open menu"
+              className="-mr-2.5 grid size-11 place-items-center rounded-sm text-ink-100 transition-colors duration-(--duration-fast) hover:bg-surface-2 hover:text-ink-50 lg:hidden"
+            >
               <Menu className="size-5" aria-hidden="true" />
-            )}
-          </button>
-        </div>
-      </nav>
+            </button>
+          </div>
+        </nav>
+      </header>
 
-      {menuOpen ? (
-        <div
-          id="mobile-menu"
-          className="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-line bg-void/95 backdrop-blur-xl lg:hidden"
-        >
-          <ul className="mx-auto w-full max-w-7xl px-5 py-4 sm:px-8">
-            {PRIMARY_NAV.map((link) => {
-              const active = isActivePath(pathname, link.href);
-              return (
-                <li
-                  key={link.href}
-                  className="border-b border-line-subtle last:border-b-0"
-                >
-                  <Link
-                    href={link.href}
-                    aria-current={active ? "page" : undefined}
-                    className="flex flex-col gap-1 py-4"
-                  >
-                    <span
-                      className={cn(
-                        "font-display text-xs tracking-[0.18em] uppercase",
-                        active ? "text-gold-300" : "text-ink-100",
-                      )}
-                    >
-                      {link.label}
-                    </span>
-                    {link.description ? (
-                      <span className="text-xs text-ink-500">{link.description}</span>
-                    ) : null}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
-    </header>
+      <MobileMenu
+        open={menuOpen && !isDesktop}
+        onClose={closeMenu}
+        onOpenSearch={openSearch}
+        favoritesCount={favoritesCount}
+        account={mobileAccount}
+      />
+    </>
+  );
+}
+
+function CurrentDesktopLinks() {
+  return <DesktopLinks pathname={usePathname()} />;
+}
+
+/**
+ * The desktop links, with a gold hairline that slides to the active section.
+ *
+ * Positions are measured from the rendered links (Michroma is wide, and its
+ * metrics only settle once the webfont loads, so nothing is hard-coded). The
+ * rule is moved by writing a transform to the DOM — no React state per move —
+ * and it previews the hovered or focused link before settling back. The first
+ * placement is instant; after that it animates, except under reduced motion.
+ */
+function DesktopLinks({ pathname }: { pathname: string | null }) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const ruleRef = useRef<HTMLSpanElement>(null);
+  const activeHref = pathname === null ? null : activeNavHref(pathname);
+  const [preview, setPreview] = useState<string | null>(null);
+  const target = preview ?? activeHref;
+
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const rule = ruleRef.current;
+    if (!list || !rule) return;
+
+    const place = () => {
+      const link = target
+        ? list.querySelector<HTMLElement>(`[data-nav-href="${CSS.escape(target)}"]`)
+        : null;
+      const label = link?.querySelector<HTMLElement>("[data-nav-label]");
+      if (!link || !label || label.offsetWidth === 0) {
+        rule.style.opacity = "0";
+        return;
+      }
+      const x = link.offsetLeft + label.offsetLeft;
+      rule.style.transform = `translateX(${x}px) scaleX(${label.offsetWidth})`;
+      rule.style.opacity = target === activeHref ? "1" : "0.45";
+    };
+
+    place();
+    // Enable the transition only after the first placement, so the rule
+    // does not fly in from the left edge on page load.
+    const frame = window.requestAnimationFrame(() => {
+      rule.dataset.ready = "";
+    });
+    const observer = new ResizeObserver(place);
+    observer.observe(list);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [target, activeHref]);
+
+  return (
+    <ul
+      ref={listRef}
+      className="relative hidden h-16 items-stretch lg:flex"
+      onPointerLeave={() => setPreview(null)}
+      onBlur={(event) => {
+        if (!listRef.current?.contains(event.relatedTarget as Node | null))
+          setPreview(null);
+      }}
+    >
+      {PRIMARY_NAV.map((link) => {
+        const active = link.href === activeHref;
+        return (
+          <li key={link.href} className="flex">
+            <Link
+              href={link.href}
+              data-nav-href={link.href}
+              aria-current={
+                active ? (pathname === link.href ? "page" : "true") : undefined
+              }
+              onPointerEnter={() => setPreview(link.href)}
+              onFocus={() => setPreview(link.href)}
+              className={cn(
+                "group/nav relative flex items-center px-3 font-display text-micro tracking-hud uppercase xl:px-4",
+                "transition-colors duration-(--duration-fast) focus-visible:outline-none",
+                active ? "text-ink-50" : "text-ink-300 hover:text-ink-50",
+              )}
+            >
+              {/* The keyboard ring hugs the label: around the full-height
+                  link it would be a tall box clipped by the window edge. */}
+              <span
+                data-nav-label=""
+                className={cn(
+                  "relative rounded-xs",
+                  "group-focus-visible/nav:outline-2 group-focus-visible/nav:outline-offset-[6px]",
+                  "group-focus-visible/nav:outline-gold-500 group-focus-visible/nav:outline-solid",
+                )}
+              >
+                {link.label}
+              </span>
+            </Link>
+          </li>
+        );
+      })}
+      <span
+        ref={ruleRef}
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute bottom-0 left-0 h-px w-px origin-left bg-gold-400 opacity-0",
+          "data-ready:transition-[transform,opacity] data-ready:duration-(--duration-normal)",
+          "data-ready:ease-cinematic motion-reduce:transition-none",
+        )}
+      />
+    </ul>
   );
 }

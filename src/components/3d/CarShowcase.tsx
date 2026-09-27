@@ -2,14 +2,17 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { CarBuild } from "@/lib/car-build";
 import type { TourStop } from "@/lib/anatomy-tour";
+import { stableKey } from "@/lib/viewer-lru";
 import type { TourProgress } from "./StageDirector";
+import { ModelErrorBoundary } from "./ModelErrorBoundary";
+import { useSceneLifecycle, useWebGLSupport } from "./useSceneLifecycle";
 
 /**
  * The anatomy tour: a scroll-driven walk through one car's systems.
@@ -21,8 +24,11 @@ import type { TourProgress } from "./StageDirector";
  * scenery layered behind them.
  *
  * The stage is dynamically imported with ssr:false (three.js touches
- * `window`), mounts only as the section nears the viewport, and stops
- * rendering whenever it scrolls out of view.
+ * `window`), mounts as it nears the viewport and unmounts only when far away,
+ * and renders only while it is on screen and holds the page's render slot —
+ * when the interactive viewer below is the more visible scene, the tour
+ * pauses on its last frame. Without WebGL, or if the scene fails, the stage
+ * keeps its poster and the tour reads as plain text.
  */
 
 const ShowcaseStage = dynamic(
@@ -144,8 +150,11 @@ export function CarShowcase({
 }) {
   const isMobile = useIsMobile();
   const reducedMotion = useReducedMotion();
+  const webgl = useWebGLSupport();
+  const id = useId();
 
   const sectionRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const stepsRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
   const centers = useRef<number[]>([]);
@@ -153,9 +162,15 @@ export function CarShowcase({
   const activeRef = useRef(0);
 
   const [active, setActive] = useState(0);
-  const [near, setNear] = useState(false);
-  const [running, setRunning] = useState(false);
   const [ready, setReady] = useState(false);
+  const buildKey = stableKey(build);
+  // A failure belongs to the car that failed; another car gets its own try.
+  const [failedKey, setFailedKey] = useState<string | null>(null);
+  const failed = failedKey === buildKey;
+  const { mounted, canRender } = useSceneLifecycle(stageRef, `tour${id}`);
+  const handleReady = useCallback(() => setReady(true), []);
+  const handleFailed = useCallback(() => setFailedKey(buildKey), [buildKey]);
+  const unavailable = webgl === false || failed;
 
   // Map the scroll position onto the stops: beat 2.5 means halfway between
   // the second and third card, measured at the middle of the viewport.
@@ -205,31 +220,6 @@ export function CarShowcase({
     };
   }, [measure, update]);
 
-  // Mount the 3D stage just before it is needed, and only render while the
-  // section is actually on screen.
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
-    const mount = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) setNear(true);
-      },
-      { rootMargin: "300px" },
-    );
-    const visible = new IntersectionObserver((entries) => {
-      // A batch can hold several stale entries for one target; the last is
-      // the current state.
-      const entry = entries.at(-1);
-      if (entry) setRunning(entry.isIntersecting);
-    });
-    mount.observe(section);
-    visible.observe(section);
-    return () => {
-      mount.disconnect();
-      visible.disconnect();
-    };
-  }, []);
-
   const jumpTo = (index: number) => {
     stepRefs.current[index]?.scrollIntoView({
       behavior: reducedMotion ? "auto" : "smooth",
@@ -242,32 +232,43 @@ export function CarShowcase({
   return (
     <section ref={sectionRef} className="relative" aria-label={`Anatomy tour: ${label}`}>
       {/* ------------------------------------------------ Sticky 3D stage */}
-      <div className="sticky top-0 h-[100svh] overflow-hidden bg-void" aria-hidden="true">
+      <div
+        ref={stageRef}
+        className="sticky top-0 h-[100svh] overflow-hidden bg-void"
+        aria-hidden="true"
+      >
         {/* Poster until the first frame: a pool of light where the car will be. */}
         <div
           className={cn(
             "absolute inset-0 transition-opacity duration-1000",
-            ready ? "opacity-0" : "opacity-100",
+            ready && !unavailable ? "opacity-0" : "opacity-100",
           )}
         >
           <div className="absolute top-[42%] left-[62%] size-[36rem] -translate-1/2 rounded-full bg-gold-800/15 blur-[120px] max-md:left-1/2" />
           <p className="absolute top-[48%] left-[62%] -translate-1/2 font-display text-[9px] tracking-[0.24em] text-ink-500 uppercase max-md:left-1/2">
-            Preparing 3D model
+            {unavailable ? "3D view unavailable on this device" : "Preparing 3D model"}
           </p>
         </div>
 
-        {near ? (
+        {mounted && webgl === true && !failed ? (
           <div className="absolute inset-0">
-            <ShowcaseStage
-              build={build}
-              stops={stops}
-              progressRef={progress}
-              active={active}
-              reducedMotion={reducedMotion}
-              lowDetail={isMobile}
-              running={running}
-              onReady={() => setReady(true)}
-            />
+            <ModelErrorBoundary
+              label="tour"
+              resetKeys={[buildKey]}
+              fallback={null}
+              onError={handleFailed}
+            >
+              <ShowcaseStage
+                build={build}
+                stops={stops}
+                progressRef={progress}
+                active={active}
+                reducedMotion={reducedMotion}
+                lowDetail={isMobile}
+                running={canRender}
+                onReady={handleReady}
+              />
+            </ModelErrorBoundary>
           </div>
         ) : null}
 

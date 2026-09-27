@@ -1,505 +1,706 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
-import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  useId,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import { ChevronDown, LoaderCircle, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { buildQueryString, type RawSearchParams } from "@/lib/search-params";
-import type { FilterOptions, FacetOption } from "@/lib/facets";
+import { formatNumber } from "@/lib/format";
+import type {
+  FacetOption,
+  FilterOptions,
+  ListFacet,
+  NumericFilterKey,
+  RangeFacet,
+} from "@/lib/facets";
 
 /**
- * Filter rail.
+ * The catalogue filters, as one GET form.
  *
- * Every control is a plain `<Link>` that rewrites the URL, so filters are
- * shareable, back/forward works, and the whole thing functions with JavaScript
- * disabled. The only client-side state is which accordion sections are open
- * and whether the mobile drawer is showing.
+ * It is a real form with real checkboxes and number inputs, so it submits
+ * without JavaScript and every control has native semantics. With JavaScript:
+ *
+ *   - `instant` (the desktop rail): a checkbox or currency change applies at
+ *     once; number ranges apply on Enter or their Apply button.
+ *   - `staged` (the mobile sheet): nothing applies until "Show results".
+ *
+ * The inputs are controlled and reset from the server's state after every
+ * navigation, so what is ticked is always what is applied — including values
+ * the search parser read from the query, which are ticked and marked. Any
+ * submission writes those values into the URL explicitly and keeps only the
+ * query's leftover words, so a refined search reads the same either way.
  */
 
-type FilterGroupKey =
-  | "country"
-  | "manufacturer"
-  | "category"
-  | "fuel"
-  | "drive"
-  | "body"
-  | "transmission"
-  | "layout"
-  | "cylinders"
-  | "aspiration";
+export type FilterPanelModel = {
+  options: FilterOptions;
+  /** Filter keys whose current values came from the search text. */
+  searchKeys: string[];
+  /** Params carried through unchanged (q's leftover words, sort, page size). */
+  hidden: [string, string][];
+  /** Canonical URL of the current state; the draft resets when it changes. */
+  stateKey: string;
+  action: string;
+};
 
-const ASPIRATION_OPTIONS: FacetOption[] = [
-  { value: "naturally_aspirated", label: "Naturally Aspirated" },
-  { value: "turbocharged", label: "Turbocharged" },
-  { value: "twin_turbo", label: "Twin-Turbo" },
-  { value: "supercharged", label: "Supercharged" },
-];
+type Draft = {
+  lists: Record<string, string[]>;
+  numbers: Partial<Record<NumericFilterKey, string>>;
+  currency: string;
+};
 
-/** Toggle one value of a repeatable param, preserving everything else. */
-function toggleHref(
-  params: RawSearchParams,
-  key: string,
-  value: string,
-  basePath: string,
-): string {
-  const raw = params[key];
-  const current = (Array.isArray(raw) ? raw : raw ? [raw] : []).flatMap((entry) =>
-    entry.split(","),
-  );
-  const next = current.includes(value)
-    ? current.filter((entry) => entry !== value)
-    : [...current, value];
-
-  return `${basePath}${buildQueryString(params, {
-    [key]: next.length > 0 ? next : undefined,
-    // Any filter change invalidates the current page number.
-    page: undefined,
-  })}`;
+function initialDraft(options: FilterOptions): Draft {
+  const lists: Record<string, string[]> = {};
+  for (const facet of options.lists) {
+    lists[facet.param] = facet.options
+      .filter((option) => option.selected)
+      .map((option) => option.value);
+  }
+  const numbers: Partial<Record<NumericFilterKey, string>> = {};
+  for (const range of options.ranges) {
+    if (range.min !== undefined) numbers[range.minParam] = String(range.min);
+    if (range.maxParam && range.max !== undefined)
+      numbers[range.maxParam] = String(range.max);
+  }
+  if (options.price?.min !== undefined) numbers.priceMin = String(options.price.min);
+  if (options.price?.max !== undefined) numbers.priceMax = String(options.price.max);
+  return { lists, numbers, currency: options.price?.currency ?? "" };
 }
 
-function isChecked(params: RawSearchParams, key: string, value: string): boolean {
-  const raw = params[key];
-  const current = (Array.isArray(raw) ? raw : raw ? [raw] : []).flatMap((entry) =>
-    entry.split(","),
-  );
-  return current.includes(value);
+function draftToHref(model: FilterPanelModel, draft: Draft): string {
+  const search = new URLSearchParams();
+  const hidden = new Map(model.hidden);
+  const q = hidden.get("q");
+  if (q) search.append("q", q);
+
+  for (const facet of model.options.lists) {
+    for (const value of draft.lists[facet.param] ?? []) search.append(facet.param, value);
+  }
+  for (const range of model.options.ranges) {
+    for (const key of [range.minParam, range.maxParam]) {
+      if (!key) continue;
+      const raw = draft.numbers[key]?.trim();
+      if (raw && Number.isFinite(Number(raw))) search.append(key, raw);
+    }
+  }
+  if (draft.currency) {
+    search.append("priceCurrency", draft.currency);
+    for (const key of ["priceMin", "priceMax"] as const) {
+      const raw = draft.numbers[key]?.trim();
+      if (raw && Number.isFinite(Number(raw))) search.append(key, raw);
+    }
+  }
+  for (const [name, value] of model.hidden) {
+    if (name !== "q") search.append(name, value);
+  }
+  const query = search.toString();
+  return query ? `${model.action}?${query}` : model.action;
 }
 
-function FilterGroup({
-  title,
-  paramKey,
-  options,
-  params,
-  basePath,
-  defaultOpen = false,
-  maxVisible = 8,
+const noop = () => () => {};
+/** True once hydrated: server and first client render agree (false), then true. */
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    noop,
+    () => true,
+    () => false,
+  );
+}
+
+const SUMMARY =
+  "flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 text-left text-ink-200 " +
+  "transition-colors duration-(--duration-fast) hover:text-ink-50 lg:min-h-0 [&::-webkit-details-marker]:hidden";
+
+function GroupSummary({ title, active }: { title: string; active: number }) {
+  return (
+    <summary className={SUMMARY}>
+      <span className="font-display text-micro tracking-hud uppercase">
+        {title}
+        {active > 0 ? (
+          <span className="ml-2 text-gold-300">
+            ({active})<span className="sr-only"> selected</span>
+          </span>
+        ) : null}
+      </span>
+      <ChevronDown
+        className="size-3.5 shrink-0 text-ink-500 transition-transform duration-(--duration-fast) group-open/facet:rotate-180"
+        aria-hidden="true"
+      />
+    </summary>
+  );
+}
+
+function Checkbox({
+  name,
+  option,
+  checked,
+  fromSearch,
+  onChange,
 }: {
-  title: string;
-  paramKey: FilterGroupKey;
-  options: FacetOption[];
-  params: RawSearchParams;
-  basePath: string;
-  defaultOpen?: boolean;
-  maxVisible?: number;
+  name: string;
+  option: FacetOption;
+  checked: boolean;
+  fromSearch: boolean;
+  onChange: (checked: boolean) => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
-  const [showAll, setShowAll] = useState(false);
+  const empty = option.count === 0 && !checked;
+  return (
+    <label
+      className={cn(
+        "group/option flex min-h-11 cursor-pointer items-center gap-3 py-1 text-sm lg:min-h-8 lg:text-xs",
+        checked
+          ? "text-gold-200"
+          : empty
+            ? "text-ink-500"
+            : "text-ink-300 hover:text-ink-50",
+      )}
+    >
+      <span className="relative grid size-4 shrink-0 place-items-center">
+        <input
+          type="checkbox"
+          name={name}
+          value={option.value}
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+          className={cn(
+            "peer size-4 cursor-pointer appearance-none rounded-xs border bg-surface-1 transition-colors",
+            "border-line-strong checked:border-gold-500 checked:bg-gold-500 hover:border-ink-500",
+          )}
+        />
+        <svg
+          viewBox="0 0 10 8"
+          aria-hidden="true"
+          className="pointer-events-none absolute size-2 fill-void opacity-0 peer-checked:opacity-100"
+        >
+          <path d="M3.7 7.5.2 4l1-1 2.5 2.5L8.8.2l1 1z" />
+        </svg>
+      </span>
+      <span className="flex min-w-0 flex-1 items-center gap-1.5">
+        <span className="truncate">{option.label}</span>
+        {fromSearch && checked ? (
+          <>
+            <Search className="size-3 shrink-0 text-gold-500" aria-hidden="true" />
+            <span className="sr-only">(from your search)</span>
+          </>
+        ) : null}
+      </span>
+      <span
+        className={cn(
+          "tabular shrink-0 font-mono text-[10px]",
+          empty ? "text-ink-600" : "text-ink-500",
+        )}
+      >
+        {formatNumber(option.count)}
+        <span className="sr-only"> cars</span>
+      </span>
+    </label>
+  );
+}
 
-  if (options.length === 0) return null;
+/**
+ * A collapsible filter group. Native <details>, so it works without
+ * JavaScript. Its initial state is fixed at mount: React would otherwise
+ * rewrite the `open` attribute whenever the default changed, collapsing a
+ * group under the user's pointer as its last option is unticked.
+ */
+function Group({ defaultOpen, children }: { defaultOpen: boolean; children: ReactNode }) {
+  const [initiallyOpen] = useState(defaultOpen);
+  return (
+    <details className="group/facet border-b border-line-subtle" open={initiallyOpen}>
+      {children}
+    </details>
+  );
+}
 
-  const activeCount = options.filter((option) =>
-    isChecked(params, paramKey, option.value),
-  ).length;
-  const visible = showAll ? options : options.slice(0, maxVisible);
+const VISIBLE_OPTIONS = 8;
+
+function ListGroup({
+  facet,
+  values,
+  fromSearch,
+  defaultOpen,
+  onToggle,
+}: {
+  facet: ListFacet;
+  values: string[];
+  fromSearch: boolean;
+  defaultOpen: boolean;
+  onToggle: (value: string, checked: boolean) => void;
+}) {
+  const selected = new Set(values);
+  // Which options sit above "show more" is decided once, at mount: the first
+  // few plus anything already ticked (a ticked option is never hidden). Kept
+  // stable afterwards, so ticking an option never moves it — which would
+  // remount its checkbox and drop keyboard focus.
+  const [pinned] = useState(
+    () =>
+      new Set(
+        facet.options
+          .filter((option, index) => index < VISIBLE_OPTIONS || option.selected)
+          .map((option) => option.value),
+      ),
+  );
+  const head = facet.options.filter((option) => pinned.has(option.value));
+  const tail = facet.options.filter((option) => !pinned.has(option.value));
+
+  const row = (option: FacetOption) => (
+    <li key={option.value}>
+      <Checkbox
+        name={facet.param}
+        option={option}
+        checked={selected.has(option.value)}
+        fromSearch={fromSearch}
+        onChange={(checked) => onToggle(option.value, checked)}
+      />
+    </li>
+  );
 
   return (
-    <div className="border-b border-line-subtle">
-      <button
-        type="button"
-        onClick={() => setOpen((previous) => !previous)}
-        aria-expanded={open}
-        className="flex w-full items-center justify-between py-4 text-left text-ink-200 transition-colors hover:text-ink-50"
-      >
-        <span className="font-display text-[10px] tracking-[0.18em] uppercase">
-          {title}
-          {activeCount > 0 ? (
-            <span className="ml-2 text-gold-300">({activeCount})</span>
-          ) : null}
-        </span>
-        <ChevronDown
-          className={cn(
-            "size-3.5 transition-transform duration-200",
-            open && "rotate-180",
-          )}
-          aria-hidden="true"
-        />
-      </button>
-
-      {open ? (
-        <ul className="pb-4">
-          {visible.map((option) => {
-            const checked = isChecked(params, paramKey, option.value);
-            return (
-              <li key={option.value}>
-                <Link
-                  href={toggleHref(params, paramKey, option.value, basePath)}
-                  scroll={false}
-                  aria-pressed={checked}
-                  className={cn(
-                    "flex items-center justify-between gap-3 py-1.5 text-xs transition-colors",
-                    checked ? "text-gold-300" : "text-ink-400 hover:text-ink-100",
-                  )}
-                >
-                  <span className="flex min-w-0 items-center gap-2.5">
-                    <span
-                      aria-hidden="true"
-                      className={cn(
-                        "flex size-3.5 shrink-0 items-center justify-center rounded-xs border",
-                        checked ? "border-gold-500 bg-gold-500" : "border-line-strong",
-                      )}
-                    >
-                      {checked ? (
-                        <svg viewBox="0 0 10 8" className="size-2 fill-current text-void">
-                          <path d="M3.7 7.5.2 4l1-1 2.5 2.5L8.8.2l1 1z" />
-                        </svg>
-                      ) : null}
-                    </span>
-                    <span className="truncate">{option.label}</span>
-                  </span>
-                  {option.count !== undefined ? (
-                    <span className="tabular shrink-0 font-mono text-[10px] text-ink-600">
-                      {option.count}
-                    </span>
-                  ) : null}
-                </Link>
-              </li>
-            );
-          })}
-
-          {options.length > maxVisible ? (
-            <li className="pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAll((previous) => !previous)}
-                className="text-[11px] text-ink-500 transition-colors hover:text-gold-300"
-              >
-                {showAll ? "Show fewer" : `Show all ${options.length}`}
-              </button>
-            </li>
-          ) : null}
-        </ul>
-      ) : null}
-    </div>
+    <Group defaultOpen={defaultOpen}>
+      <GroupSummary title={facet.title} active={selected.size} />
+      <fieldset className="pb-3">
+        <legend className="sr-only">{facet.title}</legend>
+        <ul>{head.map(row)}</ul>
+        {tail.length > 0 ? (
+          <details className="group/more">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-ink-400 transition-colors hover:text-gold-300 lg:min-h-8 [&::-webkit-details-marker]:hidden">
+              <span className="group-open/more:hidden">Show {tail.length} more</span>
+              <span className="hidden group-open/more:inline">Show fewer</span>
+            </summary>
+            <ul className="pb-1">{tail.map(row)}</ul>
+          </details>
+        ) : null}
+      </fieldset>
+    </Group>
   );
 }
 
-/** Range filters are two number inputs inside a GET form — no JS needed. */
+const NUMBER_INPUT =
+  "tabular h-11 w-full min-w-0 rounded-xs border border-line bg-surface-1 px-2.5 font-mono text-sm text-ink-100 " +
+  "placeholder:text-ink-600 hover:border-line-strong focus-visible:border-gold-500 lg:h-9 lg:text-xs";
+
 function RangeGroup({
-  title,
-  minKey,
-  maxKey,
-  bounds,
-  unit,
-  params,
-  basePath,
+  range,
+  numbers,
+  fromSearch,
+  defaultOpen,
+  showApply,
+  onChange,
 }: {
-  title: string;
-  minKey: string;
-  maxKey: string;
-  bounds: [number, number] | null;
-  unit: string;
-  params: RawSearchParams;
-  basePath: string;
+  range: RangeFacet;
+  numbers: Draft["numbers"];
+  fromSearch: boolean;
+  defaultOpen: boolean;
+  showApply: boolean;
+  onChange: (key: NumericFilterKey, value: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  if (!bounds) return null;
-
-  const [min, max] = bounds;
-  const currentMin = params[minKey];
-  const currentMax = params[maxKey];
-
-  // Carry every other active param through as hidden fields, so submitting
-  // the range does not wipe the rest of the filter state.
-  const hidden = Object.entries(params).filter(
-    ([key]) => key !== minKey && key !== maxKey && key !== "page",
-  );
+  const id = useId();
+  const min = numbers[range.minParam] ?? "";
+  const max = range.maxParam ? (numbers[range.maxParam] ?? "") : "";
+  const active = range.min !== undefined || range.max !== undefined ? 1 : 0;
+  const unit = range.unit ? ` (${range.unit})` : "";
+  const format = (value: number) => (range.unit ? formatNumber(value) : String(value));
 
   return (
-    <div className="border-b border-line-subtle">
-      <button
-        type="button"
-        onClick={() => setOpen((previous) => !previous)}
-        aria-expanded={open}
-        className="flex w-full items-center justify-between py-4 text-left text-ink-200 transition-colors hover:text-ink-50"
-      >
-        <span className="font-display text-[10px] tracking-[0.18em] uppercase">
-          {title}
-          {currentMin || currentMax ? (
-            <span className="ml-2 text-gold-300">(1)</span>
-          ) : null}
-        </span>
-        <ChevronDown
+    <Group defaultOpen={defaultOpen}>
+      <GroupSummary title={range.title} active={active} />
+      <fieldset className="pb-4">
+        <legend className="sr-only">
+          {range.title}
+          {unit}
+        </legend>
+        <div
           className={cn(
-            "size-3.5 transition-transform duration-200",
-            open && "rotate-180",
+            "grid items-center gap-2",
+            range.maxParam ? "grid-cols-[1fr_auto_1fr]" : "grid-cols-1",
           )}
-          aria-hidden="true"
-        />
-      </button>
-
-      {open ? (
-        <form action={basePath} method="get" className="pb-4">
-          {hidden.map(([key, raw]) =>
-            (Array.isArray(raw) ? raw : raw ? [raw] : []).map((value, index) => (
-              <input key={`${key}-${index}`} type="hidden" name={key} value={value} />
-            )),
-          )}
-
-          <div className="flex items-center gap-2">
-            <label className="sr-only" htmlFor={`${minKey}-input`}>
-              Minimum {title} in {unit}
+        >
+          <div>
+            <label htmlFor={`${id}-min`} className="sr-only">
+              {range.maxParam ? `Minimum ${range.title.toLowerCase()}` : `At least`}
+              {unit}
             </label>
             <input
-              id={`${minKey}-input`}
+              id={`${id}-min`}
               type="number"
-              name={minKey}
-              min={min}
-              max={max}
-              placeholder={String(min)}
-              defaultValue={typeof currentMin === "string" ? currentMin : undefined}
-              className="tabular w-full rounded-xs border border-line bg-surface-2 px-2 py-1.5 font-mono text-xs text-ink-100 placeholder:text-ink-600"
-            />
-            <span className="text-xs text-ink-600">to</span>
-            <label className="sr-only" htmlFor={`${maxKey}-input`}>
-              Maximum {title} in {unit}
-            </label>
-            <input
-              id={`${maxKey}-input`}
-              type="number"
-              name={maxKey}
-              min={min}
-              max={max}
-              placeholder={String(max)}
-              defaultValue={typeof currentMax === "string" ? currentMax : undefined}
-              className="tabular w-full rounded-xs border border-line bg-surface-2 px-2 py-1.5 font-mono text-xs text-ink-100 placeholder:text-ink-600"
+              inputMode="decimal"
+              step="any"
+              name={range.minParam}
+              value={min}
+              onChange={(event) => onChange(range.minParam, event.target.value)}
+              placeholder={
+                range.bounds
+                  ? `${range.maxParam ? "" : "At least "}${format(range.bounds[0])}`
+                  : "Min"
+              }
+              className={NUMBER_INPUT}
             />
           </div>
+          {range.maxParam ? (
+            <>
+              <span aria-hidden="true" className="text-xs text-ink-600">
+                –
+              </span>
+              <div>
+                <label htmlFor={`${id}-max`} className="sr-only">
+                  Maximum {range.title.toLowerCase()}
+                  {unit}
+                </label>
+                <input
+                  id={`${id}-max`}
+                  type="number"
+                  inputMode="decimal"
+                  step="any"
+                  name={range.maxParam}
+                  value={max}
+                  onChange={(event) => onChange(range.maxParam!, event.target.value)}
+                  placeholder={range.bounds ? format(range.bounds[1]) : "Max"}
+                  className={NUMBER_INPUT}
+                />
+              </div>
+            </>
+          ) : null}
+        </div>
+        <p className="mt-2 flex items-center justify-between gap-2 text-hud text-ink-500">
+          <span>
+            {range.bounds
+              ? `${format(range.bounds[0])} – ${format(range.bounds[1])}${range.unit ? ` ${range.unit}` : ""}`
+              : "No car here publishes this"}
+          </span>
+          {fromSearch ? (
+            <span className="flex items-center gap-1 text-gold-500">
+              <Search className="size-3" aria-hidden="true" />
+              from search
+            </span>
+          ) : null}
+        </p>
+        {showApply ? (
           <button
             type="submit"
-            className="mt-2.5 w-full rounded-xs border border-line py-1.5 font-display text-[10px] tracking-[0.14em] text-ink-300 uppercase transition-colors hover:border-gold-700 hover:text-gold-300"
+            className="mt-3 h-11 w-full rounded-xs border border-line font-display text-micro tracking-button text-ink-300 uppercase transition-colors hover:border-gold-600 hover:text-gold-300 lg:h-9"
           >
-            Apply {unit}
+            Apply {range.title.toLowerCase()}
           </button>
-        </form>
-      ) : null}
-    </div>
+        ) : null}
+      </fieldset>
+    </Group>
   );
 }
 
-function FilterContents({
+function PriceGroup({
   options,
-  params,
-  basePath,
+  draft,
+  defaultOpen,
+  showApply,
+  onCurrency,
+  onNumber,
 }: {
-  options: FilterOptions;
-  params: RawSearchParams;
-  basePath: string;
+  options: NonNullable<FilterOptions["price"]>;
+  draft: Draft;
+  defaultOpen: boolean;
+  showApply: boolean;
+  onCurrency: (currency: string) => void;
+  onNumber: (key: "priceMin" | "priceMax", value: string) => void;
 }) {
-  return (
-    <>
-      <FilterGroup
-        title="Country"
-        paramKey="country"
-        options={options.countries}
-        params={params}
-        basePath={basePath}
-        defaultOpen
-      />
-      <FilterGroup
-        title="Manufacturer"
-        paramKey="manufacturer"
-        options={options.manufacturers}
-        params={params}
-        basePath={basePath}
-      />
-      <FilterGroup
-        title="Category"
-        paramKey="category"
-        options={options.categories}
-        params={params}
-        basePath={basePath}
-        defaultOpen
-      />
-      <FilterGroup
-        title="Fuel"
-        paramKey="fuel"
-        options={FUEL_OPTIONS}
-        params={params}
-        basePath={basePath}
-        defaultOpen
-      />
-      <FilterGroup
-        title="Drivetrain"
-        paramKey="drive"
-        options={DRIVE_OPTIONS}
-        params={params}
-        basePath={basePath}
-      />
-      <FilterGroup
-        title="Body Type"
-        paramKey="body"
-        options={options.bodyTypes}
-        params={params}
-        basePath={basePath}
-      />
-      <FilterGroup
-        title="Transmission"
-        paramKey="transmission"
-        options={options.transmissionTypes}
-        params={params}
-        basePath={basePath}
-      />
-      <FilterGroup
-        title="Engine Layout"
-        paramKey="layout"
-        options={options.engineLayouts}
-        params={params}
-        basePath={basePath}
-      />
-      <FilterGroup
-        title="Cylinders"
-        paramKey="cylinders"
-        options={options.cylinders}
-        params={params}
-        basePath={basePath}
-      />
-      <FilterGroup
-        title="Aspiration"
-        paramKey="aspiration"
-        options={ASPIRATION_OPTIONS}
-        params={params}
-        basePath={basePath}
-      />
-      <RangeGroup
-        title="Power"
-        minKey="powerMin"
-        maxKey="powerMax"
-        bounds={options.ranges.power}
-        unit="hp"
-        params={params}
-        basePath={basePath}
-      />
-      <RangeGroup
-        title="Top Speed"
-        minKey="speedMin"
-        maxKey="speedMax"
-        bounds={options.ranges.speed}
-        unit="km/h"
-        params={params}
-        basePath={basePath}
-      />
-      <RangeGroup
-        title="Year"
-        minKey="yearMin"
-        maxKey="yearMax"
-        bounds={options.ranges.year}
-        unit="year"
-        params={params}
-        basePath={basePath}
-      />
-    </>
-  );
-}
-
-const FUEL_OPTIONS: FacetOption[] = [
-  { value: "petrol", label: "Petrol" },
-  { value: "diesel", label: "Diesel" },
-  { value: "hybrid", label: "Hybrid" },
-  { value: "phev", label: "Plug-in Hybrid" },
-  { value: "electric", label: "Electric" },
-  { value: "hydrogen", label: "Hydrogen" },
-];
-
-const DRIVE_OPTIONS: FacetOption[] = [
-  { value: "fwd", label: "Front-Wheel Drive" },
-  { value: "rwd", label: "Rear-Wheel Drive" },
-  { value: "awd", label: "All-Wheel Drive" },
-  { value: "4wd", label: "Four-Wheel Drive" },
-];
-
-export function FilterRail({
-  options,
-  params,
-  basePath = "/cars",
-  activeCount,
-}: {
-  options: FilterOptions;
-  params: RawSearchParams;
-  basePath?: string;
-  activeCount: number;
-}) {
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const id = useId();
+  const currency = draft.currency;
+  // Bounds are only known for the currency the server last applied.
+  const bounds = currency && currency === options.currency ? options.bounds : null;
+  const format = (value: number) =>
+    new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US").format(value);
 
   return (
-    <>
-      {/* Mobile trigger */}
-      <button
-        type="button"
-        onClick={() => setDrawerOpen(true)}
-        className="flex items-center gap-2 rounded-xs border border-line px-3 py-2 font-display text-[10px] tracking-[0.14em] text-ink-200 uppercase transition-colors hover:border-line-strong lg:hidden"
-      >
-        <SlidersHorizontal className="size-3.5" aria-hidden="true" />
-        Filters
-        {activeCount > 0 ? <span className="text-gold-300">({activeCount})</span> : null}
-      </button>
-
-      {/* Desktop rail */}
-      <aside className="hidden lg:block" aria-label="Filters">
-        <div className="sticky top-24">
-          <div className="flex items-center justify-between border-b border-line pb-3">
-            <h2 className="font-display text-[10px] tracking-[0.18em] text-ink-100 uppercase">
-              Filters
-            </h2>
-            {activeCount > 0 ? (
-              <Link
-                href={basePath}
-                className="text-[11px] text-gold-300 transition-colors hover:text-gold-200"
-              >
-                Clear all
-              </Link>
-            ) : null}
-          </div>
-          <div className="max-h-[calc(100vh-10rem)] overflow-y-auto pr-1">
-            <FilterContents options={options} params={params} basePath={basePath} />
-          </div>
-        </div>
-      </aside>
-
-      {/* Mobile drawer */}
-      {drawerOpen ? (
-        <div className="fixed inset-0 z-[100] lg:hidden" role="presentation">
-          <button
-            type="button"
-            aria-label="Close filters"
-            onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-void/85 backdrop-blur-sm"
-          />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Filters"
-            className="absolute inset-y-0 left-0 w-full max-w-sm border-r border-line bg-surface-1"
+    <Group defaultOpen={defaultOpen}>
+      <GroupSummary title="Price" active={options.currency ? 1 : 0} />
+      <fieldset className="pb-4">
+        <legend className="sr-only">Listed price</legend>
+        <label htmlFor={`${id}-currency`} className="text-hud text-ink-400">
+          Currency
+        </label>
+        <div className="relative mt-1.5">
+          <select
+            id={`${id}-currency`}
+            name="priceCurrency"
+            value={currency}
+            onChange={(event) => onCurrency(event.target.value)}
+            className="h-11 w-full appearance-none rounded-xs border border-line bg-surface-1 pr-8 pl-2.5 text-sm text-ink-100 hover:border-line-strong focus-visible:border-gold-500 lg:h-9 lg:text-xs"
           >
-            <header className="flex items-center justify-between border-b border-line px-5 py-4">
-              <h2 className="font-display text-xs tracking-[0.18em] text-ink-100 uppercase">
-                Filters
-              </h2>
-              <div className="flex items-center gap-3">
-                {activeCount > 0 ? (
-                  <Link
-                    href={basePath}
-                    onClick={() => setDrawerOpen(false)}
-                    className="text-[11px] text-gold-300"
-                  >
-                    Clear all
-                  </Link>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => setDrawerOpen(false)}
-                  aria-label="Close"
-                  className="-mr-2 p-2 text-ink-400 hover:text-ink-50"
-                >
-                  <X className="size-4" aria-hidden="true" />
-                </button>
-              </div>
-            </header>
-            <div className="h-[calc(100%-3.75rem)] overflow-y-auto px-5 pb-8">
-              <FilterContents options={options} params={params} basePath={basePath} />
+            <option value="">Any — choose to filter</option>
+            {options.currencies.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} ({option.count})
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-ink-500"
+            aria-hidden="true"
+          />
+        </div>
+
+        {currency ? (
+          <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <div>
+              <label htmlFor={`${id}-min`} className="sr-only">
+                Minimum price in {currency}
+              </label>
+              <input
+                id={`${id}-min`}
+                type="number"
+                inputMode="decimal"
+                step="any"
+                name="priceMin"
+                value={draft.numbers.priceMin ?? ""}
+                onChange={(event) => onNumber("priceMin", event.target.value)}
+                placeholder={bounds ? format(bounds[0]) : "Min"}
+                className={NUMBER_INPUT}
+              />
+            </div>
+            <span aria-hidden="true" className="text-xs text-ink-600">
+              –
+            </span>
+            <div>
+              <label htmlFor={`${id}-max`} className="sr-only">
+                Maximum price in {currency}
+              </label>
+              <input
+                id={`${id}-max`}
+                type="number"
+                inputMode="decimal"
+                step="any"
+                name="priceMax"
+                value={draft.numbers.priceMax ?? ""}
+                onChange={(event) => onNumber("priceMax", event.target.value)}
+                placeholder={bounds ? format(bounds[1]) : "Max"}
+                className={NUMBER_INPUT}
+              />
             </div>
           </div>
+        ) : null}
+
+        <p className="mt-2.5 text-xs leading-relaxed text-ink-500">
+          Listed prices, in the currency they were published in. Prices are never
+          converted, so a range always applies within one currency.
+        </p>
+        {showApply && currency ? (
+          <button
+            type="submit"
+            className="mt-3 h-11 w-full rounded-xs border border-line font-display text-micro tracking-button text-ink-300 uppercase transition-colors hover:border-gold-600 hover:text-gold-300 lg:h-9"
+          >
+            Apply price
+          </button>
+        ) : null}
+      </fieldset>
+    </Group>
+  );
+}
+
+/** Which groups start open: the everyday ones, plus any with an active value. */
+const OPEN_BY_DEFAULT = new Set(["country", "category", "fuel", "power"]);
+
+/** The order groups appear in, whatever order the facet data arrives in. */
+const GROUP_ORDER = [
+  "country",
+  "manufacturer",
+  "category",
+  "body",
+  "fuel",
+  "price",
+  "power",
+  "speed",
+  "range",
+  "transmission",
+  "drive",
+  "engineLayout",
+  "cylinders",
+  "aspiration",
+  "year",
+  "status",
+];
+
+export function FilterPanel({
+  model,
+  mode,
+  onApplied,
+  className,
+}: {
+  model: FilterPanelModel;
+  mode: "instant" | "staged";
+  /** Called after a staged submit, e.g. to close the sheet. */
+  onApplied?: () => void;
+  className?: string;
+}) {
+  const router = useRouter();
+  const hydrated = useHydrated();
+  const [pending, startTransition] = useTransition();
+  const [draft, setDraft] = useState(() => initialDraft(model.options));
+  const [syncedKey, setSyncedKey] = useState(model.stateKey);
+
+  // After a navigation lands, adopt the server's state (React's "adjust state
+  // when a prop changes" pattern). Not while one is still in flight, or a
+  // second quick click would be undone by the first response.
+  if (model.stateKey !== syncedKey && !pending) {
+    setSyncedKey(model.stateKey);
+    setDraft(initialDraft(model.options));
+  }
+
+  const navigate = (next: Draft) => {
+    const href = draftToHref(model, next);
+    startTransition(() => {
+      router.push(href, { scroll: mode === "staged" });
+    });
+    onApplied?.();
+  };
+
+  const update = (next: Draft, apply: boolean) => {
+    setDraft(next);
+    if (apply && mode === "instant") navigate(next);
+  };
+
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    navigate(draft);
+  };
+
+  const searchKeys = new Set(model.searchKeys);
+  const options = model.options;
+  const listByKey = new Map(options.lists.map((facet) => [facet.key as string, facet]));
+  const rangeByKey = new Map(options.ranges.map((range) => [range.key as string, range]));
+
+  const groups = GROUP_ORDER.map((key) => {
+    const facet = listByKey.get(key);
+    if (facet) {
+      const values = draft.lists[facet.param] ?? [];
+      return (
+        <ListGroup
+          key={key}
+          facet={facet}
+          values={values}
+          fromSearch={searchKeys.has(facet.key)}
+          defaultOpen={
+            OPEN_BY_DEFAULT.has(key) || facet.options.some((option) => option.selected)
+          }
+          onToggle={(value, checked) => {
+            const current = draft.lists[facet.param] ?? [];
+            const nextValues = checked
+              ? [...current.filter((entry) => entry !== value), value]
+              : current.filter((entry) => entry !== value);
+            update(
+              { ...draft, lists: { ...draft.lists, [facet.param]: nextValues } },
+              true,
+            );
+          }}
+        />
+      );
+    }
+    const range = rangeByKey.get(key);
+    if (range) {
+      return (
+        <RangeGroup
+          key={key}
+          range={range}
+          numbers={draft.numbers}
+          fromSearch={
+            searchKeys.has(range.minParam) ||
+            (range.maxParam ? searchKeys.has(range.maxParam) : false)
+          }
+          defaultOpen={
+            OPEN_BY_DEFAULT.has(key) || range.min !== undefined || range.max !== undefined
+          }
+          showApply={mode === "instant"}
+          onChange={(param, value) =>
+            update({ ...draft, numbers: { ...draft.numbers, [param]: value } }, false)
+          }
+        />
+      );
+    }
+    if (key === "price" && options.price) {
+      return (
+        <PriceGroup
+          key={key}
+          options={options.price}
+          draft={draft}
+          defaultOpen={options.price.currency !== undefined}
+          showApply={mode === "instant"}
+          onCurrency={(currency) =>
+            update(
+              {
+                ...draft,
+                currency,
+                // Bounds typed in one currency mean nothing in another.
+                numbers: { ...draft.numbers, priceMin: "", priceMax: "" },
+              },
+              true,
+            )
+          }
+          onNumber={(param, value) =>
+            update({ ...draft, numbers: { ...draft.numbers, [param]: value } }, false)
+          }
+        />
+      );
+    }
+    return null;
+  });
+
+  return (
+    <form
+      action={model.action}
+      method="get"
+      onSubmit={onSubmit}
+      aria-busy={pending || undefined}
+      className={cn("relative", className)}
+    >
+      {model.hidden.map(([name, value]) => (
+        <input key={name} type="hidden" name={name} value={value} />
+      ))}
+
+      {mode === "instant" ? (
+        <div
+          aria-hidden={!pending}
+          className={cn(
+            "pointer-events-none absolute -top-9 right-0 flex items-center gap-1.5 text-hud text-gold-400 transition-opacity",
+            pending ? "opacity-100" : "opacity-0",
+          )}
+        >
+          <LoaderCircle className="size-3 animate-spin" aria-hidden="true" />
+          Updating
         </div>
       ) : null}
-    </>
+
+      {groups}
+
+      {/* Staged mode always needs a submit; instant mode needs one only
+          before hydration (or without JavaScript), when nothing applies on
+          change. */}
+      {mode === "staged" ? (
+        <div className="sticky -bottom-5 -mx-5 mt-4 -mb-5 flex gap-3 border-t border-line bg-surface-1/95 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur sm:-mx-6 sm:px-6">
+          <button
+            type="button"
+            onClick={() => navigate({ lists: {}, numbers: {}, currency: "" })}
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-xs border border-line-strong font-display text-micro tracking-button text-ink-200 uppercase transition-colors hover:border-gold-500 hover:text-gold-300"
+          >
+            Clear all
+          </button>
+          <button
+            type="submit"
+            className="inline-flex h-12 flex-[1.4] items-center justify-center rounded-xs bg-gold-500 font-display text-micro tracking-button text-void uppercase transition-colors hover:bg-gold-400"
+          >
+            Show results
+          </button>
+        </div>
+      ) : !hydrated ? (
+        <button
+          type="submit"
+          className="mt-5 h-11 w-full rounded-xs bg-gold-500 font-display text-micro tracking-button text-void uppercase hover:bg-gold-400"
+        >
+          Apply filters
+        </button>
+      ) : null}
+    </form>
   );
 }

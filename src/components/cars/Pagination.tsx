@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { buildQueryString, type RawSearchParams } from "@/lib/search-params";
 
 /**
  * Page numbers to render: always the first and last, the current page and its
  * neighbours, with gaps elided. Keeps the control a fixed width regardless of
  * how many pages there are.
  */
-function pageItems(current: number, total: number): (number | "gap")[] {
+export function pageItems(current: number, total: number): (number | "gap")[] {
   if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
 
   const items: (number | "gap")[] = [1];
@@ -23,101 +22,94 @@ function pageItems(current: number, total: number): (number | "gap")[] {
   return items;
 }
 
+const CELL =
+  "flex h-11 min-w-11 items-center justify-center rounded-xs border px-3 font-display text-micro " +
+  "tracking-hud uppercase transition-colors duration-(--duration-fast) sm:h-10 sm:min-w-10";
+
 /**
  * Server-side pagination. Every control is a real link, so pages are
- * crawlable, shareable and work without JavaScript.
+ * crawlable, shareable and work without JavaScript. On phones the numbers
+ * collapse to "page x of y" between the arrows.
  */
 export function Pagination({
   page,
   pageCount,
-  basePath,
-  searchParams,
+  href,
+  className,
 }: {
   page: number;
   pageCount: number;
-  basePath: string;
-  searchParams: RawSearchParams;
+  /** URL of a page (1-based). */
+  href: (page: number) => string;
+  className?: string;
 }) {
   if (pageCount <= 1) return null;
 
-  const href = (target: number) =>
-    `${basePath}${buildQueryString(searchParams, { page: target === 1 ? undefined : target })}`;
-
-  const linkClasses =
-    "font-display flex h-9 min-w-9 items-center justify-center border px-3 " +
-    "text-[10px] tracking-[0.14em] uppercase transition-colors duration-200";
+  const arrow = (direction: "prev" | "next") => {
+    const target = direction === "prev" ? page - 1 : page + 1;
+    const enabled = target >= 1 && target <= pageCount;
+    const Icon = direction === "prev" ? ChevronLeft : ChevronRight;
+    const label = direction === "prev" ? "Previous page" : "Next page";
+    return enabled ? (
+      <Link
+        href={href(target)}
+        rel={direction}
+        aria-label={label}
+        className={cn(
+          CELL,
+          "border-line text-ink-300 hover:border-gold-600 hover:text-gold-300",
+        )}
+      >
+        <Icon className="size-4" aria-hidden="true" />
+      </Link>
+    ) : (
+      <span aria-hidden="true" className={cn(CELL, "border-line-subtle text-ink-600")}>
+        <Icon className="size-4" />
+      </span>
+    );
+  };
 
   return (
-    <nav aria-label="Pagination" className="mt-14 flex items-center justify-center gap-1">
-      {page > 1 ? (
-        <Link
-          href={href(page - 1)}
-          rel="prev"
-          aria-label="Previous page"
-          className={cn(
-            linkClasses,
-            "border-line text-ink-300 hover:border-gold-700 hover:text-gold-300",
-          )}
-        >
-          <ChevronLeft className="size-3.5" aria-hidden="true" />
-        </Link>
-      ) : (
-        <span
-          aria-hidden="true"
-          className={cn(linkClasses, "border-line-subtle text-ink-600")}
-        >
-          <ChevronLeft className="size-3.5" />
-        </span>
-      )}
+    <nav aria-label="Pagination" className={cn("flex items-center gap-1.5", className)}>
+      {arrow("prev")}
 
-      {pageItems(page, pageCount).map((item, index) =>
-        item === "gap" ? (
-          <span
-            key={`gap-${index}`}
-            aria-hidden="true"
-            className="px-1 font-mono text-xs text-ink-600"
-          >
-            …
-          </span>
-        ) : (
-          <Link
-            key={item}
-            href={href(item)}
-            aria-label={`Page ${item}`}
-            aria-current={item === page ? "page" : undefined}
-            className={cn(
-              linkClasses,
-              "tabular",
-              item === page
-                ? "border-gold-500 bg-gold-800/15 text-gold-300"
-                : "border-line text-ink-300 hover:border-gold-700 hover:text-gold-300",
-            )}
-          >
-            {item}
-          </Link>
-        ),
-      )}
+      <p className="tabular px-3 font-mono text-xs text-ink-300 sm:hidden">
+        <span className="sr-only">Page </span>
+        {page} <span className="text-ink-500">/</span> {pageCount}
+      </p>
 
-      {page < pageCount ? (
-        <Link
-          href={href(page + 1)}
-          rel="next"
-          aria-label="Next page"
-          className={cn(
-            linkClasses,
-            "border-line text-ink-300 hover:border-gold-700 hover:text-gold-300",
-          )}
-        >
-          <ChevronRight className="size-3.5" aria-hidden="true" />
-        </Link>
-      ) : (
-        <span
-          aria-hidden="true"
-          className={cn(linkClasses, "border-line-subtle text-ink-600")}
-        >
-          <ChevronRight className="size-3.5" />
-        </span>
-      )}
+      <ul className="hidden items-center gap-1.5 sm:flex">
+        {pageItems(page, pageCount).map((item, index) =>
+          item === "gap" ? (
+            <li
+              key={`gap-${index}`}
+              aria-hidden="true"
+              className="px-1 font-mono text-xs text-ink-600"
+            >
+              …
+            </li>
+          ) : (
+            <li key={item}>
+              <Link
+                href={href(item)}
+                aria-label={`Page ${item}`}
+                aria-current={item === page ? "page" : undefined}
+                className={cn(
+                  CELL,
+                  "tabular",
+                  item === page
+                    ? "border-gold-500 bg-gold-800/15 text-gold-300"
+                    : "border-line text-ink-300 hover:border-gold-600 hover:text-gold-300",
+                )}
+              >
+                {item}
+              </Link>
+            </li>
+          ),
+        )}
+      </ul>
+
+      {arrow("next")}
     </nav>
   );
 }

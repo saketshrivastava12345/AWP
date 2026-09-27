@@ -10,6 +10,12 @@ export type SelectOption = {
   disabled?: boolean;
 };
 
+/** A labelled <optgroup>; screen readers announce its label with its options. */
+export type SelectGroup = {
+  label: string;
+  options: readonly SelectOption[];
+};
+
 /**
  * A styled native <select>.
  *
@@ -21,6 +27,7 @@ export function Select({
   label,
   hideLabel = false,
   options,
+  groups,
   placeholder,
   size = "md",
   className,
@@ -31,6 +38,8 @@ export function Select({
   label: string;
   hideLabel?: boolean;
   options: readonly SelectOption[];
+  /** Grouped options, rendered after `options`. Empty groups are omitted. */
+  groups?: readonly SelectGroup[];
   /** Shown as a first, empty option. */
   placeholder?: string;
   size?: "sm" | "md";
@@ -63,6 +72,21 @@ export function Select({
               {option.label}
             </option>
           ))}
+          {groups?.map((group) =>
+            group.options.length > 0 ? (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map((option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    disabled={option.disabled}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null,
+          )}
         </select>
         <ChevronDown
           className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-ink-400"

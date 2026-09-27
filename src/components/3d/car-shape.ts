@@ -694,6 +694,13 @@ export function buildShell(shape: BodyShape, lowDetail: boolean): THREE.BufferGe
       3,
     ),
   );
+  geometry.setAttribute(
+    "uv",
+    new THREE.Float32BufferAttribute(
+      shellUvs(positions, stationData.length, ringSize),
+      2,
+    ),
+  );
   const index: number[] = [];
   buckets.forEach((bucket, slot) => {
     geometry.addGroup(index.length, bucket.length, slot);
@@ -701,6 +708,29 @@ export function buildShell(shape: BodyShape, lowDetail: boolean): THREE.BufferGe
   });
   geometry.setIndex(index);
   return geometry;
+}
+
+/**
+ * Texture coordinates in metres: along the car, and around each section by
+ * arc length. Only fine surface detail (the paint's metallic flake) is mapped
+ * onto the shell, so an even physical scale matters and seams do not.
+ */
+function shellUvs(positions: number[], stationCount: number, ringSize: number): number[] {
+  const uvs: number[] = [];
+  for (let i = 0; i < stationCount; i += 1) {
+    let arc = 0;
+    for (let k = 0; k < ringSize; k += 1) {
+      const base = (i * ringSize + k) * 3;
+      if (k > 0) {
+        arc += Math.hypot(
+          (positions[base] ?? 0) - (positions[base - 3] ?? 0),
+          (positions[base + 1] ?? 0) - (positions[base - 2] ?? 0),
+        );
+      }
+      uvs.push(positions[base + 2] ?? 0, arc);
+    }
+  }
+  return uvs;
 }
 
 /**

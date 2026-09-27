@@ -1,6 +1,16 @@
 import { cn } from "@/lib/utils";
+import { NOT_AVAILABLE } from "@/lib/format";
 import type { DriveType, FuelType } from "@/types/domain";
 import { powertrainKind } from "@/types/domain";
+import { DetailHeading } from "@/components/cars/detail/DetailHeading";
+
+const DRIVE_LABELS: Record<DriveType | "none", string> = {
+  fwd: "Front-wheel drive",
+  rwd: "Rear-wheel drive",
+  awd: "All-wheel drive",
+  "4wd": "Four-wheel drive",
+  none: "Driven wheels not recorded",
+};
 
 /**
  * Animated flow diagram of how power reaches the road.
@@ -75,7 +85,7 @@ function WheelDiagram({ drive }: { drive: DriveType | null }) {
       viewBox="0 0 80 110"
       className="h-24 w-auto"
       role="img"
-      aria-label={`Driven wheels: ${drive ?? "unknown"}`}
+      aria-label={`Driven wheels: ${DRIVE_LABELS[drive ?? "none"]}`}
     >
       {/* Car outline */}
       <rect
@@ -128,10 +138,12 @@ function WheelDiagram({ drive }: { drive: DriveType | null }) {
 export function PowertrainVisualizer({
   fuelType,
   driveType,
+  headingLevel = 3,
   className,
 }: {
   fuelType: FuelType | null;
   driveType: DriveType | null;
+  headingLevel?: 2 | 3;
   className?: string;
 }) {
   const stages = stagesFor(fuelType);
@@ -140,14 +152,15 @@ export function PowertrainVisualizer({
     <section
       id="powertrain"
       aria-labelledby="powertrain-heading"
-      className={cn("scroll-mt-32 pt-14", className)}
+      className={cn("scroll-mt-24", className)}
     >
-      <h2
+      <DetailHeading
         id="powertrain-heading"
-        className="border-b border-line pb-4 font-display text-sm tracking-[0.18em] text-ink-50 uppercase"
-      >
-        Powertrain Flow
-      </h2>
+        level={headingLevel}
+        eyebrow="Powertrain"
+        title="How power reaches the road"
+        meta={DRIVE_LABELS[driveType ?? "none"]}
+      />
 
       <div className="mt-8 flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-14">
         <ol className="flex flex-1 flex-wrap items-center gap-y-4">
@@ -201,9 +214,9 @@ export function PowertrainVisualizer({
           <div>
             <p className="text-label">Driven wheels</p>
             <p className="mt-2 font-mono text-xs text-ink-200">
-              {driveType ? driveType.toUpperCase() : "Not available"}
+              {driveType ? driveType.toUpperCase() : NOT_AVAILABLE}
             </p>
-            <p className="mt-1 text-[11px] text-ink-600">Gold = driven</p>
+            <p className="mt-1 text-[11px] text-ink-500">Gold = driven</p>
           </div>
         </div>
       </div>

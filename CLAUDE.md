@@ -74,29 +74,51 @@ All versions are pinned exactly (no `^`) so the build is reproducible for markin
 
 ```
 src/
-  app/                 routes, layout.tsx, not-found.tsx, error.tsx
+  app/                 routes; layout.tsx, template.tsx, not-found/error/loading,
+                       icon.svg, apple-icon.tsx, opengraph-image.tsx, sitemap, robots
+    admin/             the CMS (vehicles, models, prices + import, markets, media,
+                       sources); media/upload/[file] is the upload route handler
+    api/               search (palette), cars (card lookups), favorites,
+                       recently-viewed
+    auth/              sign-in/up/out + reset server actions, /auth/confirm
   components/
-    3d/                CarViewer, ProceduralCar, GLBCar, CameraRig, Lighting,
-                       ExplodedView, EngineeringOverlay, ViewerErrorBoundary
-    cars/              CarCard, CarGrid, SpecSection, CarDNA,
-                       PowertrainVisualizer, CompareTable
-    countries/         WorldMap, CountryCard
-    manufacturers/     ManufacturerCard, ModelGroup
-    parts/             PartCard, PartDetail
-    layout/            Navbar, Footer, LoadingScreen, PageTransition, SearchOverlay
-    ui/                Button, GlassCard, StatCard, Tabs, Sheet, Skeleton, Badge
+    3d/                Car3DViewer (+ ViewerCanvas, CameraController, CarLighting,
+                       ModelLoader, CarControls, ConfiguratorPanel, overlays),
+                       ProceduralCar/CarBody (lofted car), CarShowcase (scroll
+                       tour), StageDirector, Hero*, car-* geometry/layout modules
+    cars/              CarCard, CarGrid, CarPhoto, ListedPrice, FilterRail, SortBar,
+                       FavoriteButton; catalogue/ (listing parts); detail/ (the
+                       car page's chapters, gallery, panels)
+    pricing/           PricingSection and its selector, summary, history, provenance
+    compare/           the compare view, picker and cards
+    account/           favourites view, recently viewed, auth forms
+    admin/             CMS forms, tables, uploads
+    home/ countries/ manufacturers/ parts/
+    layout/            Navbar, MobileMenu, AccountMenu, CommandPalette, Footer,
+                       LoadingScreen
+    ui/                Dialog/Sheet, Tooltip/InfoHint, Select, SegmentedControl,
+                       Switch, Field, Toast, Kbd, IconButton, Progress, Button,
+                       Badge, GlassCard, StatCard, Skeleton, Container, ...
   lib/
-    supabase/          client.ts (browser), server.ts (RSC/route handlers)
-    queries/           cars.ts, manufacturers.ts, countries.ts, parts.ts, compare.ts
-    search/            parseQuery.ts + parseQuery.test.ts
-    dna.ts, format.ts, utils.ts, env.ts, fonts.ts, site-config.ts
-  hooks/               useReducedMotion, useIsMobile, ...
+    supabase/          client.ts (browser), server.ts (static + cookie clients),
+                       middleware.ts (session refresh used by src/proxy.ts)
+    queries/           server-only data access, one module per area
+    pricing/           pure pricing engine, market selection, chart, presentation
+    detail/            pure helpers for the car page (performance, gallery, JSON-LD)
+    admin/             validation, CSV, file signatures, server actions
+    favorites/         guest/account favourites store and recently viewed
+    search/            parseQuery.ts (natural-language catalogue search)
+    viewer-*.ts        pure 3D viewer logic (quality tiers, presets, arbiter, paint)
+    format.ts, cache-tags.ts, static-params.ts, json-ld.ts, car-build.ts, ...
+  proxy.ts             Next 16's renamed middleware (session refresh)
   types/               database.ts (generated — do not edit), domain.ts
 supabase/
-  migrations/0001_schema.sql, 0002_rls.sql, 0003_storage.sql
-  seed.sql
+  migrations/0001..0008   schema, RLS, storage, role fixes, engine position,
+                          exhaust group, markets/pricing/media/generations
+  seed.sql, verify.sql
 public/
-  models/ textures/ images/ map/
+  draco/ basis/        self-hosted Draco and Basis/KTX2 decoders
+  images/cars/         committed photographs (credits in images/CREDITS.md)
 ```
 
 ### Rules
@@ -230,7 +252,9 @@ Fonts (`src/lib/fonts.ts`, via `next/font/google`):
   records which convention it uses in `performance_specs.source`.
 - `car_media` is **empty**. No real image or GLB URLs exist yet, and inventing
   them would breach the same rule. The 3D viewer's procedural fallback (Phase 5)
-  is designed for exactly this state.
+  is designed for exactly this state. _(Phase 11: the seed now registers the
+  eight photographs committed under `public/images/cars/`, with the author and
+  licence from CREDITS.md.)_
 
 **Phase 3**
 
@@ -621,21 +645,104 @@ rejection instead of logging 478 phantom errors per build.
 Screenshots under SwiftShader need long settles: GSAP's lag smoothing advances
 tweens only 33 ms per slow frame, so an explode "takes" 30 s there.
 
+**Phase 11 — markets, sourced pricing, and a full product pass**
+
+Built by parallel workstreams on disjoint files, each verified in a browser,
+then reviewed adversarially. The decisions worth keeping:
+
+- **Pricing is sourced or absent.** `market_prices` (migration 0008) holds
+  one row per variant × market (country, optional state, optional city) ×
+  price type × effective date. `source`, `source_url` and `last_verified_at`
+  are NOT NULL; a trigger rejects a state outside its country or a city
+  outside its state; `unique nulls not distinct` stops duplicate national
+  rows. `current_market_prices` (security_invoker) picks the latest row in
+  force per scope with DISTINCT ON. No price is seeded: every car says "Price
+  data unavailable" until an admin records one with its source.
+- **Price types never blur.** Manufacturer list, dealer list, ex-showroom,
+  on-road and estimated on-road are separate; when AURIX adds the components
+  up itself the total is labelled **Calculated on-road**, and only when every
+  component it needs is present. A city falls back to its state, then the
+  country, and the page says which it is showing. Nothing is converted
+  between currencies, anywhere — compare never crowns a price.
+- `src/lib/pricing/engine.ts` is pure and unit-tested; the UI only chooses
+  what to show. The market choice lives in `?market=` and localStorage, read
+  with `useSyncExternalStore` — never `useSearchParams`, which would make the
+  static car page dynamic.
+- **Cache tags** (`src/lib/cache-tags.ts`): `catalogue` (1 h), `prices`
+  (10 min), `markets` (1 day). Admin server actions call `updateTag()` so an
+  edit is visible on the next request; route handlers must use
+  `revalidateTag(tag, { expire: 0 })` because `updateTag` only works in
+  server actions.
+- **Provenance everywhere.** Spec tables gained `source_url` and
+  `last_verified_at`; `car_media` gained licence, author, source URL, pixel
+  size, shot type and 3D-model metadata (`is_exact_model` is required for a
+  GLB — the viewer labels a model "exact" or "representation"). The admin
+  "Data sources" page lists every figure with its status.
+- **Admin is a real CMS, still without a service-role key.** One
+  `requireAdmin()` (getUser + profiles.role) guards every page, action and the
+  upload route, and RLS checks again. Uploads are validated by magic bytes and
+  header parsing (PNG/JPEG/WebP/AVIF sizes, the glTF binary header and its
+  JSON chunk for Draco/KTX2/meshopt), not by name or declared type.
+- **Favourites work for guests.** localStorage `aurix-favorites` (+ the
+  `aurix:favorites-changed` event) for guests, the `favorites` table for
+  accounts, merged on sign-in and cleared only after the merge succeeds.
+  Sign-in state reaches client stores through a rotating, non-secret
+  `aurix-auth-epoch` cookie — the pages themselves stay static.
+- **The command palette** searches through a `search_catalogue` SQL function
+  (tsquery prefix + pg_trgm word similarity), SECURITY INVOKER so RLS still
+  hides unpublished cars; `/api/search` is publicly cacheable.
+- **generateStaticParams must never return `[]`** under Cache Components
+  (build error E898 on a fresh clone with no database). Every dynamic route
+  wraps its params in `withPlaceholder()`; the placeholder slug 404s.
+- `typecheck` runs `next typegen` first, so it works on a fresh clone without
+  a build; CI (`.github/workflows/ci.yml`) builds with **no** Supabase
+  credentials to prove the empty-state path.
+- `src/middleware.ts` became `src/proxy.ts` (Next 16 rename). Its matcher
+  skips static files, the public cacheable APIs and the admin upload route.
+
+**Traps found while building it**
+
+1. `usePathname()` in a client component rendered by the root layout, outside
+   `<Suspense>`, blocks prerendering of every dynamic route whose params are
+   not all listed — a build failure in Next 16.3. The navbar reads the path
+   inside its own Suspense boundary; page transitions moved to a hook-free
+   `app/template.tsx`.
+2. A value exported from a `"use client"` module arrives in a server
+   component as a client reference, not the value. A class-name constant
+   shared by the server AccountMenu silently became `undefined` and the
+   account slot lost its reserved size. Shared constants live in plain `.ts`.
+3. `Intl.DateTimeFormat("en-GB")` prints "Sep" or "Sept" depending on the ICU
+   version, so a date rendered by Node and again by the browser could differ
+   (hydration mismatch). `formatDate` builds the string by hand.
+4. An invisible, absolutely-positioned tooltip still widens the scrollable
+   area; tooltips are now `display: none` until shown.
+5. A dialog rendered inside an element with a transform or backdrop-filter is
+   positioned against that element. `Dialog` portals to `<body>`, and decides
+   which dialog is topmost by open order, not DOM order.
+6. Many single-variant models repeat the model name as the variant name
+   ("Ferrari F8 Tributo F8 Tributo"); `carDisplayName()` and the search
+   function drop the repeat.
+7. `power_hp` is an integer column: PostgREST rejects a fractional bound, so
+   the related-cars power band rounds inward.
+8. Turbopack's dev server grows past 10 GB after an hour of constant
+   recompiles on this 16 GB machine; restart it when it does.
+9. In dev, every page streams, so the no-JavaScript experience can only be
+   judged against a production build.
+
 **Open items**
 
-- Apply migration 0006 to the hosted database: `npm run db:push`, then
-  `npm run db:seed` (idempotent). Until then combustion cars render without an
-  engine, and the tour's engine stop has no position line.
+- Apply migrations 0006–0008 to the hosted database: `npm run db:push`, then
+  `npm run db:seed` (idempotent).
+- Configure Supabase Auth: Site URL, the `/auth/confirm` redirect URL, and
+  ideally the token-hash email templates (README section 4).
+- Record prices, availability and paint colours through the admin panel,
+  each with its source. None are seeded.
 - Cars without a verified photograph show the silhouette placeholder. Run
   `node scripts/fetch-images.mjs --all --download` on a machine with internet
   access, check every pick by eye, and commit the files in
-  `public/images/cars/`.
-- Otherwise none blocking. The Supabase publishable key was initially rejected because
-  the paste had wrapped and lost its last four characters (`BUNI` arrived on a
-  line of its own and looked like a stray token). The corrected key is in
-  `.env.local` and is verified working: `/auth/v1/health` returns 200, anon
-  SELECT on `car_catalog` returns all 54 rows through PostgREST, and anon
-  INSERT is correctly refused with `42501 permission denied`.
+  `public/images/cars/`; or upload licensed photographs in the admin panel.
+- No licensed GLB is bundled; every car shows the parametric representation.
+- On Vercel, admin uploads above 4.5 MB need signed direct-to-Storage uploads.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { GOLD } from "@/lib/viewer-colors";
 import type { CarMotion } from "./ProceduralCar";
 import type { CarLayout } from "./car-layout";
-import { GOLD } from "./car-materials";
 import { cameraAt, type Shot } from "./tour-cameras";
 
 /**
@@ -40,6 +40,7 @@ export function Director({
 }) {
   const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera;
   const size = useThree((state) => state.size);
+  const invalidate = useThree((state) => state.invalidate);
   const positionRef = useRef(new THREE.Vector3());
   const targetRef = useRef(new THREE.Vector3());
   const started = useRef(false);
@@ -56,6 +57,9 @@ export function Director({
         : THREE.MathUtils.damp(shownRef.current ?? goal, goal, 4, Math.min(delta, 0.1));
     started.current = true;
     shownRef.current = beat;
+    // On-demand rendering: keep asking for frames until the camera has
+    // caught up with the scroll position, then let the canvas idle.
+    if (Math.abs(beat - goal) > 1e-4) invalidate();
 
     cameraAt(shots, beat, reducedMotion, position, target);
     // Shots are framed for a landscape screen. A portrait phone sees far less

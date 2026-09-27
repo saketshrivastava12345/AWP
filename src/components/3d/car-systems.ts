@@ -827,3 +827,196 @@ export function buildElectronics(layout: CarLayout, lowDetail: boolean): Part[] 
   });
   return parts;
 }
+
+// ---------------------------------------------------------------------------
+// Exhaust
+// ---------------------------------------------------------------------------
+
+/**
+ * Downpipes, catalytic converter, silencer and tailpipes. The tailpipes sit at
+ * the exits found on the real rear surface (body-geometry.ts). Where the
+ * engine's position is not recorded only the rear section is drawn: routing
+ * pipes from a guessed engine would be inventing the layout.
+ */
+export function buildExhaust(
+  layout: CarLayout,
+  lowDetail: boolean,
+  tips: THREE.Vector3[],
+): Part[] {
+  const { engine, spec, build } = layout;
+  if (build.powertrain === "electric") return [];
+  const parts: Part[] = [];
+  const gc = spec.groundClearance;
+  const radial = lowDetail ? 12 : 20;
+  const pipeRadius = 0.026;
+
+  // Tailpipes: a polished tip with a sooted end inside it.
+  for (const tip of tips) {
+    const tube = new THREE.CylinderGeometry(0.043, 0.043, 0.16, radial, 1, true);
+    tube.rotateX(Math.PI / 2);
+    parts.push({ geometry: place(tube, { position: tip }), material: "chrome" });
+    const soot = new THREE.CircleGeometry(0.041, radial);
+    soot.rotateY(Math.PI);
+    soot.translate(0, 0, 0.06);
+    parts.push({ geometry: place(soot, { position: tip }), material: "under" });
+  }
+
+  const rearMounted = build.enginePosition === "mid" || build.enginePosition === "rear";
+  const tipZ =
+    tips.length > 0 ? Math.max(...tips.map((tip) => tip.z)) : spec.tailZ + 0.12;
+  const tipY = tips[0]?.y ?? gc + 0.16;
+
+  // Silencer, across the car just ahead of the tailpipes.
+  const size = new THREE.Vector3(
+    spec.width * (rearMounted ? 0.46 : 0.5),
+    0.16,
+    build.enginePosition === "rear" ? 0.16 : 0.26,
+  );
+  const silencer = new THREE.Vector3(
+    0,
+    Math.max(gc + 0.02 + size.y / 2, tipY + 0.02),
+    tipZ + 0.1 + size.z / 2,
+  );
+  parts.push({
+    geometry: place(rbox(size.x, size.y, size.z, 0.06), { position: silencer }),
+    material: "steel",
+  });
+  for (const tip of tips) {
+    const from = new THREE.Vector3(tip.x, tip.y, tip.z + 0.07);
+    const to = new THREE.Vector3(tip.x * 0.8, silencer.y, silencer.z - size.z / 2 + 0.02);
+    parts.push({
+      geometry: tubeAlong([from, from.clone().lerp(to, 0.5), to], 0.03, lowDetail),
+      material: "steel",
+    });
+  }
+
+  if (!engine) return parts;
+
+  const scale = engine.scale;
+  const { center } = engine;
+  const half = engine.footprint / 2;
+  const banks: number[] = engine.banks === 2 ? [1, -1] : [1];
+  const cat = (at: THREE.Vector3, length: number, radius: number) =>
+    parts.push({
+      geometry: place(cyl(radius, length, "z", radial), { position: at }),
+      material: "alloy",
+    });
+
+  if (!rearMounted) {
+    // Front engine: down from the manifolds, back along the tunnel, around the
+    // final drive and into the silencer.
+    const floorY = gc + 0.1;
+    const catAt = new THREE.Vector3(0.14, floorY, center.z - half - 0.28);
+    cat(catAt, 0.36, 0.075);
+    for (const bank of banks) {
+      const exit = engine.longitudinal
+        ? new THREE.Vector3(bank * 0.3 * scale, center.y - 0.05, center.z)
+        : new THREE.Vector3(0.05 * bank, center.y - 0.05, center.z + 0.22 * scale);
+      parts.push({
+        geometry: tubeAlong(
+          [
+            exit,
+            new THREE.Vector3(bank * 0.2 * scale, floorY + 0.05, center.z - half * 0.6),
+            new THREE.Vector3(catAt.x, catAt.y, catAt.z + 0.2),
+          ],
+          pipeRadius,
+          lowDetail,
+        ),
+        material: "castIron",
+      });
+    }
+    parts.push({
+      geometry: tubeAlong(
+        [
+          new THREE.Vector3(catAt.x, catAt.y - 0.01, catAt.z - 0.2),
+          new THREE.Vector3(0.2, floorY - 0.01, spec.rearAxleZ + 0.6),
+          new THREE.Vector3(0.36, floorY + 0.04, spec.rearAxleZ),
+          new THREE.Vector3(0.26, silencer.y, silencer.z + size.z / 2 - 0.02),
+        ],
+        pipeRadius,
+        lowDetail,
+      ),
+      material: "steel",
+    });
+    return parts;
+  }
+
+  // Mid or rear engine: short runs from each bank, past the gearbox, into the
+  // silencer at the tail.
+  for (const bank of banks) {
+    const exit = new THREE.Vector3(bank * 0.3 * scale, center.y - 0.08, center.z);
+    const catAt = new THREE.Vector3(
+      bank * 0.32,
+      Math.max(gc + 0.12, center.y - 0.18),
+      center.z - half * 0.55,
+    );
+    cat(catAt, 0.26, 0.06);
+    parts.push({
+      geometry: tubeAlong(
+        [
+          exit,
+          exit
+            .clone()
+            .lerp(catAt, 0.5)
+            .setY(catAt.y + 0.02),
+          catAt.clone().setZ(catAt.z + 0.13),
+        ],
+        pipeRadius,
+        lowDetail,
+      ),
+      material: "castIron",
+    });
+    parts.push({
+      geometry: tubeAlong(
+        [
+          catAt.clone().setZ(catAt.z - 0.13),
+          new THREE.Vector3(bank * 0.3, catAt.y, (catAt.z + silencer.z) / 2),
+          new THREE.Vector3(bank * 0.22, silencer.y, silencer.z + size.z / 2 - 0.02),
+        ],
+        pipeRadius,
+        lowDetail,
+      ),
+      material: "steel",
+    });
+  }
+  return parts;
+}
+
+// ---------------------------------------------------------------------------
+// All systems
+// ---------------------------------------------------------------------------
+
+export type SystemName =
+  | "engine"
+  | "transmission"
+  | "suspension"
+  | "battery"
+  | "interior"
+  | "electronics"
+  | "exhaust";
+
+export type Systems = Record<SystemName, Part[]> & { dispose(): void };
+
+/** Every baked subsystem for a car, built together so it can be cached. */
+export function buildSystems(
+  layout: CarLayout,
+  lowDetail: boolean,
+  exhaustTips: THREE.Vector3[],
+): Systems {
+  const systems: Record<SystemName, Part[]> = {
+    engine: buildEngine(layout, lowDetail),
+    transmission: buildTransmission(layout, lowDetail),
+    suspension: buildSuspension(layout, lowDetail),
+    battery: buildBattery(layout, lowDetail),
+    interior: buildInterior(layout, lowDetail),
+    electronics: buildElectronics(layout, lowDetail),
+    exhaust: buildExhaust(layout, lowDetail, exhaustTips),
+  };
+  return {
+    ...systems,
+    dispose() {
+      for (const parts of Object.values(systems))
+        for (const part of parts) part.geometry.dispose();
+    },
+  };
+}

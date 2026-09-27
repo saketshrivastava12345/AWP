@@ -5,6 +5,13 @@ import { useCallback, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
+ * How eagerly to fetch: `preload` puts the image in the document head (the
+ * likely LCP card), `eager` loads it straight away without jumping the queue
+ * (the rest of the first row), `lazy` waits until it nears the viewport.
+ */
+export type PhotoLoading = "preload" | "eager" | "lazy";
+
+/**
  * A car's photograph that degrades to a placeholder instead of breaking.
  *
  * A `car_media` row can outlive its file — a photograph fetched on one
@@ -19,14 +26,14 @@ export function CarPhoto({
   src,
   alt,
   sizes,
-  priority = false,
+  loading = "lazy",
   className,
   fallback,
 }: {
   src: string;
   alt: string;
   sizes: string;
-  priority?: boolean;
+  loading?: PhotoLoading;
   className?: string;
   fallback: ReactNode;
 }) {
@@ -45,7 +52,10 @@ export function CarPhoto({
       alt={alt}
       fill
       sizes={sizes}
-      priority={priority}
+      // `preload` and `loading` must not be combined (Next 16).
+      {...(loading === "preload"
+        ? { preload: true }
+        : { loading: loading === "eager" ? ("eager" as const) : ("lazy" as const) })}
       onError={() => setFailed(true)}
       className={cn("object-cover", className)}
     />

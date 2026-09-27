@@ -8,17 +8,22 @@ export type SitemapEntry = { path: string; updatedAt: string | null };
 export type SitemapData = {
   variants: SitemapEntry[];
   models: SitemapEntry[];
+  /** /cars/[manufacturer]: a maker's catalogue, for makers with public cars. */
+  makerCatalogues: SitemapEntry[];
   manufacturers: SitemapEntry[];
   countries: SitemapEntry[];
   parts: SitemapEntry[];
+  partCategories: SitemapEntry[];
 };
 
 const EMPTY: SitemapData = {
   variants: [],
   models: [],
+  makerCatalogues: [],
   manufacturers: [],
   countries: [],
   parts: [],
+  partCategories: [],
 };
 
 type VariantRow = {
@@ -38,6 +43,8 @@ type ModelRow = {
 };
 
 type SlugRow = { slug: string; updated_at: string };
+
+type PartRow = SlugRow & { part_categories: { slug: string } | null };
 
 /**
  * Every public catalogue page with its real last-modified time.
@@ -69,7 +76,10 @@ export async function getSitemapData(): Promise<SitemapData> {
         .returns<ModelRow[]>(),
       supabase.from("manufacturers").select("slug, updated_at").returns<SlugRow[]>(),
       supabase.from("countries").select("slug, updated_at").returns<SlugRow[]>(),
-      supabase.from("parts").select("slug, updated_at").returns<SlugRow[]>(),
+      supabase
+        .from("parts")
+        .select("slug, updated_at, part_categories ( slug )")
+        .returns<PartRow[]>(),
     ]);
 
     for (const [label, result] of [
@@ -95,6 +105,7 @@ export async function getSitemapData(): Promise<SitemapData> {
           },
         ];
       }),
+      makerCatalogues: makerCatalogueEntries(models.data ?? []),
       models: (models.data ?? []).flatMap((row) =>
         row.manufacturers
           ? [
@@ -117,11 +128,39 @@ export async function getSitemapData(): Promise<SitemapData> {
         path: `/parts/${row.slug}`,
         updatedAt: row.updated_at,
       })),
+      partCategories: categoryEntries(parts.data ?? []),
     };
   } catch (error) {
     console.error("getSitemapData threw:", error);
     return EMPTY;
   }
+}
+
+/** One /cars/[manufacturer] entry per maker with a public model, dated by its newest model. */
+function makerCatalogueEntries(models: readonly ModelRow[]): SitemapEntry[] {
+  const newest = new Map<string, string>();
+  for (const model of models) {
+    const slug = model.manufacturers?.slug;
+    if (!slug) continue;
+    const seen = newest.get(slug);
+    newest.set(slug, seen ? latest(seen, model.updated_at) : model.updated_at);
+  }
+  return [...newest].map(([slug, updatedAt]) => ({ path: `/cars/${slug}`, updatedAt }));
+}
+
+/**
+ * One entry per part category that has parts. Categories carry no timestamp
+ * of their own, so each takes the newest date among its parts.
+ */
+function categoryEntries(parts: readonly PartRow[]): SitemapEntry[] {
+  const newest = new Map<string, string>();
+  for (const part of parts) {
+    const slug = part.part_categories?.slug;
+    if (!slug) continue;
+    const seen = newest.get(slug);
+    newest.set(slug, seen ? latest(seen, part.updated_at) : part.updated_at);
+  }
+  return [...newest].map(([slug, updatedAt]) => ({ path: `/parts/${slug}`, updatedAt }));
 }
 
 /** The later of two ISO timestamps. */

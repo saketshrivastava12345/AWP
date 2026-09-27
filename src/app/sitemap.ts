@@ -41,9 +41,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const everything = [
     ...data.variants,
     ...data.models,
+    ...data.makerCatalogues,
     ...data.manufacturers,
     ...data.countries,
     ...data.parts,
+    ...data.partCategories,
   ];
 
   return [
@@ -54,9 +56,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/parts", newestOf(data.parts), "monthly", 0.8),
     entry("/about", null, "yearly", 0.4),
     ...section(data.variants, "monthly", 0.7),
+    ...section(data.makerCatalogues, "monthly", 0.6),
     ...section(data.models, "monthly", 0.6),
     ...section(data.manufacturers, "monthly", 0.6),
     ...section(data.countries, "monthly", 0.6),
+    ...section(data.partCategories, "monthly", 0.5),
     ...section(data.parts, "monthly", 0.5),
   ];
 }

@@ -1,78 +1,165 @@
 "use client";
 
+import { MARK_PATHS, MARK_STROKES, MARK_VIEWBOX } from "@/components/layout/brand-mark";
+
 /**
  * Last-resort boundary for errors thrown in the root layout itself.
  *
- * This replaces the entire document, so it must render its own <html> and
- * <body> and cannot rely on the app's providers, fonts or stylesheet — hence
- * the inline styles.
+ * It replaces the entire document, so it renders its own <html> and <body>
+ * and relies on nothing the layout provides — no stylesheet, no webfonts, no
+ * providers. Hence inline styles, system fonts and a plain <a> home. Colours
+ * are the design tokens' values (void, ink, gold).
  */
+
+const COLORS = {
+  void: "#06060a",
+  line: "rgba(255,255,255,0.1)",
+  gold: "#c8a34a",
+  ink50: "#f7f7f8",
+  ink300: "#a1a1ae",
+  ink500: "#787882",
+} as const;
+
+const label = {
+  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+  fontSize: "0.6875rem",
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
+} as const;
+
+const button = {
+  display: "inline-flex",
+  alignItems: "center",
+  height: "2.75rem",
+  padding: "0 1.5rem",
+  borderRadius: "2px",
+  fontSize: "0.6875rem",
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  textDecoration: "none",
+  cursor: "pointer",
+} as const;
+
 export default function GlobalError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <html lang="en">
+      <head>
+        <title>AURIX — Something went wrong</title>
+        <meta name="theme-color" content={COLORS.void} />
+      </head>
       <body
         style={{
           margin: 0,
-          minHeight: "100vh",
+          minHeight: "100dvh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#06060a",
-          color: "#e8e8ec",
-          fontFamily: "system-ui, sans-serif",
+          backgroundColor: COLORS.void,
+          color: COLORS.ink50,
+          fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
           padding: "1.5rem",
+          boxSizing: "border-box",
+          colorScheme: "dark",
         }}
       >
-        <div style={{ maxWidth: "32rem" }}>
-          <p
-            style={{
-              fontSize: "0.625rem",
-              letterSpacing: "0.22em",
-              textTransform: "uppercase",
-              color: "#7c7c8a",
-              margin: 0,
-            }}
-          >
-            AURIX
-          </p>
+        <main style={{ width: "100%", maxWidth: "34rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <svg
+              width="20"
+              height="20"
+              viewBox={MARK_VIEWBOX}
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d={MARK_PATHS.chevron}
+                stroke={COLORS.gold}
+                strokeWidth={MARK_STROKES.chevron}
+                strokeMiterlimit={10}
+              />
+              <path
+                d={MARK_PATHS.bar}
+                stroke={COLORS.gold}
+                strokeWidth={MARK_STROKES.bar}
+              />
+            </svg>
+            <span style={{ fontSize: "0.9375rem", letterSpacing: "0.3em" }}>AURIX</span>
+          </div>
+
+          <p style={{ ...label, color: COLORS.gold, margin: "3rem 0 0" }}>System fault</p>
           <h1
             style={{
-              fontSize: "1.5rem",
-              letterSpacing: "0.06em",
-              margin: "1.25rem 0 0",
+              fontSize: "1.75rem",
+              fontWeight: 400,
+              letterSpacing: "0.04em",
+              lineHeight: 1.25,
+              margin: "1rem 0 0",
             }}
           >
-            The application failed to start
+            AURIX could not start
           </h1>
-          <p style={{ color: "#a1a1ae", lineHeight: 1.7, marginTop: "1rem" }}>
-            An unrecoverable error occurred while loading the page.
-            {error.digest ? ` Reference: ${error.digest}.` : ""}
+          <p style={{ color: COLORS.ink300, lineHeight: 1.7, margin: "1rem 0 0" }}>
+            An unexpected error stopped the application from loading. Trying again usually
+            resolves it.
           </p>
-          <button
-            type="button"
-            onClick={reset}
+
+          <div
             style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.75rem",
               marginTop: "2rem",
-              padding: "0.75rem 1.5rem",
-              backgroundColor: "#c8a34a",
-              color: "#06060a",
-              border: "none",
-              borderRadius: "2px",
-              fontSize: "0.6875rem",
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              cursor: "pointer",
             }}
           >
-            Reload
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => retry()}
+              style={{
+                ...button,
+                border: "none",
+                backgroundColor: COLORS.gold,
+                color: COLORS.void,
+              }}
+            >
+              Try again
+            </button>
+            {/* A plain anchor on purpose: this screen means the app itself
+                failed, so a full document load is the reliable way home. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a
+              href="/"
+              style={{
+                ...button,
+                border: `1px solid ${COLORS.line}`,
+                color: COLORS.ink50,
+              }}
+            >
+              Return home
+            </a>
+          </div>
+
+          {error.digest ? (
+            <p
+              style={{
+                ...label,
+                letterSpacing: "0.04em",
+                textTransform: "none",
+                color: COLORS.ink500,
+                borderTop: `1px solid ${COLORS.line}`,
+                margin: "3rem 0 0",
+                paddingTop: "1.25rem",
+              }}
+            >
+              Reference {error.digest}
+            </p>
+          ) : null}
+        </main>
       </body>
     </html>
   );

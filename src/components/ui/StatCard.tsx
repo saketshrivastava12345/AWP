@@ -1,6 +1,7 @@
 import { type ComponentPropsWithoutRef } from "react";
 import { cn } from "@/lib/utils";
 import { NOT_AVAILABLE } from "@/lib/format";
+import { InfoHint } from "@/components/ui/Tooltip";
 
 export type StatCardProps = {
   /** Small caps label, e.g. "0–100 KM/H". */
@@ -9,7 +10,7 @@ export type StatCardProps = {
   value: string | null;
   /** Unit shown smaller beside the value, e.g. "SEC". */
   unit?: string;
-  /** Optional provenance/caveat, surfaced as a tooltip. */
+  /** Provenance or caveat, shown by an "i" hint reachable by keyboard and touch. */
   hint?: string;
   size?: "sm" | "md" | "lg";
   className?: string;
@@ -25,6 +26,10 @@ const VALUE_SIZES = {
  * The signature numeric treatment: a small tracked label above a large display
  * figure. Digits are tabular so columns of these line up.
  *
+ * It is one term–description pair, so it must sit inside a <StatRow> (a <dl>):
+ * the label is the <dt> and the figure the <dd>, which is what lets a screen
+ * reader announce "Power, 650 PS" as a pair.
+ *
  * When `value` is null the component renders "Not available" in muted text at
  * body size rather than hiding itself — an absent figure is information, and
  * silently dropping the tile would make the row jump around.
@@ -37,16 +42,19 @@ export function StatCard({
   size = "md",
   className,
 }: StatCardProps) {
-  const isAvailable = value !== null;
-
   return (
     <div className={cn("edge-light bg-surface-1/60 px-5 py-6", className)}>
-      <p className="text-label" title={hint}>
+      <dt className="flex items-center gap-1.5 text-label">
         {label}
-      </p>
+        {hint ? (
+          <InfoHint label={`About ${label}`} side="bottom" className="font-sans">
+            {hint}
+          </InfoHint>
+        ) : null}
+      </dt>
 
-      {isAvailable ? (
-        <p
+      {value !== null ? (
+        <dd
           className={cn(
             "tabular mt-3 font-display leading-none text-ink-50",
             VALUE_SIZES[size],
@@ -54,17 +62,18 @@ export function StatCard({
         >
           {value}
           {unit ? <span className="ml-2 text-xs text-ink-400">{unit}</span> : null}
-        </p>
+        </dd>
       ) : (
-        <p className="mt-3 text-sm leading-none text-ink-500 italic">{NOT_AVAILABLE}</p>
+        <dd className="mt-3 text-sm leading-none text-ink-500 italic">{NOT_AVAILABLE}</dd>
       )}
     </div>
   );
 }
 
 /**
- * A row of stats separated by hairlines. Uses a one-pixel gap over a bordered
- * container so the dividers are true hairlines at any device pixel ratio.
+ * A row of stats separated by hairlines: the <dl> that StatCards belong in.
+ * Uses a one-pixel gap over a bordered container so the dividers are true
+ * hairlines at any device pixel ratio.
  */
 export function StatRow({
   children,

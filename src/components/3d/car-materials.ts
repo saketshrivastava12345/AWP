@@ -1,80 +1,41 @@
 import * as THREE from "three";
+import { GOLD } from "@/lib/viewer-colors";
+import { FINISH_PARAMS, type SurfaceParams } from "@/lib/viewer-paint";
+import { releaseTexture, retainTexture, type TextureName } from "./car-textures";
+
+export { GOLD };
 
 /**
  * Materials for the procedural car.
  *
- * The paint is the part that sells the shape: a metallic base under a clear
- * coat, which is how real automotive paint is built. It only reads as metal
- * because Lighting.tsx gives it a studio of soft light panels to reflect.
+ * The paint is the part that sells the shape: a base coat under a clear coat,
+ * which is how real automotive paint is built, with metallic flake in the base
+ * where the finish has it. It only reads as metal because the lighting rig
+ * gives it soft light panels to reflect.
  */
 
-export type PaintId =
-  "gt-silver" | "carrara" | "obsidian" | "graphite" | "aurum" | "rosso";
+/** A paint as the renderer needs it: colour plus finish parameters. */
+export type PaintSurface = SurfaceParams & { color: string };
 
-export type Paint = {
-  id: PaintId;
-  label: string;
-  color: string;
-  metalness: number;
-  roughness: number;
+/** The neutral studio silver the car shows before anything is chosen. */
+export const DEFAULT_SURFACE: PaintSurface = {
+  color: "#aeb3ba",
+  ...FINISH_PARAMS.metallic,
 };
 
-/**
- * Paint swatches offered in the viewer. A car's real colour is not in the
- * catalogue, so this is presentation only — nothing here claims a factory
- * colour for any variant.
- */
-export const PAINTS: readonly Paint[] = [
-  {
-    id: "gt-silver",
-    label: "GT Silver",
-    color: "#aeb3ba",
-    metalness: 0.78,
-    roughness: 0.3,
-  },
-  {
-    id: "carrara",
-    label: "Carrara White",
-    color: "#e6e4df",
-    metalness: 0.12,
-    roughness: 0.28,
-  },
-  {
-    id: "graphite",
-    label: "Graphite",
-    color: "#3a3e45",
-    metalness: 0.72,
-    roughness: 0.3,
-  },
-  {
-    id: "obsidian",
-    label: "Obsidian",
-    color: "#0d0e11",
-    metalness: 0.55,
-    roughness: 0.3,
-  },
-  { id: "aurum", label: "Aurum", color: "#a8823a", metalness: 0.86, roughness: 0.3 },
-  { id: "rosso", label: "Rosso", color: "#6e1512", metalness: 0.45, roughness: 0.32 },
-] as const;
-
-export const DEFAULT_PAINT: PaintId = "gt-silver";
-
-export function paintById(id: PaintId | null | undefined): Paint {
-  return PAINTS.find((paint) => paint.id === id) ?? PAINTS[0]!;
-}
-
-export const GOLD = "#c8a34a";
-
 type Factory = () => THREE.Material;
+
+/** Carbon without its weave texture (LOW quality): a flat dark lacquer. */
+const CARBON_PLAIN = "#15161a";
 
 const FACTORIES = {
   paint: () =>
     new THREE.MeshPhysicalMaterial({
-      color: PAINTS[0]!.color,
-      metalness: PAINTS[0]!.metalness,
-      roughness: PAINTS[0]!.roughness,
-      clearcoat: 1,
-      clearcoatRoughness: 0.04,
+      color: DEFAULT_SURFACE.color,
+      metalness: DEFAULT_SURFACE.metalness,
+      roughness: DEFAULT_SURFACE.roughness,
+      clearcoat: DEFAULT_SURFACE.clearcoat,
+      clearcoatRoughness: DEFAULT_SURFACE.clearcoatRoughness,
       envMapIntensity: 1.25,
     }),
   /** The inside of the shell, seen through the glass. */
@@ -110,7 +71,8 @@ const FACTORIES = {
       metalness: 0.35,
     }),
   chrome: () =>
-    new THREE.MeshStandardMaterial({ color: "#e8e8ec", roughness: 0.1, metalness: 1 }),
+    new THREE.MeshStandardMaterial({ color: "#e8e8ec", roughness: 0.06, metalness: 1 }),
+  /** Windscreen and rear glass: see-through, with a strong reflection. */
   glass: () =>
     new THREE.MeshPhysicalMaterial({
       color: "#0f161b",
@@ -122,6 +84,7 @@ const FACTORIES = {
       clearcoat: 1,
       clearcoatRoughness: 0.02,
       depthWrite: false,
+      ior: 1.5,
     }),
   /** Side glass: no opening behind it, so it is drawn as deep tinted glass. */
   sideGlass: () =>
@@ -133,44 +96,20 @@ const FACTORIES = {
       clearcoat: 1,
       clearcoatRoughness: 0.02,
     }),
-  lens: () =>
-    new THREE.MeshPhysicalMaterial({
-      color: "#1a2026",
-      metalness: 0.6,
-      roughness: 0.08,
-      envMapIntensity: 1.8,
-      clearcoat: 1,
-    }),
-  drl: () =>
-    new THREE.MeshStandardMaterial({
-      color: "#ffffff",
-      emissive: "#e6f3ff",
-      emissiveIntensity: 2.6,
-      roughness: 0.2,
-      toneMapped: false,
-    }),
-  tail: () =>
-    new THREE.MeshStandardMaterial({
-      color: "#2a0305",
-      emissive: "#b0141c",
-      emissiveIntensity: 1.9,
-      roughness: 0.25,
-      toneMapped: false,
-    }),
+  /** Rubber: dark, rough, almost no specular. */
   tyre: () =>
     new THREE.MeshStandardMaterial({
       color: "#131316",
       roughness: 0.88,
       metalness: 0.02,
     }),
+  /** One rim material whose finish the configurator eases between. */
   rim: () =>
     new THREE.MeshStandardMaterial({
       color: "#c2c6cc",
       roughness: 0.24,
       metalness: 0.95,
     }),
-  rimDark: () =>
-    new THREE.MeshStandardMaterial({ color: "#2a2c30", roughness: 0.3, metalness: 0.9 }),
   disc: () =>
     new THREE.MeshStandardMaterial({
       color: "#7c7e84",
@@ -184,6 +123,7 @@ const FACTORIES = {
       metalness: 0.35,
       clearcoat: 0.8,
     }),
+  /** Brushed aluminium castings. */
   alloy: () =>
     new THREE.MeshStandardMaterial({
       color: "#9a9da4",
@@ -194,13 +134,14 @@ const FACTORIES = {
     new THREE.MeshStandardMaterial({ color: "#4a4744", roughness: 0.62, metalness: 0.7 }),
   camCover: () =>
     new THREE.MeshStandardMaterial({ color: "#1c1d21", roughness: 0.45, metalness: 0.5 }),
+  /** Carbon fibre under lacquer. The weave texture supplies the colour. */
   carbon: () =>
     new THREE.MeshPhysicalMaterial({
-      color: "#15161a",
+      color: CARBON_PLAIN,
       roughness: 0.35,
       metalness: 0.3,
       clearcoat: 1,
-      clearcoatRoughness: 0.08,
+      clearcoatRoughness: 0.06,
     }),
   steel: () =>
     new THREE.MeshStandardMaterial({ color: "#6f727a", roughness: 0.4, metalness: 0.82 }),
@@ -235,21 +176,71 @@ const FACTORIES = {
 
 export type MaterialName = keyof typeof FACTORIES;
 
+/** Which procedural texture a material wears, when surface detail is on. */
+const DETAIL: Partial<
+  Record<
+    MaterialName,
+    { texture: TextureName; slot: "normalMap" | "map" | "roughnessMap" }
+  >
+> = {
+  paint: { texture: "flake", slot: "normalMap" },
+  carbon: { texture: "carbon", slot: "map" },
+  alloy: { texture: "brushed", slot: "roughnessMap" },
+};
+
+/** Windscreen glass drawn by physical transmission instead of blending. */
+const TRANSMISSIVE_GLASS = {
+  transmission: 1,
+  thickness: 0.006,
+  color: new THREE.Color("#dfe7ea"),
+  attenuationColor: new THREE.Color("#7f959e"),
+  attenuationDistance: 0.35,
+  opacity: 1,
+  transparent: false,
+};
+
+const BLENDED_GLASS = {
+  transmission: 0,
+  thickness: 0,
+  color: new THREE.Color("#0f161b"),
+  attenuationColor: new THREE.Color("#ffffff"),
+  attenuationDistance: Infinity,
+  opacity: 0.42,
+  transparent: true,
+};
+
 /**
  * A lazily-populated set of materials.
  *
  * Each subsystem gets its own kit, so highlighting the brakes can tint the
  * brake materials without also tinting the identical-looking steel of the
  * suspension. Only materials actually used are ever created.
+ *
+ * `dispose()` frees the GPU side but keeps the material objects: React's
+ * development double-mount disposes and then reuses a kit, and everything
+ * that captured a material (the shell's material array, the ghost fades)
+ * must keep pointing at live objects.
  */
 export class MaterialKit {
   private readonly cache = new Map<MaterialName, THREE.Material>();
+  private readonly retained = new Set<TextureName>();
+  private detail: boolean;
+  private transmission: boolean;
+  /** Strength of the paint flake, from the current finish (0–1). */
+  private flake = DEFAULT_SURFACE.flake;
+
+  constructor({ detail = true, transmission = false } = {}) {
+    this.detail = detail;
+    this.transmission = transmission;
+  }
 
   get<T extends MaterialName>(name: T): ReturnType<(typeof FACTORIES)[T]> {
     let material = this.cache.get(name);
     if (!material) {
       material = FACTORIES[name]();
       this.cache.set(name, material);
+      this.applyDetail(name, material);
+      if (name === "glass") this.applyGlass(material as THREE.MeshPhysicalMaterial);
     }
     return material as ReturnType<(typeof FACTORIES)[T]>;
   }
@@ -258,25 +249,125 @@ export class MaterialKit {
     return [...this.cache.values()];
   }
 
+  /** Turn the procedural surface textures on or off (quality level). */
+  setSurfaceDetail(on: boolean): void {
+    if (on === this.detail) return;
+    this.detail = on;
+    for (const [name, material] of this.cache) this.applyDetail(name, material);
+  }
+
+  /** Physically transmissive windscreen glass (HIGH quality only). */
+  setGlassTransmission(on: boolean): void {
+    if (on === this.transmission) return;
+    this.transmission = on;
+    const glass = this.cache.get("glass");
+    if (glass) this.applyGlass(glass as THREE.MeshPhysicalMaterial);
+  }
+
+  get glassTransmission(): boolean {
+    return this.transmission;
+  }
+
+  /** Flake strength for the paint's normal map, 0–1. */
+  setFlake(amount: number): void {
+    this.flake = amount;
+    const paint = this.cache.get("paint") as THREE.MeshPhysicalMaterial | undefined;
+    if (paint) paint.normalScale.setScalar(0.32 * amount);
+  }
+
+  private applyDetail(name: MaterialName, material: THREE.Material): void {
+    const detail = DETAIL[name];
+    if (!detail) return;
+    const target = material as THREE.MeshStandardMaterial;
+    const current = target[detail.slot];
+    if (this.detail && !current) {
+      const texture = this.retain(detail.texture);
+      if (!texture) return;
+      target[detail.slot] = texture;
+      if (name === "paint") target.normalScale.setScalar(0.32 * this.flake);
+      // The weave texture carries the colour; the base must not tint it.
+      if (name === "carbon") target.color.set("#ffffff");
+      target.needsUpdate = true;
+    } else if (!this.detail && current) {
+      target[detail.slot] = null;
+      if (name === "carbon") target.color.set(CARBON_PLAIN);
+      target.needsUpdate = true;
+    }
+  }
+
+  private applyGlass(material: THREE.MeshPhysicalMaterial): void {
+    const recipe = this.transmission ? TRANSMISSIVE_GLASS : BLENDED_GLASS;
+    material.transmission = recipe.transmission;
+    material.thickness = recipe.thickness;
+    material.color.copy(recipe.color);
+    material.attenuationColor.copy(recipe.attenuationColor);
+    material.attenuationDistance = recipe.attenuationDistance;
+    material.opacity = recipe.opacity;
+    material.transparent = recipe.transparent;
+    material.userData.baseOpacity = recipe.opacity;
+    material.needsUpdate = true;
+  }
+
+  private retain(name: TextureName): THREE.Texture | null {
+    const texture = retainTexture(name);
+    if (texture) {
+      if (this.retained.has(name)) releaseTexture(name);
+      else this.retained.add(name);
+    }
+    return texture;
+  }
+
   dispose(): void {
     for (const material of this.cache.values()) material.dispose();
-    this.cache.clear();
+    for (const name of this.retained) releaseTexture(name);
+    this.retained.clear();
   }
 }
 
-export function applyPaint(material: THREE.MeshPhysicalMaterial, paint: Paint): void {
-  material.color.set(paint.color);
-  material.metalness = paint.metalness;
-  material.roughness = paint.roughness;
+/** Set a paint's colour and finish on a physical material. */
+export function applySurface(
+  material: THREE.MeshPhysicalMaterial,
+  surface: PaintSurface,
+): void {
+  material.color.set(surface.color);
+  material.metalness = surface.metalness;
+  material.roughness = surface.roughness;
+  material.clearcoat = surface.clearcoat;
+  material.clearcoatRoughness = surface.clearcoatRoughness;
+  material.iridescence = surface.iridescence;
+  material.iridescenceIOR = 1.3;
 }
 
-/** The tint a highlighted subsystem glows with, already scaled to a glint. */
-const HIGHLIGHT = new THREE.Color(GOLD).multiplyScalar(0.06);
+const scratchColor = new THREE.Color();
+
+/** A surface part-way between two others (colour blended in linear space). */
+export function blendSurface(
+  material: THREE.MeshPhysicalMaterial,
+  from: PaintSurface,
+  to: PaintSurface,
+  t: number,
+): void {
+  const k = Math.min(1, Math.max(0, t));
+  material.color.set(from.color).lerp(scratchColor.set(to.color), k);
+  const mix = (a: number, b: number) => a + (b - a) * k;
+  material.metalness = mix(from.metalness, to.metalness);
+  material.roughness = mix(from.roughness, to.roughness);
+  material.clearcoat = mix(from.clearcoat, to.clearcoat);
+  material.clearcoatRoughness = mix(from.clearcoatRoughness, to.clearcoatRoughness);
+  // Iridescence switches a shader feature on above zero; step it at the ends
+  // rather than recompiling mid-blend.
+  material.iridescence =
+    k < 1 ? Math.min(from.iridescence, to.iridescence) : to.iridescence;
+  material.iridescenceIOR = 1.3;
+}
+
+/** Brightest the highlight tint gets, already scaled to a glint. */
+const HIGHLIGHT = new THREE.Color(GOLD).multiplyScalar(0.12);
 
 /**
- * Tint every material in a kit faintly toward gold, to point at the subsystem
- * being discussed. What really picks it out is setDim() fading everything
- * around it; this only adds warmth.
+ * Tint every material in a kit toward gold, to point at the subsystem being
+ * hovered, selected or discussed. What really picks a subsystem out is
+ * setDim() fading everything around it; this only adds warmth.
  *
  * The blend works on the emissive colour with the intensity pinned at 1.
  * Materials default to an emissive intensity of 1 with a black colour, so

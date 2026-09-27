@@ -12,10 +12,11 @@ import type {
 import {
   DEFAULT_PAGE_SIZE,
   DEFAULT_SORT,
-  SORT_OPTIONS,
+  sortOrders,
   type CarFilters,
   type SortKey,
 } from "@/lib/car-query";
+import { CARD_COLUMNS, type CatalogCardRow } from "@/lib/queries/catalog-columns";
 
 export {
   DEFAULT_PAGE_SIZE,
@@ -25,6 +26,7 @@ export {
   type SortKey,
   type CarFilters,
 } from "@/lib/car-query";
+export { CARD_COLUMNS, type CatalogCardRow } from "@/lib/queries/catalog-columns";
 
 export type ListCarsOptions = {
   page?: number;
@@ -33,126 +35,138 @@ export type ListCarsOptions = {
   filters?: CarFilters;
 };
 
+/** A page of the collection, and whether the read itself failed. */
+export type CataloguePage = Paginated<CatalogCardRow> & {
+  /** True when the database could not be read — distinct from "nothing matches". */
+  failed: boolean;
+};
+
+type StaticClient = ReturnType<typeof createStaticClient>;
+
 /**
- * The grid card needs only a handful of columns. Selecting them explicitly
- * rather than `*` keeps the payload small — the view is wide.
+ * The catalogue view with every filter applied, as PostgREST filters.
+ *
+ * `rowMatches` in lib/facets.ts is the in-memory twin of this function (used
+ * for facet counts); the two must agree, including NULL semantics — a car
+ * with no published figure never satisfies a range.
  */
-const CARD_COLUMNS = [
-  "variant_id",
-  "variant_slug",
-  "variant_name",
-  "model_slug",
-  "model_name",
-  "manufacturer_slug",
-  "manufacturer_name",
-  "country_slug",
-  "country_name",
-  "country_flag_emoji",
-  "category_name",
-  "category_slug",
-  "body_type",
-  "fuel_type",
-  "drive_type",
-  "power_hp",
-  "top_speed_kmh",
-  "zero_to_100_s",
-  "base_price",
-  "price_currency",
-  "year_start",
-  "year_end",
-  "primary_image_url",
-  "has_glb",
-  "engine_configuration",
-].join(",");
+function filteredCatalogue(
+  supabase: StaticClient,
+  columns: string,
+  filters: CarFilters,
+  head = false,
+) {
+  let query = supabase.from("car_catalog").select(columns, { count: "exact", head });
+
+  if (filters.country?.length) query = query.in("country_slug", filters.country);
+  if (filters.manufacturer?.length)
+    query = query.in("manufacturer_slug", filters.manufacturer);
+  if (filters.category?.length) query = query.in("category_slug", filters.category);
+  if (filters.body?.length) query = query.in("body_type", filters.body);
+  if (filters.fuel?.length) query = query.in("fuel_type", filters.fuel);
+  if (filters.transmission?.length)
+    query = query.in("transmission_type", filters.transmission);
+  if (filters.drive?.length) query = query.in("drive_type", filters.drive);
+  if (filters.engineLayout?.length)
+    query = query.in("engine_layout", filters.engineLayout);
+  if (filters.cylinders?.length) query = query.in("engine_cylinders", filters.cylinders);
+  if (filters.aspiration?.length) query = query.in("aspiration", filters.aspiration);
+  if (filters.status?.length) query = query.in("status", filters.status);
+
+  if (filters.powerMin !== undefined) query = query.gte("power_hp", filters.powerMin);
+  if (filters.powerMax !== undefined) query = query.lte("power_hp", filters.powerMax);
+  if (filters.speedMin !== undefined)
+    query = query.gte("top_speed_kmh", filters.speedMin);
+  if (filters.speedMax !== undefined)
+    query = query.lte("top_speed_kmh", filters.speedMax);
+  if (filters.yearMin !== undefined) query = query.gte("year_start", filters.yearMin);
+  if (filters.yearMax !== undefined) query = query.lte("year_start", filters.yearMax);
+  if (filters.rangeMin !== undefined) query = query.gte("range_km", filters.rangeMin);
+
+  // Never across currencies: a price bound only exists inside one currency.
+  if (filters.priceCurrency) {
+    query = query.eq("listed_price_currency", filters.priceCurrency);
+    if (filters.priceMin !== undefined)
+      query = query.gte("listed_price", filters.priceMin);
+    if (filters.priceMax !== undefined)
+      query = query.lte("listed_price", filters.priceMax);
+  }
+
+  if (filters.text?.trim()) {
+    // websearch_to_tsquery handles quoted phrases and bare words safely, and
+    // never throws on punctuation the way plainto/to_tsquery can.
+    query = query.textSearch("search_document", filters.text.trim(), {
+      type: "websearch",
+      config: "simple",
+    });
+  }
+
+  return query;
+}
+
+/** PostgREST's "Requested range not satisfiable": a page past the last one. */
+const RANGE_NOT_SATISFIABLE = "PGRST103";
 
 /**
  * Page of cars for the collection grid.
  *
  * Returns an empty page rather than throwing when Supabase is unconfigured or
- * unreachable, so the route renders its empty state. Failing loudly here would
- * take down a page whose job is to degrade gracefully.
+ * unreachable, so the route renders its empty state; `failed` tells that
+ * apart from a filter set nothing matches. A page past the end is not an
+ * error: it comes back with no rows and the real total, so the route can send
+ * the visitor to the last page.
  */
-export async function listCars(
-  options: ListCarsOptions = {},
-): Promise<Paginated<CatalogCar>> {
-  const page = Math.max(1, options.page ?? 1);
+export async function listCars(options: ListCarsOptions = {}): Promise<CataloguePage> {
+  const page = Math.max(1, Math.floor(options.page ?? 1));
   const pageSize = Math.max(1, Math.min(60, options.pageSize ?? DEFAULT_PAGE_SIZE));
-  const sort = SORT_OPTIONS[options.sort ?? DEFAULT_SORT];
+  const sort = options.sort ?? DEFAULT_SORT;
   const filters = options.filters ?? {};
 
-  const empty: Paginated<CatalogCar> = {
-    rows: [],
-    total: 0,
+  const result = (
+    total: number,
+    rows: CatalogCardRow[],
+    failed: boolean,
+  ): CataloguePage => ({
+    rows,
+    total,
     page,
     pageSize,
-    pageCount: 0,
-  };
-  if (!isConfigured()) return empty;
+    pageCount: Math.ceil(total / pageSize),
+    failed,
+  });
+  if (!isConfigured()) return result(0, [], true);
 
   try {
     const supabase = createStaticClient();
-    let query = supabase.from("car_catalog").select(CARD_COLUMNS, { count: "exact" });
-
-    if (filters.country?.length) query = query.in("country_slug", filters.country);
-    if (filters.manufacturer?.length)
-      query = query.in("manufacturer_slug", filters.manufacturer);
-    if (filters.category?.length) query = query.in("category_slug", filters.category);
-    if (filters.fuel?.length) query = query.in("fuel_type", filters.fuel);
-    if (filters.drive?.length) query = query.in("drive_type", filters.drive);
-    if (filters.body?.length) query = query.in("body_type", filters.body);
-    if (filters.transmission?.length)
-      query = query.in("transmission_type", filters.transmission);
-    if (filters.engineLayout?.length)
-      query = query.in("engine_layout", filters.engineLayout);
-    if (filters.aspiration?.length) query = query.in("aspiration", filters.aspiration);
-    if (filters.cylinders?.length)
-      query = query.in("engine_cylinders", filters.cylinders);
-
-    if (filters.powerMin !== undefined) query = query.gte("power_hp", filters.powerMin);
-    if (filters.powerMax !== undefined) query = query.lte("power_hp", filters.powerMax);
-    if (filters.speedMin !== undefined)
-      query = query.gte("top_speed_kmh", filters.speedMin);
-    if (filters.speedMax !== undefined)
-      query = query.lte("top_speed_kmh", filters.speedMax);
-    if (filters.priceMin !== undefined) query = query.gte("base_price", filters.priceMin);
-    if (filters.priceMax !== undefined) query = query.lte("base_price", filters.priceMax);
-    if (filters.yearMin !== undefined) query = query.gte("year_start", filters.yearMin);
-    if (filters.yearMax !== undefined) query = query.lte("year_start", filters.yearMax);
-
-    if (filters.text?.trim()) {
-      // websearch_to_tsquery handles quoted phrases and bare words safely, and
-      // never throws on punctuation the way plainto/to_tsquery can.
-      query = query.textSearch("search_document", filters.text.trim(), {
-        type: "websearch",
-        config: "simple",
+    let query = filteredCatalogue(supabase, CARD_COLUMNS, filters);
+    for (const order of sortOrders(sort, filters)) {
+      query = query.order(order.column, {
+        ascending: order.ascending,
+        nullsFirst: false,
       });
     }
 
     const from = (page - 1) * pageSize;
     const { data, count, error } = await query
-      .order(sort.column, { ascending: sort.ascending, nullsFirst: false })
       // A stable tiebreaker: without it, rows with equal power can reorder
       // between pages and a car appears twice or not at all.
       .order("variant_id", { ascending: true })
       .range(from, from + pageSize - 1)
-      .returns<CatalogCar[]>();
+      .returns<CatalogCardRow[]>();
 
     if (error) {
+      if (error.code === RANGE_NOT_SATISFIABLE) {
+        const counted = await filteredCatalogue(supabase, "variant_id", filters, true);
+        if (!counted.error) return result(counted.count ?? 0, [], false);
+      }
       console.error("listCars failed:", error.message);
-      return empty;
+      return result(0, [], true);
     }
 
-    const total = count ?? 0;
-    return {
-      rows: data ?? [],
-      total,
-      page,
-      pageSize,
-      pageCount: Math.ceil(total / pageSize),
-    };
+    return result(count ?? 0, data ?? [], false);
   } catch (error) {
     console.error("listCars threw:", error);
-    return empty;
+    return result(0, [], true);
   }
 }
 
@@ -328,11 +342,56 @@ export const getVariantDetail = cache(async function getVariantDetail(
   }
 });
 
+/** The catalogue's listed price for one variant (see car_catalog.listed_price_*). */
+export type VariantListedPrice = Pick<
+  CatalogCar,
+  | "listed_price"
+  | "listed_price_currency"
+  | "listed_price_type"
+  | "listed_price_market"
+  | "listed_price_verified_at"
+>;
+
+const LISTED_PRICE_COLUMNS =
+  "listed_price,listed_price_currency,listed_price_type,listed_price_market,listed_price_verified_at";
+
+/**
+ * The listed price the car cards show, for the detail page's hero — read from
+ * the same view column, so the hero and the cards can never disagree. It is
+ * the most recently verified in-force listed price in any market, else the
+ * variant's recorded base price, with its type and market. Null when the view
+ * cannot be read or has no row; the hero then shows no price.
+ */
+export const getVariantListedPrice = cache(async function getVariantListedPrice(
+  variantId: string,
+): Promise<VariantListedPrice | null> {
+  if (!isConfigured()) return null;
+
+  try {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("car_catalog")
+      .select(LISTED_PRICE_COLUMNS)
+      .eq("variant_id", variantId)
+      .limit(1)
+      .returns<VariantListedPrice[]>();
+
+    if (error) {
+      console.error("getVariantListedPrice failed:", error.message);
+      return null;
+    }
+    return data?.[0] ?? null;
+  } catch (error) {
+    console.error("getVariantListedPrice threw:", error);
+    return null;
+  }
+});
+
 /** Sibling variants of the same model, for the "other variants" section. */
 export async function getSiblingVariants(
   modelId: string,
   excludeVariantId: string,
-): Promise<CatalogCar[]> {
+): Promise<CatalogCardRow[]> {
   if (!isConfigured()) return [];
 
   try {
@@ -343,7 +402,8 @@ export async function getSiblingVariants(
       .eq("model_id", modelId)
       .neq("variant_id", excludeVariantId)
       .order("power_hp", { ascending: false, nullsFirst: false })
-      .returns<CatalogCar[]>();
+      .order("variant_id", { ascending: true })
+      .returns<CatalogCardRow[]>();
 
     if (error) {
       console.error("getSiblingVariants failed:", error.message);
@@ -396,7 +456,7 @@ export async function getAllVariantPaths(): Promise<
 }
 
 /** A small set of notable cars, used on the home page. */
-export async function getFeaturedCars(limit = 6): Promise<CatalogCar[]> {
+export async function getFeaturedCars(limit = 6): Promise<CatalogCardRow[]> {
   if (!isConfigured()) return [];
 
   try {
@@ -406,8 +466,9 @@ export async function getFeaturedCars(limit = 6): Promise<CatalogCar[]> {
       .select(CARD_COLUMNS)
       .not("power_hp", "is", null)
       .order("power_hp", { ascending: false, nullsFirst: false })
+      .order("variant_id", { ascending: true })
       .limit(limit)
-      .returns<CatalogCar[]>();
+      .returns<CatalogCardRow[]>();
 
     if (error) {
       console.error("getFeaturedCars failed:", error.message);

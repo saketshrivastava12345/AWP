@@ -1,29 +1,30 @@
 "use client";
 
-import {
-  cloneElement,
-  isValidElement,
-  useId,
-  useState,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type TriggerProps = {
-  "aria-describedby"?: string;
-  onFocus?: (event: React.FocusEvent) => void;
-  onBlur?: (event: React.FocusEvent) => void;
-};
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * A tooltip that works for mouse, keyboard AND touch — unlike the native
  * `title` attribute this replaces, which keyboard and touch users never see.
  *
  * Shown on hover and on focus of the trigger; a tap focuses the trigger, so
- * touch works too. The trigger is described by the tooltip text for screen
- * readers. Content is short text: this is not a popover for interactive UI.
+ * touch works too. Content is short text: this is not a popover for
+ * interactive UI.
+ *
+ * Two details matter:
+ *
+ *   - The bubble is `display: none` while hidden, not merely transparent. An
+ *     invisible absolutely-positioned box still counts towards the page's
+ *     scrollable area, so a tooltip opening towards the edge made narrow
+ *     screens scroll sideways. It fades in with `@starting-style`.
+ *   - The trigger is described by the tooltip through `aria-describedby`,
+ *     set on the first focusable element inside the wrapper after mount. That
+ *     works whatever the child is — including an element rendered by a server
+ *     component, which cannot be cloned with new props on the client.
  */
 export function Tooltip({
   content,
@@ -32,39 +33,46 @@ export function Tooltip({
   className,
 }: {
   content: ReactNode;
-  children: ReactElement<TriggerProps>;
+  children: ReactNode;
   side?: "top" | "bottom" | "left" | "right";
   className?: string;
 }) {
   const id = useId();
+  const wrapperRef = useRef<HTMLSpanElement>(null);
   const [focused, setFocused] = useState(false);
 
-  const trigger = isValidElement(children)
-    ? cloneElement(children, {
-        "aria-describedby": id,
-        onFocus: (event: React.FocusEvent) => {
-          setFocused(true);
-          children.props.onFocus?.(event);
-        },
-        onBlur: (event: React.FocusEvent) => {
-          setFocused(false);
-          children.props.onBlur?.(event);
-        },
-      })
-    : children;
+  useEffect(() => {
+    const trigger = wrapperRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+    if (!trigger) return;
+    const previous = trigger.getAttribute("aria-describedby");
+    const ids = new Set((previous ?? "").split(/\s+/).filter(Boolean));
+    ids.add(id);
+    trigger.setAttribute("aria-describedby", [...ids].join(" "));
+    return () => {
+      if (previous === null) trigger.removeAttribute("aria-describedby");
+      else trigger.setAttribute("aria-describedby", previous);
+    };
+  }, [id]);
 
   return (
-    <span className={cn("group/tip relative inline-flex", className)}>
-      {trigger}
+    <span
+      ref={wrapperRef}
+      className={cn("group/tip relative inline-flex", className)}
+      // Focus events bubble in React, so this sees focus on any trigger.
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    >
+      {children}
       <span
         id={id}
         role="tooltip"
         className={cn(
-          "pointer-events-none absolute z-(--z-raised) w-max max-w-[16rem] rounded-sm border border-line-strong",
-          "bg-surface-2/95 px-2.5 py-1.5 text-left text-xs leading-snug font-normal tracking-normal normal-case",
-          "text-ink-200 opacity-0 shadow-lg backdrop-blur-sm transition-opacity duration-(--duration-fast)",
-          "group-hover/tip:opacity-100",
-          focused && "opacity-100",
+          "pointer-events-none absolute z-(--z-raised) hidden w-max max-w-[min(16rem,calc(100vw-2rem))]",
+          "rounded-sm border border-line-strong bg-surface-2/95 px-2.5 py-1.5 text-left text-xs leading-snug",
+          "font-normal tracking-normal text-ink-200 normal-case shadow-lg backdrop-blur-sm",
+          "transition-[opacity,display] transition-discrete duration-(--duration-fast) starting:opacity-0",
+          "group-hover/tip:block",
+          focused && "block",
           side === "top" && "bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2",
           side === "bottom" && "top-[calc(100%+6px)] left-1/2 -translate-x-1/2",
           side === "left" && "top-1/2 right-[calc(100%+6px)] -translate-y-1/2",
@@ -97,7 +105,7 @@ export function InfoHint({
       <button
         type="button"
         aria-label={label}
-        className="inline-grid size-5 place-items-center rounded-full text-ink-500 transition-colors hover:text-gold-300"
+        className="inline-grid size-5 place-items-center rounded-full text-ink-500 transition-colors hover:text-gold-300 focus-visible:text-gold-300"
       >
         <Info className="size-3.5" aria-hidden="true" />
       </button>

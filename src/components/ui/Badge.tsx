@@ -15,6 +15,11 @@ const TONES: Record<BadgeTone, string> = {
   negative: "border-signal-negative/35 text-signal-negative",
 };
 
+/**
+ * A small tracked tag: fuel type, category, status. Set in text-micro (10px),
+ * the floor for anything a reader must read — the wide display face at 9px
+ * was below comfortable legibility.
+ */
 export function Badge({
   children,
   tone = "neutral",
@@ -28,7 +33,7 @@ export function Badge({
     <span
       className={cn(
         "inline-flex items-center rounded-xs border px-2 py-1 font-display",
-        "text-[9px] leading-none tracking-[0.18em] uppercase",
+        "text-micro leading-none tracking-hud uppercase",
         TONES[tone],
         className,
       )}

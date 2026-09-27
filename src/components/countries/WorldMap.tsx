@@ -1,159 +1,337 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useId, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { COUNTRY_MARKERS } from "./map-data";
-import type { CountryWithCounts } from "@/types/domain";
+import {
+  CELL,
+  MAP_HEIGHT,
+  MAP_WIDTH,
+  formatCoordinates,
+  hoverCardPlacement,
+  landPath,
+  markerFor,
+  markerRadius,
+  placeMarkers,
+  project,
+} from "./atlas";
+import type { CountryListItem } from "@/lib/queries/countries";
 
 /**
- * Clickable world map.
+ * The world map: a dot-matrix of the continents with one marker per
+ * catalogued country, sized by how many cars it has.
  *
- * The map data is bundled locally (`map-data.ts`) rather than fetched from a
- * third-party URL at runtime, per the brief: no external request, nothing to
- * break offline, and no dependency on someone else's CDN staying up.
+ * Each marker is ONE link (the old map nested a focusable <g role="link"> in
+ * the link, so every marker cost two tab stops and the inner one did nothing).
+ * Hovering or focusing a marker lifts it and opens a hover card; the same
+ * state is shared with the country cards below the map (see CountryAtlas),
+ * so hovering a card lights its marker and vice versa.
  *
- * It is an equirectangular projection, which makes the maths trivial —
- * longitude and latitude map linearly onto x and y — and is accurate enough
- * for placing ten country markers.
- *
- * On small screens this is hidden entirely in favour of the card grid, which
- * is the better interaction on touch anyway.
+ * Everything the map says is also in the card grid, which is what small
+ * screens get instead: the map is hidden below `md`.
  */
 
-const WIDTH = 1000;
-const HEIGHT = 500;
+const GRATICULE_LONGITUDES = [-150, -120, -90, -60, -30, 0, 30, 60, 90, 120, 150];
+const GRATICULE_LATITUDES = [60, 30, 0, -30];
 
-/** Equirectangular projection: lon/lat straight onto the viewBox. */
-function project(lon: number, lat: number): [number, number] {
-  return [((lon + 180) / 360) * WIDTH, ((90 - lat) / 180) * HEIGHT];
+const LABEL_OFFSET = 7;
+
+function labelPosition(side: "left" | "right" | "top" | "bottom", radius: number) {
+  const gap = radius + LABEL_OFFSET;
+  switch (side) {
+    case "left":
+      return { x: -gap, y: 3.5, anchor: "end" as const };
+    case "top":
+      return { x: 0, y: -gap - 1, anchor: "middle" as const };
+    case "bottom":
+      return { x: 0, y: gap + 8, anchor: "middle" as const };
+    default:
+      return { x: gap, y: 3.5, anchor: "start" as const };
+  }
 }
 
-export function WorldMap({ countries }: { countries: CountryWithCounts[] }) {
-  const [hovered, setHovered] = useState<string | null>(null);
+export function WorldMap({
+  countries,
+  activeSlug,
+  onActiveChange,
+  className,
+}: {
+  countries: CountryListItem[];
+  activeSlug: string | null;
+  onActiveChange: (slug: string | null) => void;
+  className?: string;
+}) {
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const ids = {
+    title: `${uid}-title`,
+    dots: `${uid}-dots`,
+    land: `${uid}-land`,
+    glow: `${uid}-glow`,
+  };
 
-  // Only show markers for countries actually in the catalogue.
-  const bySlug = new Map(countries.map((country) => [country.slug, country]));
-  const markers = COUNTRY_MARKERS.filter((marker) => bySlug.has(marker.slug));
+  const land = useMemo(() => landPath(), []);
+  const { placed, unplaced } = useMemo(() => placeMarkers(countries), [countries]);
+  const active = placed.find((marker) => marker.slug === activeSlug) ?? null;
+  const activeCoordinates = active ? markerFor(active.slug) : null;
+  const card = active ? hoverCardPlacement(active.x, active.y) : null;
+
+  const activeRadius = active ? markerRadius(active.country.variant_count) : 0;
 
   return (
-    <div className="relative hidden overflow-hidden border border-line bg-surface-1/40 md:block">
-      <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="h-auto w-full"
-        role="img"
-        aria-label="World map showing the countries in the catalogue"
-      >
-        <defs>
-          <radialGradient id="marker-glow">
-            <stop offset="0%" stopColor="var(--color-gold-400)" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="var(--color-gold-400)" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-
-        {/* Graticule, as a faint technical grid rather than a decorative one. */}
-        <g stroke="var(--color-line-subtle)" strokeWidth="0.5" fill="none">
-          {Array.from({ length: 11 }, (_, index) => {
-            const y = (index / 10) * HEIGHT;
-            return <line key={`lat-${index}`} x1="0" y1={y} x2={WIDTH} y2={y} />;
-          })}
-          {Array.from({ length: 19 }, (_, index) => {
-            const x = (index / 18) * WIDTH;
-            return <line key={`lon-${index}`} x1={x} y1="0" x2={x} y2={HEIGHT} />;
-          })}
-        </g>
-
-        {/* Equator, emphasised slightly. */}
-        <line
-          x1="0"
-          y1={HEIGHT / 2}
-          x2={WIDTH}
-          y2={HEIGHT / 2}
-          stroke="var(--color-line)"
-          strokeWidth="0.8"
+    <figure className={cn("relative", className)}>
+      <div className="relative overflow-hidden border border-line bg-surface-1/50">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-2 opacity-60 hud-corners"
         />
 
-        {markers.map((marker) => {
-          const country = bySlug.get(marker.slug);
-          if (!country) return null;
+        <svg
+          viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT.toFixed(2)}`}
+          className="block h-auto w-full"
+          aria-labelledby={ids.title}
+        >
+          <title id={ids.title}>
+            World map of the countries in the catalogue. Each marker is a link to that
+            country.
+          </title>
+          <defs>
+            <pattern
+              id={ids.dots}
+              width={CELL}
+              height={CELL}
+              patternUnits="userSpaceOnUse"
+            >
+              <circle
+                cx={CELL / 2}
+                cy={CELL / 2}
+                r={CELL * 0.24}
+                fill="var(--color-ink-600)"
+              />
+            </pattern>
+            <clipPath id={ids.land}>
+              <path d={land} />
+            </clipPath>
+            <radialGradient id={ids.glow}>
+              <stop offset="0%" stopColor="var(--color-gold-400)" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="var(--color-gold-400)" stopOpacity="0" />
+            </radialGradient>
+          </defs>
 
-          const [x, y] = project(marker.lon, marker.lat);
-          const isActive = hovered === marker.slug;
-          // Marker size reflects how many cars the country contributes.
-          const radius = 5 + Math.min(10, country.variant_count * 0.55);
+          {/* Graticule: a faint technical grid every 30 degrees. */}
+          <g
+            stroke="var(--color-line-subtle)"
+            strokeWidth="0.6"
+            fill="none"
+            aria-hidden="true"
+          >
+            {GRATICULE_LONGITUDES.map((lon) => {
+              const { x } = project(lon, 0);
+              return <line key={`lon${lon}`} x1={x} y1={0} x2={x} y2={MAP_HEIGHT} />;
+            })}
+            {GRATICULE_LATITUDES.map((lat) => {
+              const { y } = project(0, lat);
+              return (
+                <line
+                  key={`lat${lat}`}
+                  x1={0}
+                  y1={y}
+                  x2={MAP_WIDTH}
+                  y2={y}
+                  strokeDasharray={lat === 0 ? undefined : "2 6"}
+                  stroke={lat === 0 ? "var(--color-line)" : undefined}
+                />
+              );
+            })}
+          </g>
 
-          return (
-            <Link key={marker.slug} href={`/countries/${country.slug}`}>
-              <g
-                onMouseEnter={() => setHovered(marker.slug)}
-                onMouseLeave={() => setHovered(null)}
-                onFocus={() => setHovered(marker.slug)}
-                onBlur={() => setHovered(null)}
-                tabIndex={0}
-                role="link"
-                aria-label={`${country.name}: ${country.variant_count} cars, ${country.manufacturer_count} manufacturers`}
-                className="cursor-pointer focus:outline-none"
+          {/* Land: one whole dot per land cell. */}
+          <rect
+            width={MAP_WIDTH}
+            height={MAP_HEIGHT}
+            fill={`url(#${ids.dots})`}
+            clipPath={`url(#${ids.land})`}
+            aria-hidden="true"
+          />
+
+          {/* The active marker's glow sits under every marker. The markers
+              keep a fixed DOM order (moving the focused one would break the
+              Tab order), so its highlight ring is drawn in a layer above them. */}
+          {active ? (
+            <circle
+              cx={active.x}
+              cy={active.y}
+              r={activeRadius * 3.4}
+              fill={`url(#${ids.glow})`}
+              className="pointer-events-none animate-overlay-in"
+              aria-hidden="true"
+            />
+          ) : null}
+
+          {placed.map((marker) => {
+            const { country } = marker;
+            const isActive = marker.slug === activeSlug;
+            const radius = markerRadius(country.variant_count);
+            const label = labelPosition(marker.label, radius);
+            const name = `${country.name}: ${country.manufacturer_count} ${
+              country.manufacturer_count === 1 ? "manufacturer" : "manufacturers"
+            }, ${country.variant_count} ${country.variant_count === 1 ? "car" : "cars"}`;
+
+            return (
+              <Link
+                key={marker.slug}
+                href={`/countries/${country.slug}`}
+                aria-label={name}
+                className="group outline-none"
+                onMouseEnter={() => onActiveChange(marker.slug)}
+                onMouseLeave={() => onActiveChange(null)}
+                onFocus={() => onActiveChange(marker.slug)}
+                onBlur={() => onActiveChange(null)}
               >
-                {isActive ? (
-                  <circle cx={x} cy={y} r={radius * 3} fill="url(#marker-glow)" />
-                ) : null}
-
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={radius}
-                  className={cn(
-                    "transition-all duration-300",
-                    isActive ? "fill-gold-300" : "fill-gold-600",
-                  )}
-                  fillOpacity={isActive ? 1 : 0.75}
-                />
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={radius + 4}
-                  fill="none"
-                  stroke="var(--color-gold-500)"
-                  strokeWidth="0.75"
-                  strokeOpacity={isActive ? 0.9 : 0.25}
-                  className="transition-all duration-300"
-                />
-
-                <text
-                  x={x}
-                  y={y - radius - 10}
-                  textAnchor="middle"
-                  className={cn(
-                    "font-mono transition-opacity duration-300",
-                    isActive ? "opacity-100" : "opacity-55",
-                  )}
-                  fill={isActive ? "var(--color-gold-200)" : "var(--color-ink-300)"}
-                  fontSize="13"
-                >
-                  {country.name}
-                </text>
-
-                {isActive ? (
+                <g transform={`translate(${marker.x.toFixed(2)} ${marker.y.toFixed(2)})`}>
+                  {/* Decoration never takes the pointer, so a marker's rings
+                      cannot steal the hover from a close neighbour in Europe. */}
+                  <circle
+                    r={radius + 3.5}
+                    fill="none"
+                    stroke="var(--color-gold-500)"
+                    strokeWidth={isActive ? 1.2 : 0.8}
+                    strokeOpacity={isActive ? 0.95 : 0.35}
+                    className="pointer-events-none transition-[stroke-opacity] duration-(--duration-fast)"
+                  />
+                  <circle
+                    r={radius}
+                    className={cn(
+                      "pointer-events-none transition-[fill] duration-(--duration-fast)",
+                      isActive ? "fill-gold-300" : "fill-gold-600",
+                    )}
+                  />
+                  {/* Keyboard focus ring: SVG links draw no outline of their own. */}
+                  <circle
+                    r={radius + 7.5}
+                    fill="none"
+                    stroke="var(--color-gold-300)"
+                    strokeWidth="1.6"
+                    strokeDasharray="3 2.5"
+                    className="pointer-events-none opacity-0 group-focus-visible:opacity-100"
+                  />
+                  {/* The hit area: a little larger than the marker (small ones
+                      are hard to hover), but never reaching a neighbour's. */}
+                  <circle r={Math.max(radius + 3, 9)} fill="transparent" />
                   <text
-                    x={x}
-                    y={y + radius + 20}
-                    textAnchor="middle"
-                    fill="var(--color-ink-400)"
-                    fontSize="11"
-                    className="font-mono"
+                    x={label.x}
+                    y={label.y}
+                    textAnchor={label.anchor}
+                    fontSize="12"
+                    letterSpacing="1.2"
+                    className={cn(
+                      "font-mono transition-[fill] duration-(--duration-fast)",
+                      isActive ? "fill-gold-200" : "fill-ink-400",
+                    )}
+                    aria-hidden="true"
                   >
-                    {country.variant_count} cars · {country.manufacturer_count} makers
+                    {country.iso_code}
                   </text>
-                ) : null}
-              </g>
-            </Link>
-          );
-        })}
-      </svg>
+                </g>
+              </Link>
+            );
+          })}
 
-      <p className="absolute right-4 bottom-3 font-mono text-[10px] text-ink-600">
-        Marker size reflects the number of cars catalogued
-      </p>
-    </div>
+          {active ? (
+            <circle
+              cx={active.x}
+              cy={active.y}
+              r={activeRadius + 3.5}
+              fill="none"
+              stroke="var(--color-gold-400)"
+              strokeWidth="1.2"
+              className="pointer-events-none"
+              aria-hidden="true"
+            />
+          ) : null}
+        </svg>
+
+        {/* HUD readout of the active marker. */}
+        <p
+          aria-hidden="true"
+          className="tabular pointer-events-none absolute top-3 left-3 border border-line-subtle bg-void/80 px-2.5 py-1 text-hud backdrop-blur-sm"
+        >
+          {active && activeCoordinates
+            ? `${active.country.iso_code} · ${formatCoordinates(
+                activeCoordinates.lat,
+                activeCoordinates.lon,
+              )}`
+            : "Hover or focus a marker"}
+        </p>
+
+        {/* Hover card. Informational only (the marker is the link), so it never
+            takes the pointer and screen readers get the marker's label instead. */}
+        {active && card ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute z-(--z-raised) w-60 animate-overlay-in"
+            style={{
+              left: `${card.left * 100}%`,
+              top: `${card.top * 100}%`,
+              transform: `translate(${card.alignRight ? "calc(-100% - 18px)" : "18px"}, ${
+                card.below ? "14px" : "calc(-100% - 14px)"
+              })`,
+            }}
+          >
+            <div className="edge-light border border-line-strong bg-surface-2/95 p-4 shadow-2xl shadow-black/50 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl leading-none">{active.country.flag_emoji}</span>
+                <div className="min-w-0">
+                  <p className="truncate font-display text-xs tracking-button text-ink-50 uppercase">
+                    {active.country.name}
+                  </p>
+                  <p className="mt-1 text-hud">{active.country.iso_code}</p>
+                </div>
+              </div>
+              <dl className="mt-4 space-y-1.5 border-t border-line-subtle pt-3">
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-label text-[9px]">Manufacturers</dt>
+                  <dd className="tabular font-mono text-sm text-ink-50">
+                    {active.country.manufacturer_count}
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-label text-[9px]">Cars</dt>
+                  <dd className="tabular font-mono text-sm text-ink-50">
+                    {active.country.variant_count}
+                  </dd>
+                </div>
+              </dl>
+              {active.country.makers.length > 0 ? (
+                <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-ink-300">
+                  {active.country.makers.map((maker) => maker.name).join(" · ")}
+                </p>
+              ) : null}
+              <p className="mt-3 font-display text-[9px] tracking-hud text-gold-300 uppercase">
+                Open country →
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <figcaption className="mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-xs text-ink-500">
+        <span className="inline-flex items-center gap-2">
+          <svg viewBox="0 0 34 12" className="h-3 w-8" aria-hidden="true">
+            <circle cx="5" cy="6" r="2.5" className="fill-gold-600" />
+            <circle cx="22" cy="6" r="5" className="fill-gold-600" />
+          </svg>
+          Marker area grows with the number of catalogued cars.
+        </span>
+        <span>
+          Land: Natural Earth 1:110m (public domain). Markers are approximate centroids.
+        </span>
+        {unplaced.length > 0 ? (
+          <span className="w-full">
+            Not on the map (no coordinates recorded):{" "}
+            {unplaced.map((country) => country.name).join(", ")}. They are listed below.
+          </span>
+        ) : null}
+      </figcaption>
+    </figure>
   );
 }

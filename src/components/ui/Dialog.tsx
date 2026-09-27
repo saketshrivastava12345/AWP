@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
@@ -165,7 +166,10 @@ export function Dialog({
     full: "inset-0 animate-overlay-in",
   };
 
-  return (
+  // Portalled to <body>: rendered in place, a dialog inside any ancestor with
+  // a transform, filter or backdrop-filter is positioned against that ancestor
+  // instead of the viewport (a sticky toolbar with backdrop blur, a card).
+  return createPortal(
     <div
       className={cn(
         "fixed inset-0",
@@ -246,6 +250,7 @@ export function Dialog({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

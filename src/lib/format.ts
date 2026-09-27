@@ -106,6 +106,9 @@ export function formatPriceCompact(
       style: "currency",
       currency,
       notation: value >= 1e5 ? "compact" : "standard",
+      // Without an explicit minimum, a currency's default (2) is clamped to
+      // the maximum and a round figure prints as "$150.0K".
+      minimumFractionDigits: 0,
       maximumFractionDigits: value >= 1e5 ? 1 : 0,
     }).format(value);
   } catch {
