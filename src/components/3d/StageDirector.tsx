@@ -103,6 +103,10 @@ export function Director({
   return null;
 }
 
+function setOpacity(material: THREE.Material, opacity: number): void {
+  material.opacity = opacity;
+}
+
 /** Lane markings that slide under the car as it drives. */
 export function Road({
   layout,
@@ -146,7 +150,7 @@ export function Road({
   useFrame(() => {
     if (visibilityRef) {
       const visibility = visibilityRef.current ?? 1;
-      material.opacity = 0.32 * visibility;
+      setOpacity(material, 0.32 * visibility);
       if (groupRef.current) groupRef.current.visible = visibility > 0.001;
     }
     const distance = motionRef.current.distance;

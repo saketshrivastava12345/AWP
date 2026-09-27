@@ -245,7 +245,10 @@ export function explodedCentre(layout: CarLayout, group: ViewerGroup): THREE.Vec
  * backs away as more of the car is separated; for each group it leans toward
  * where that group is going, so the part in motion is the centre of the frame.
  */
-export function blueprintShots(layout: CarLayout, groups: readonly ViewerGroup[]): Shot[] {
+export function blueprintShots(
+  layout: CarLayout,
+  groups: readonly ViewerGroup[],
+): Shot[] {
   const { spec } = layout;
   const k = spec.length / 4.5;
   const H = spec.height;

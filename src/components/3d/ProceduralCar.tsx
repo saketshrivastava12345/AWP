@@ -341,8 +341,9 @@ function Subsystem({
   register: (name: ViewerGroup, group: THREE.Group | null) => void;
   /**
    * The group's blueprint line work. Its colour runs from ink to gold with
-   * the highlight; its opacity follows the drawing, except on the body, whose
-   * panel lines fade with the ghosted shell instead.
+   * the highlight and its opacity follows the drawing. (On the body these are
+   * the shell's panel lines; this runs after the shell's own fade each frame,
+   * so the blueprint has the last word while it is on screen.)
    */
   lines?: THREE.LineBasicMaterial | null;
   /** Warmth of the line work when the group is not the subject (0–1). */
@@ -389,9 +390,11 @@ function Subsystem({
         moving = moving || warmth.current !== target;
       }
       const drawing = blueprint?.current?.drawing ?? 0;
-      // The subject's lines are strong; the rest stay hairlines.
+      // The subject's lines are strong; the rest stay hairlines. The body's
+      // panel lines already carry some weight, as the only outline of the car.
       const opacity =
-        name === "body" ? null : drawing * (0.2 + 0.72 * warmth.current);
+        drawing *
+        (name === "body" ? 0.38 + 0.57 * warmth.current : 0.2 + 0.72 * warmth.current);
       toneEdges(lines, warmth.current, opacity);
     }
     if (moving) invalidate();
@@ -1068,10 +1071,11 @@ export function ProceduralCar({
   const dimOf = (group: ViewerGroup) => {
     if (group === "body" || selectedGroup === group) return 0;
     // The tour points at one system: everything else steps back.
-    if (highlightGroup !== null) return highlightGroup === group ? 0 : 1;
+    if (highlightGroup !== null && highlightGroup !== group) return 1;
     // X-ray: the powertrain stands out, the cabin and wiring recede.
     if (emphasis && emphasis.length > 0 && !emphasised(group)) return 0.7;
-    return restDim;
+    // The blueprint: everything but its subject is drawn faint.
+    return highlightGroup === group ? 0 : restDim;
   };
 
   const sub = (group: ViewerGroup, children: ReactNode) =>

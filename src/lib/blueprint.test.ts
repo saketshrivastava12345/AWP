@@ -53,10 +53,7 @@ const ELECTRIC: ViewerGroup[] = [
 ];
 const HYBRID: ViewerGroup[] = [...COMBUSTION, "battery"];
 
-function blueprintFor(
-  overrides: Parameters<typeof makeDetail>[0],
-  drawn: ViewerGroup[],
-) {
+function blueprintFor(overrides: Parameters<typeof makeDetail>[0], drawn: ViewerGroup[]) {
   const detail = makeDetail(overrides);
   const tour = buildAnatomyTour(detail, PARTS);
   return buildBlueprint(detail, tour, PARTS, blueprintGroups(drawn));

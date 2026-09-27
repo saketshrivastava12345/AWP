@@ -23,7 +23,12 @@ describe("blueprint diagram (the still exploded drawing)", () => {
   });
 
   it("an EV has a battery and no engine or exhaust in the drawing", () => {
-    const ev = { ...GENERIC_BUILD, powertrain: "electric" as const, enginePosition: null, motors: 2 };
+    const ev = {
+      ...GENERIC_BUILD,
+      powertrain: "electric" as const,
+      enginePosition: null,
+      motors: 2,
+    };
     const groups = blueprintGroups(drawnGroups(ev));
     const drawn = blueprintDiagram(ev, groups).groups.map((entry) => entry.group);
     expect(drawn).toContain("battery");

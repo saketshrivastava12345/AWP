@@ -66,9 +66,24 @@ function boxShapes(b: Box3D): DiagramShape[] {
   const p = (x: number, y: number, z: number) => project([x, y, z]);
   // Near face (x1), top face and nose-end face are the ones this view sees.
   return [
-    { kind: "poly", closed: true, weight: "outline", points: [p(x1, y0, z0), p(x1, y0, z1), p(x1, y1, z1), p(x1, y1, z0)] },
-    { kind: "poly", closed: true, weight: "outline", points: [p(x1, y1, z0), p(x1, y1, z1), p(x0, y1, z1), p(x0, y1, z0)] },
-    { kind: "poly", closed: false, weight: "outline", points: [p(x1, y0, z1), p(x0, y0, z1), p(x0, y1, z1)] },
+    {
+      kind: "poly",
+      closed: true,
+      weight: "outline",
+      points: [p(x1, y0, z0), p(x1, y0, z1), p(x1, y1, z1), p(x1, y1, z0)],
+    },
+    {
+      kind: "poly",
+      closed: true,
+      weight: "outline",
+      points: [p(x1, y1, z0), p(x1, y1, z1), p(x0, y1, z1), p(x0, y1, z0)],
+    },
+    {
+      kind: "poly",
+      closed: false,
+      weight: "outline",
+      points: [p(x1, y0, z1), p(x0, y0, z1), p(x0, y1, z1)],
+    },
   ];
 }
 
@@ -101,7 +116,8 @@ export function blueprintDiagram(
       : [e.footprint, height, across];
     boxes.engine = [box([e.center.x, floor + height / 2, e.center.z], size)];
   }
-  if (layout.gearbox) boxes.transmission = [box(v(layout.gearbox.center), v(layout.gearbox.size))];
+  if (layout.gearbox)
+    boxes.transmission = [box(v(layout.gearbox.center), v(layout.gearbox.size))];
   else
     boxes.transmission = layout.differentials.map((point) =>
       box(v(point), [0.34, 0.26, 0.3]),
@@ -118,14 +134,21 @@ export function blueprintDiagram(
   boxes.interior = [
     ...cabin.seatRows.flatMap((row, index) =>
       (index === 0 ? [cabin.seatX, -cabin.seatX] : [0]).map((x) =>
-        box([x, cabin.floorY + 0.36, row], [index === 0 ? 0.5 : spec.width * 0.62, 0.72, 0.62]),
+        box(
+          [x, cabin.floorY + 0.36, row],
+          [index === 0 ? 0.5 : spec.width * 0.62, 0.72, 0.62],
+        ),
       ),
     ),
     box([0, cabin.dashY - 0.12, cabin.dashZ], [spec.width * 0.78, 0.22, 0.34]),
   ];
-  boxes.electronics = [box([0, cabin.dashY - 0.34, cabin.dashZ + 0.12], [0.34, 0.14, 0.2])];
+  boxes.electronics = [
+    box([0, cabin.dashY - 0.34, cabin.dashZ + 0.12], [0.34, 0.14, 0.2]),
+  ];
   const tail = spec.tailZ;
-  boxes.exhaust = [box([0, spec.groundClearance + 0.12, tail + 0.55], [spec.width * 0.42, 0.14, 0.7])];
+  boxes.exhaust = [
+    box([0, spec.groundClearance + 0.12, tail + 0.55], [spec.width * 0.42, 0.14, 0.7]),
+  ];
 
   // Body, as its bounding box (for the explode plan) and its side elevation.
   const drawing = drawingGeometry({
@@ -183,18 +206,35 @@ export function blueprintDiagram(
       const lift = (points: readonly (readonly [number, number])[]): Point2[] =>
         points.map(([x, y]) => project([near, toY(y) + dy, toZ(x) + dz]));
       const shapes: DiagramShape[] = [
-        { kind: "poly", closed: true, weight: "outline", points: lift(drawing.side.body) },
+        {
+          kind: "poly",
+          closed: true,
+          weight: "outline",
+          points: lift(drawing.side.body),
+        },
       ];
       if (drawing.side.glass.length > 0)
-        shapes.push({ kind: "poly", closed: true, weight: "detail", points: lift(drawing.side.glass) });
+        shapes.push({
+          kind: "poly",
+          closed: true,
+          weight: "detail",
+          points: lift(drawing.side.glass),
+        });
       // The far side's roofline, receding: the shell reads as a volume.
       const far = -spec.width / 2 + dx;
       const roof = drawing.side.body
         .filter(([, y]) => y > drawing.height * 0.55)
         .map(([x, y]) => project([far, toY(y) + dy, toZ(x) + dz]));
-      if (roof.length > 1) shapes.push({ kind: "poly", closed: false, weight: "detail", points: roof });
-      const peak = drawing.side.body.reduce((best, point) => (point[1] > best[1] ? point : best));
-      out.push({ group, shapes, anchor: project([near, toY(peak[1]) + dy, toZ(peak[0]) + dz]) });
+      if (roof.length > 1)
+        shapes.push({ kind: "poly", closed: false, weight: "detail", points: roof });
+      const peak = drawing.side.body.reduce((best, point) =>
+        point[1] > best[1] ? point : best,
+      );
+      out.push({
+        group,
+        shapes,
+        anchor: project([near, toY(peak[1]) + dy, toZ(peak[0]) + dz]),
+      });
       continue;
     }
     if (group === "wheels" || group === "brakes") {
@@ -204,7 +244,11 @@ export function blueprintDiagram(
       // Far side first so the near wheels are drawn over them.
       const order = [...layout.wheels].sort((a, b) => a.side - b.side);
       for (const { position, side, front } of order) {
-        const x = position.x + side * spread + dx - (group === "brakes" ? side * spec.tyreWidth * 0.12 : 0);
+        const x =
+          position.x +
+          side * spread +
+          dx -
+          (group === "brakes" ? side * spec.tyreWidth * 0.12 : 0);
         const [cx, cy] = project([x, position.y + dy, position.z + dz]);
         const weight = side === 1 ? "outline" : "detail";
         if (group === "wheels") {
@@ -212,7 +256,13 @@ export function blueprintDiagram(
           shapes.push({ kind: "circle", cx, cy, r: spec.rimRadius, weight: "detail" });
         } else {
           shapes.push({ kind: "circle", cx, cy, r: spec.rimRadius * 0.82, weight });
-          shapes.push({ kind: "circle", cx, cy, r: spec.rimRadius * 0.3, weight: "detail" });
+          shapes.push({
+            kind: "circle",
+            cx,
+            cy,
+            r: spec.rimRadius * 0.3,
+            weight: "detail",
+          });
         }
         // Label the near rear wheel and the near front brake, as the 3D view does.
         if (side === 1 && front === (group === "brakes"))

@@ -80,7 +80,9 @@ export async function BlueprintDiagram({
         />
       );
     }
-    const points = shape.points.map(([x, y]) => `${sx(x).toFixed(3)},${sy(y).toFixed(3)}`).join(" ");
+    const points = shape.points
+      .map(([x, y]) => `${sx(x).toFixed(3)},${sy(y).toFixed(3)}`)
+      .join(" ");
     return shape.closed ? (
       <polygon
         key={key}
@@ -159,7 +161,7 @@ export async function BlueprintDiagram({
           </span>
         ))}
       </div>
-      <figcaption className="text-hud mt-3 text-ink-400">
+      <figcaption className="mt-3 text-hud text-ink-400 max-md:hidden">
         Exploded view · each system drawn as the space it occupies in this car&apos;s
         layout
       </figcaption>

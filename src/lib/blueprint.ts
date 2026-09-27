@@ -138,7 +138,10 @@ export type BlueprintLook = {
 };
 
 /** How the car is drawn while a card is the focus. */
-export function blueprintLook(card: number, groups: readonly ViewerGroup[]): BlueprintLook {
+export function blueprintLook(
+  card: number,
+  groups: readonly ViewerGroup[],
+): BlueprintLook {
   if (card < BLUEPRINT_INTRO)
     return { ghost: 0, highlight: null, restDim: 0, restEdge: 0, shellEdge: 0 };
   // The drawing: the shell outlined in gold, the machinery inside in ink.
@@ -167,12 +170,12 @@ export type BlueprintOverlay = {
   dimensions: Map<string, HTMLElement>;
   /** One label per group, for the finale and the part in motion. */
   groups: Map<ViewerGroup, HTMLElement>;
-  /** Screen-space grid over the stage, faded in with the drawing. */
-  grid: HTMLElement | null;
+  /** Stage furniture faded in with the drawing (the screen-space grid). */
+  chrome: Map<"grid", HTMLElement>;
 };
 
 export function createBlueprintOverlay(): BlueprintOverlay {
-  return { dimensions: new Map(), groups: new Map(), grid: null };
+  return { dimensions: new Map(), groups: new Map(), chrome: new Map() };
 }
 
 // ---------------------------------------------------------------------------
@@ -315,7 +318,12 @@ export function buildBlueprint(
     : null;
 
   const groupStep = (group: ViewerGroup): BlueprintStep | null => {
-    const base = { id: group, kind: "group" as const, group, label: BLUEPRINT_LABELS[group] };
+    const base = {
+      id: group,
+      kind: "group" as const,
+      group,
+      label: BLUEPRINT_LABELS[group],
+    };
     switch (group) {
       case "body": {
         const bodyLabel = formatEnumLabel(detail.model.body_type, "");

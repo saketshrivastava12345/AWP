@@ -180,7 +180,7 @@ export function ShowcaseStage({
         groups={groups}
         dimensions={dimensions}
         shownRef={shownRef}
-        state={blueprintRef}
+        stateRef={blueprintRef}
         roadRef={roadRef}
         floorRef={floorRef}
       />
@@ -205,7 +205,7 @@ export function ShowcaseStage({
         groups={groups}
         dimensions={dimensions}
         shownRef={shownRef}
-        state={blueprintRef}
+        stateRef={blueprintRef}
         overlay={overlay}
       />
       <ScrollFrames />

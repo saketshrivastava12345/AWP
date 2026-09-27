@@ -102,8 +102,7 @@ function StepCard({
       className="relative w-full max-w-md border border-line bg-void/85 p-5 backdrop-blur-md sm:p-7"
     >
       <p className="text-label text-gold-400">
-        {String(index).padStart(2, "0")} / {String(total).padStart(2, "0")} —{" "}
-        {step.label}
+        {String(index).padStart(2, "0")} / {String(total).padStart(2, "0")} — {step.label}
       </p>
       <h3
         id={headingId}
@@ -172,8 +171,13 @@ function StepCard({
       {step.kind === "finale" && legend.length > 0 ? (
         <ol className="mt-5 grid grid-cols-2 gap-x-5 gap-y-1.5 border-t border-line-subtle pt-4">
           {legend.map((group, position) => (
-            <li key={group} className="flex gap-2 font-mono text-micro tracking-hud uppercase">
-              <span className="text-gold-500">{String(position + 1).padStart(2, "0")}</span>
+            <li
+              key={group}
+              className="flex gap-2 font-mono text-micro tracking-hud uppercase"
+            >
+              <span className="text-gold-500">
+                {String(position + 1).padStart(2, "0")}
+              </span>
               <span className="text-ink-200">{BLUEPRINT_LABELS[group]}</span>
             </li>
           ))}
@@ -318,8 +322,7 @@ export function CarShowcase({
     const section = sectionRef.current;
     const center = centers.current[index];
     if (!section || center === undefined) return;
-    const top =
-      window.scrollY + section.getBoundingClientRect().top + center - probeY();
+    const top = window.scrollY + section.getBoundingClientRect().top + center - probeY();
     window.scrollTo({ top, behavior: reducedMotion ? "auto" : "smooth" });
   };
 
@@ -347,7 +350,7 @@ export function CarShowcase({
           )}
         >
           {still && fallback ? (
-            <div className="tech-grid absolute inset-0 flex items-center justify-center p-4 pt-8 md:pr-16 md:pl-[34%] lg:pr-60 lg:pl-[40%]">
+            <div className="absolute inset-0 flex items-center justify-center tech-grid p-4 pt-8 md:pr-16 md:pl-[34%] lg:pr-60 lg:pl-[40%]">
               {fallback}
             </div>
           ) : (
@@ -390,14 +393,15 @@ export function CarShowcase({
         {!still ? (
           <div
             ref={(node) => {
-              overlay.grid = node;
+              if (node) overlay.chrome.set("grid", node);
+              else overlay.chrome.delete("grid");
             }}
             className="pointer-events-none absolute inset-0 opacity-0"
           >
-            <div className="tech-grid absolute inset-0 opacity-60" />
+            <div className="absolute inset-0 tech-grid opacity-60" />
             <div className="absolute right-5 bottom-4 hidden text-right md:block lg:right-40">
               <p className="text-hud text-gold-400">Blueprint · exploded view</p>
-              <p className="text-hud mt-1 text-ink-500">
+              <p className="mt-1 text-hud text-ink-500">
                 {measurements.length > 0
                   ? "Dimension lines: published figures only"
                   : "No published dimensions"}
@@ -424,11 +428,11 @@ export function CarShowcase({
                 }}
                 className="absolute top-0 left-0 opacity-0 will-change-transform"
               >
-                <div className="-translate-1/2 border border-gold-700/50 bg-void/85 px-1.5 py-1 leading-none whitespace-nowrap">
-                  <span className="font-mono text-micro tracking-hud text-ink-300 uppercase max-md:hidden">
-                    {DIMENSION_LABELS[dimension]}{" "}
+                <div className="flex -translate-1/2 items-baseline gap-1.5 border border-gold-700/50 bg-void/85 px-1.5 py-1 whitespace-nowrap">
+                  <span className="font-mono text-micro leading-none tracking-hud text-ink-300 uppercase max-md:hidden">
+                    {DIMENSION_LABELS[dimension]}
                   </span>
-                  <span className="tabular font-mono text-micro text-gold-200 md:text-xs">
+                  <span className="tabular font-mono text-micro leading-none text-gold-200 md:text-xs md:leading-none">
                     {formatNumber(mm)} mm
                   </span>
                 </div>
@@ -463,7 +467,7 @@ export function CarShowcase({
 
         {/* Phones: which card this is, and a hairline progress bar. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 md:hidden">
-          <p className="text-hud px-5 pb-2 text-gold-400">
+          <p className="px-5 pb-2 text-hud text-gold-400">
             {String(active).padStart(2, "0")} / {String(cards - 1).padStart(2, "0")} ·{" "}
             {current}
           </p>

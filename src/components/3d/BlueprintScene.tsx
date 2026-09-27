@@ -28,6 +28,25 @@ import type { BlueprintState } from "./ProceduralCar";
 /** Blueprint line work is decoration: never picked by the pointer. */
 const noRaycast = () => null;
 
+/** Set a material's opacity, and skip drawing it altogether at zero. */
+function fade(material: THREE.Material, opacity: number): void {
+  material.opacity = opacity;
+  material.visible = opacity > 0.002;
+}
+
+/** The fog starts further out while the drawing is up (0–1). */
+function pushFog(scene: THREE.Scene, drawing: number): void {
+  const fog = scene.fog;
+  if (!(fog instanceof THREE.Fog)) return;
+  fog.near = 11 + 8 * drawing;
+  fog.far = 32 + 14 * drawing;
+}
+
+/** Write a style value only when it changes (a write can cost a style recalc). */
+function setStyle(element: HTMLElement, property: "opacity", value: string): void {
+  if (element.style[property] !== value) element.style[property] = value;
+}
+
 // ---------------------------------------------------------------------------
 // Ground: a matte sheet over the showroom floor, and a technical grid on it
 // ---------------------------------------------------------------------------
@@ -40,7 +59,11 @@ const GRID_HALF = 16;
  * Each line is cut into short segments with a vertex colour that falls from
  * `color` to the ground colour.
  */
-function gridGeometry(step: number, skip: number | null, color: string): THREE.BufferGeometry {
+function gridGeometry(
+  step: number,
+  skip: number | null,
+  color: string,
+): THREE.BufferGeometry {
   const points: number[] = [];
   const colors: number[] = [];
   const ink = new THREE.Color(color);
@@ -169,7 +192,7 @@ export function BlueprintRig({
   groups,
   dimensions,
   shownRef,
-  state,
+  stateRef,
   roadRef,
   floorRef,
 }: {
@@ -179,7 +202,7 @@ export function BlueprintRig({
   dimensions: PublishedDimensions | null;
   /** The beat on screen, eased by the Director. */
   shownRef: RefObject<number>;
-  state: RefObject<BlueprintState>;
+  stateRef: RefObject<BlueprintState>;
   /** Visibility of the road markings, written here. */
   roadRef: RefObject<number>;
   /** The showroom floor, hidden once the sheet covers it. */
@@ -210,7 +233,7 @@ export function BlueprintRig({
   useFrame(() => {
     const beat = shownRef.current ?? 0;
     const values = blueprintFrame(beat, groups.length);
-    const current = state.current;
+    const current = stateRef.current;
     current.drawing = values.drawing;
     groups.forEach((group, index) => {
       current.explode[group] = values.explode[index] ?? 0;
@@ -218,21 +241,15 @@ export function BlueprintRig({
 
     const d = values.drawing;
     roadRef.current = 1 - d;
-    ground.sheet.opacity = d;
-    ground.minor.opacity = 0.07 * d;
-    ground.major.opacity = 0.16 * d;
+    fade(ground.sheet, d);
+    fade(ground.minor, 0.07 * d);
+    fade(ground.major, 0.16 * d);
     // The reflective floor renders the scene a second time: once the sheet
     // hides it completely, stop drawing it.
     if (floorRef.current) floorRef.current.visible = d < 0.999;
-    dimensionMaterial.opacity = 0.85 * values.dimensions;
-    dimensionMaterial.visible = values.dimensions > 0.002;
-
+    fade(dimensionMaterial, 0.85 * values.dimensions);
     // The exploded car is larger than the assembled one: push the fog back.
-    const fog = scene.fog;
-    if (fog instanceof THREE.Fog) {
-      fog.near = 11 + 8 * d;
-      fog.far = 32 + 14 * d;
-    }
+    pushFog(scene, d);
   });
 
   return (
@@ -313,7 +330,8 @@ function liftClear(labels: Placed[], base: number): void {
       const bottom = label.y - lead;
       const top = bottom - height;
       const hit = boxes.find(
-        (box) => left < box.right && right > box.left && top < box.bottom && bottom > box.top,
+        (box) =>
+          left < box.right && right > box.left && top < box.bottom && bottom > box.top,
       );
       if (!hit) break;
       lead = label.y - hit.top + 3;
@@ -333,14 +351,14 @@ export function BlueprintLabels({
   groups,
   dimensions,
   shownRef,
-  state,
+  stateRef,
   overlay,
 }: {
   layout: CarLayout;
   groups: readonly ViewerGroup[];
   dimensions: PublishedDimensions | null;
   shownRef: RefObject<number>;
-  state: RefObject<BlueprintState>;
+  stateRef: RefObject<BlueprintState>;
   overlay: BlueprintOverlay | null;
 }) {
   const camera = useThree((three) => three.camera);
@@ -348,8 +366,12 @@ export function BlueprintLabels({
   const dimensionLabels = useMemo(() => {
     if (!dimensions) return null;
     const lines = dimensionLines(layout, dimensions);
-    return (Object.entries(lines) as [DimensionId, { a: THREE.Vector3; b: THREE.Vector3 }][])
-      .map(([id, line]): [DimensionId, THREE.Vector3] => [id, line.a.clone().lerp(line.b, 0.5)]);
+    return (
+      Object.entries(lines) as [DimensionId, { a: THREE.Vector3; b: THREE.Vector3 }][]
+    ).map(([id, line]): [DimensionId, THREE.Vector3] => [
+      id,
+      line.a.clone().lerp(line.b, 0.5),
+    ]);
   }, [layout, dimensions]);
 
   useFrame(() => {
@@ -377,10 +399,8 @@ export function BlueprintLabels({
       element.style.transform = `translate3d(${at.x.toFixed(1)}px, ${at.y.toFixed(1)}px, 0)`;
     };
 
-    if (overlay.grid) {
-      const value = (0.9 * values.drawing).toFixed(3);
-      if (overlay.grid.style.opacity !== value) overlay.grid.style.opacity = value;
-    }
+    const grid = overlay.chrome.get("grid");
+    if (grid) setStyle(grid, "opacity", (0.9 * values.drawing).toFixed(3));
 
     // Measurements in drawing order; one that would cover an earlier label
     // (a narrow screen, a steep angle) is left out — its line still shows —
@@ -410,7 +430,7 @@ export function BlueprintLabels({
     groups.forEach((group, index) => {
       const element = overlay.groups.get(group);
       if (!element) return;
-      const anchor = state.current.labels.get(group);
+      const anchor = stateRef.current.labels.get(group);
       if (!anchor) {
         element.style.opacity = "0";
         return;

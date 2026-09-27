@@ -75,7 +75,8 @@ export const ENCYCLOPEDIA: Part[] = [
   part("regenerative-braking-system", "battery"),
 ];
 
-export const bySlug = (slug: string) => ENCYCLOPEDIA.find((entry) => entry.slug === slug)!;
+export const bySlug = (slug: string) =>
+  ENCYCLOPEDIA.find((entry) => entry.slug === slug)!;
 
 export type Overrides = {
   fuel?: VariantDetail["variant"]["fuel_type"];
@@ -273,4 +274,3 @@ export function makeDetail(o: Overrides = {}): VariantDetail {
     markets: [],
   };
 }
-
