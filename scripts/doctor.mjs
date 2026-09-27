@@ -310,6 +310,14 @@ for (const [label, path, init] of probes) {
     );
     finish();
   }
+  if (/invalid path specified/i.test(message)) {
+    fail(
+      "No Supabase API answered at that address",
+      `HTTP ${result.status} ${message}`,
+      `Check NEXT_PUBLIC_SUPABASE_URL is exactly the Project URL (like https://abcdefghijkl.supabase.co), nothing after .co; this is not a missing table.`,
+    );
+    finish();
+  }
   fail(`Missing: ${label}`, `HTTP ${result.status} ${message}`, MIGRATE);
   finish();
 }

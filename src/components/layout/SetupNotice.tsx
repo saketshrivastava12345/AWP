@@ -9,6 +9,7 @@ type SetupState =
   | { kind: "placeholder"; host: string }
   | { kind: "unreachable"; summary: string; fix: string; code: string | null }
   | { kind: "badkey"; detail: string }
+  | { kind: "noapi"; url: string; detail: string }
   | { kind: "http"; status: number; detail: string }
   | { kind: "outdated"; missing: string; detail: string }
   | { kind: "unseeded" };
@@ -44,6 +45,14 @@ async function probe(
     // Not JSON (an HTML gateway page, say); the text is enough.
   }
   return { status: response.status, text, json };
+}
+
+/** The API gateway's answer for a path it has no route for. */
+const INVALID_PATH = /invalid path specified/i;
+
+function messageOf(result: Probe): string {
+  const message = (result.json as { message?: unknown } | null)?.message;
+  return typeof message === "string" ? message : result.text.slice(0, 160);
 }
 
 /** A schema probe: the object it needs, and the migration that creates it. */
@@ -103,6 +112,12 @@ async function checkSetup(): Promise<SetupState> {
   if (health.status === 401 || health.status === 403) {
     return { kind: "badkey", detail: health.text.slice(0, 160) };
   }
+  // A 404 from the auth health check means no Supabase API lives at this
+  // address (a path pasted after the project URL, or a project that no
+  // longer exists) — not a missing table.
+  if (health.status === 404) {
+    return { kind: "noapi", url: env.supabaseUrl, detail: messageOf(health) };
+  }
   if (health.status >= 500) {
     return { kind: "http", status: health.status, detail: health.text.slice(0, 160) };
   }
@@ -119,6 +134,9 @@ async function checkSetup(): Promise<SetupState> {
     if (result.status === 401)
       return { kind: "badkey", detail: result.text.slice(0, 160) };
     const record = (result.json ?? {}) as { code?: string; message?: string };
+    if (INVALID_PATH.test(record.message ?? "")) {
+      return { kind: "noapi", url: env.supabaseUrl, detail: messageOf(result) };
+    }
     const missing =
       result.status === 404 || record.code === "42P01" || record.code === "PGRST205"
         ? spec.missingEntirely
@@ -174,6 +192,12 @@ function messageFor(state: Exclude<SetupState, { kind: "ok" }>): {
         title: "The project rejected the API key",
         fix: "NEXT_PUBLIC_SUPABASE_ANON_KEY does not match this project. Copy the publishable key again in one piece (Project Settings → API Keys); a key that lost its last characters when pasted fails exactly like this.",
         detail: state.detail,
+      };
+    case "noapi":
+      return {
+        title: "No Supabase API answered at this URL",
+        fix: "NEXT_PUBLIC_SUPABASE_URL must be exactly your Project URL (Supabase → Project Settings → Data API), like https://abcdefghijkl.supabase.co — nothing after .co. Save .env.local, then stop and restart `npm run dev`: the URL is read only when the dev server starts. If it is already exact, check in the Supabase dashboard that the project still exists and is not paused.",
+        detail: `${state.url} — ${state.detail}`,
       };
     case "http":
       return {
