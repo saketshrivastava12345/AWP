@@ -230,7 +230,10 @@ export function buildBreakdown(price: MarketPrice): PriceBreakdown {
 }
 
 export type HistoryPoint = {
+  /** effective_from: the day this figure came into force (YYYY-MM-DD). */
   date: string;
+  /** effective_to, when the source gave the figure an end date. */
+  until: string | null;
   amount: number;
   currency: string;
   id: string;
@@ -261,7 +264,15 @@ export function priceHistory(
       const amount = toNumber(row.on_road_price) ?? toNumber(row.ex_showroom_price);
       return amount === null
         ? []
-        : [{ date: row.effective_from, amount, currency: row.currency, id: row.id }];
+        : [
+            {
+              date: row.effective_from,
+              until: row.effective_to ?? null,
+              amount,
+              currency: row.currency,
+              id: row.id,
+            },
+          ];
     });
   return points.sort((a, b) => a.date.localeCompare(b.date));
 }
