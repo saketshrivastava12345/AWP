@@ -59,8 +59,8 @@ export function SegmentedControl<T extends string>({
       role="radiogroup"
       aria-label={label}
       className={cn(
-        "inline-flex max-w-full gap-px rounded-sm border border-line bg-line",
-        wrap ? "flex-wrap" : "[scrollbar-width:none] overflow-x-auto",
+        "inline-flex max-w-full gap-0.5 rounded-pill border border-line bg-surface-1 p-0.5",
+        wrap ? "flex-wrap" : "no-scrollbar overflow-x-auto",
         className,
       )}
     >
@@ -82,12 +82,12 @@ export function SegmentedControl<T extends string>({
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => move(event, index)}
             className={cn(
-              "inline-flex shrink-0 items-center justify-center gap-1.5 bg-surface-1 font-display uppercase",
-              "tracking-hud whitespace-nowrap transition-colors duration-(--duration-fast)",
+              "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-pill font-sans font-medium",
+              "whitespace-nowrap transition-colors duration-(--duration-fast)",
               "disabled:cursor-not-allowed disabled:opacity-35",
-              size === "sm" ? "h-8 px-2.5 text-nano" : "h-10 px-3.5 text-micro",
+              size === "sm" ? "h-8 px-3 text-xs" : "h-10 px-4 text-sm",
               checked
-                ? "bg-surface-3 text-gold-300 shadow-[inset_0_-1px_0_0_var(--color-gold-500)]"
+                ? "bg-surface-3 text-ink-50 shadow-[inset_0_0_0_1px_var(--color-line-strong)]"
                 : "text-ink-300 hover:bg-surface-2 hover:text-ink-50",
             )}
           >

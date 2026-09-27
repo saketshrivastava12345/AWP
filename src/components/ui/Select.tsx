@@ -51,17 +51,20 @@ export function Select({
 
   return (
     <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <label htmlFor={selectId} className={cn("text-label", hideLabel && "sr-only")}>
+      <label
+        htmlFor={selectId}
+        className={cn("text-body-s font-medium text-ink-200", hideLabel && "sr-only")}
+      >
         {label}
       </label>
       <div className="relative">
         <select
           id={selectId}
           className={cn(
-            "w-full min-w-0 appearance-none rounded-sm border border-line-strong bg-surface-1 pr-9 pl-3",
-            "text-sm text-ink-100 transition-colors duration-(--duration-fast)",
+            "w-full min-w-0 appearance-none rounded-control border border-line-strong bg-surface-1 pr-10 pl-3.5",
+            "text-[15px] text-ink-50 transition-colors duration-(--duration-fast)",
             "hover:border-ink-500 focus-visible:border-gold-500 disabled:cursor-not-allowed disabled:opacity-50",
-            size === "sm" ? "h-9" : "h-11",
+            size === "sm" ? "h-10" : "h-12",
             selectClassName,
           )}
           {...props}
@@ -89,7 +92,7 @@ export function Select({
           )}
         </select>
         <ChevronDown
-          className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-ink-400"
+          className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-ink-400"
           aria-hidden="true"
         />
       </div>

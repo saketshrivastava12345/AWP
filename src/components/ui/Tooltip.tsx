@@ -80,8 +80,8 @@ export function Tooltip({
         role="tooltip"
         className={cn(
           "pointer-events-none absolute z-(--z-raised) hidden w-max max-w-[min(16rem,calc(100vw-2rem))]",
-          "rounded-sm border border-line-strong bg-surface-2/95 px-2.5 py-1.5 text-left text-xs leading-snug",
-          "font-normal tracking-normal text-ink-200 normal-case shadow-lg backdrop-blur-sm",
+          "rounded-control border border-line-strong bg-surface-2/95 px-3 py-2 text-left text-[13px] leading-snug",
+          "font-sans font-normal tracking-normal text-ink-200 normal-case shadow-overlay backdrop-blur-sm",
           "transition-[opacity,display] transition-discrete duration-(--duration-fast) starting:opacity-0",
           "group-hover/tip:block",
           focused && "block",
@@ -119,7 +119,7 @@ export function InfoHint({
       <button
         type="button"
         aria-label={label}
-        className="inline-grid size-5 place-items-center rounded-full text-ink-500 transition-colors hover:text-gold-300 focus-visible:text-gold-300"
+        className="relative inline-grid size-5 place-items-center rounded-full text-ink-400 transition-colors after:absolute after:-inset-3 after:content-[''] hover:text-ink-50 focus-visible:text-ink-50"
       >
         <Info className="size-3.5" aria-hidden="true" />
       </button>

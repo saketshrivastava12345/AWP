@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useFormStatus } from "react-dom";
 import {
-  ChevronDown,
   Heart,
   LayoutDashboard,
   LoaderCircle,
+  LogIn,
   LogOut,
   UserRound,
 } from "lucide-react";
@@ -20,8 +20,8 @@ export function Avatar({ initial, className }: { initial: string; className?: st
     <span
       aria-hidden="true"
       className={cn(
-        "grid size-7 shrink-0 place-items-center rounded-full border border-gold-700 bg-surface-3",
-        "font-display text-micro leading-none text-gold-200",
+        "grid size-8 shrink-0 place-items-center rounded-full bg-surface-3",
+        "font-display text-sm leading-none font-medium text-ink-50",
         className,
       )}
     >
@@ -33,10 +33,36 @@ export function Avatar({ initial, className }: { initial: string; className?: st
 // Focus inside the menu is shown as a filled row with a gold rule on its
 // leading edge — the browser outline would be clipped by the panel.
 const ITEM =
-  "flex min-h-11 w-full items-center gap-3 rounded-sm px-3 text-left text-sm text-ink-200 " +
+  "flex min-h-11 w-full items-center gap-3 rounded-control px-3 text-left text-body-s text-ink-200 " +
   "outline-none transition-colors duration-(--duration-fast) hover:bg-surface-3 hover:text-ink-50 " +
   "focus-visible:bg-surface-3 focus-visible:text-ink-50 focus-visible:outline-none " +
   "focus-visible:shadow-[inset_2px_0_0_var(--color-gold-500)]";
+
+/**
+ * The signed-out account control: a plain "Sign in" text link (an icon below
+ * xl). Not offered on the sign-in page itself, where it would only point at
+ * the form already on screen; the footprint is kept so nothing shifts.
+ */
+export function SignInLink() {
+  const pathname = usePathname();
+  if (pathname === "/login") return <span aria-hidden="true" className={ACCOUNT_BOX} />;
+  return (
+    <span className={cn(ACCOUNT_BOX, "flex items-center justify-end")}>
+      <Link
+        href="/login"
+        className={cn(
+          "inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-pill text-ink-200",
+          "font-display text-[15px] transition-colors duration-(--duration-fast)",
+          "hover:bg-white/6 hover:text-ink-50 xl:px-3",
+        )}
+      >
+        <LogIn className="size-[18px] shrink-0 xl:hidden" aria-hidden="true" />
+        {/* Visible from xl; always the link's accessible name. */}
+        <span className="max-xl:sr-only">Sign in</span>
+      </Link>
+    </span>
+  );
+}
 
 /**
  * The signed-in account menu (WAI-ARIA menu button).
@@ -140,7 +166,7 @@ export function AccountMenuButton({
   return (
     <div
       ref={wrapperRef}
-      className="relative"
+      className={cn(ACCOUNT_BOX, "relative flex items-center justify-end")}
       onBlur={(event) => {
         if (open && !wrapperRef.current?.contains(event.relatedTarget as Node | null)) {
           setOpen(false);
@@ -157,42 +183,30 @@ export function AccountMenuButton({
         onClick={() => (open ? closeMenu(false) : openMenu("first"))}
         onKeyDown={onButtonKeyDown}
         className={cn(
-          ACCOUNT_BOX,
-          "group flex items-center justify-center gap-2 rounded-sm transition-colors duration-(--duration-fast)",
-          "hover:bg-surface-2 xl:justify-start xl:border xl:border-line xl:pr-2.5 xl:pl-1.5",
-          "xl:hover:border-line-strong",
-          open && "bg-surface-2 xl:border-line-strong",
+          "grid size-11 place-items-center rounded-pill transition-colors duration-(--duration-fast)",
+          "hover:bg-white/6",
+          open && "bg-white/6",
         )}
       >
         <Avatar initial={account.initial} />
-        <span className="hidden min-w-0 flex-1 truncate text-left text-xs text-ink-200 xl:block">
-          {account.name}
-        </span>
-        <ChevronDown
-          aria-hidden="true"
-          className={cn(
-            "hidden size-3.5 shrink-0 text-ink-500 transition-transform duration-(--duration-fast) xl:block",
-            open && "rotate-180 text-gold-400",
-          )}
-        />
       </button>
 
       {open ? (
         <div
           className={cn(
-            "absolute top-[calc(100%+0.75rem)] right-0 z-(--z-raised) w-72 animate-panel-in overflow-hidden rounded-md",
-            "border border-line-strong bg-surface-1 shadow-[0_28px_70px_-24px_rgb(0_0_0/0.95)]",
+            "absolute top-[calc(100%+0.5rem)] right-0 z-(--z-raised) w-72 animate-panel-in overflow-hidden rounded-card",
+            "border border-line bg-surface-1 shadow-overlay",
           )}
         >
-          <div className="edge-light flex items-center gap-3 border-b border-line-subtle px-4 py-4">
-            <Avatar initial={account.initial} className="size-9 text-xs" />
+          <div className="flex items-center gap-3 border-b border-line-subtle px-4 py-4">
+            <Avatar initial={account.initial} className="size-9" />
             <div className="min-w-0">
-              <p className="truncate text-sm text-ink-50">{account.name}</p>
+              <p className="truncate text-body-s text-ink-50">{account.name}</p>
               {account.email ? (
-                <p className="truncate text-xs text-ink-400">{account.email}</p>
+                <p className="truncate text-caption">{account.email}</p>
               ) : null}
               {account.isAdmin ? (
-                <p className="mt-1.5 text-hud text-gold-400">Administrator</p>
+                <p className="mt-1 text-caption text-ink-300">Administrator</p>
               ) : null}
             </div>
           </div>
@@ -220,7 +234,7 @@ export function AccountMenuButton({
             </Link>
             {account.isAdmin ? (
               <Link href="/admin" role="menuitem" tabIndex={-1} className={ITEM}>
-                <LayoutDashboard className="size-4 text-gold-500" aria-hidden="true" />
+                <LayoutDashboard className="size-4 text-ink-400" aria-hidden="true" />
                 Admin dashboard
               </Link>
             ) : null}

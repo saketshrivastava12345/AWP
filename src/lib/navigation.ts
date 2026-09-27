@@ -22,9 +22,11 @@ export const PRIMARY_NAV: readonly NavLink[] = [
     description: "Every variant, filterable by specification",
   },
   {
+    // Presented as "Brands", as car makers' own sites say; the route keeps
+    // its name so every existing link still works.
     href: "/manufacturers",
-    label: "Manufacturers",
-    description: "The marques and the models they build",
+    label: "Brands",
+    description: "The makers and the models they build",
   },
   { href: "/countries", label: "Countries", description: "Where each car comes from" },
   { href: "/parts", label: "Parts", description: "The components inside the machine" },
@@ -44,7 +46,7 @@ export const FOOTER_SECTIONS: readonly FooterSection[] = [
     title: "Explore",
     links: [
       { href: "/cars", label: "All cars" },
-      { href: "/manufacturers", label: "Manufacturers" },
+      { href: "/manufacturers", label: "Brands" },
       { href: "/countries", label: "Countries" },
       { href: "/parts", label: "Parts encyclopedia" },
     ],
@@ -80,7 +82,11 @@ export function activeNavHref(pathname: string): string | null {
   return PRIMARY_NAV.find((link) => isActivePath(pathname, link.href))?.href ?? null;
 }
 
-/** Two-digit index used as a technical label in the mobile menu: "01". */
+/**
+ * Two-digit index: "01". No longer shown in the menu or on the 404 page
+ * (numbered labels were part of the old HUD styling); kept for any caller
+ * with genuinely ordered content.
+ */
 export function navIndex(position: number): string {
   return String(position + 1).padStart(2, "0");
 }

@@ -129,6 +129,12 @@ html[data-nav-hidden] {
   --nav-offset: 0px;
 }
 
+/* The navbar slides away on scroll-down (pages with a SubNav only, never
+   under reduced motion — see Navbar.tsx), but never while it holds focus. */
+html[data-nav-hidden] [data-navbar]:not(:focus-within) {
+  translate: 0 -100%;
+}
+
 html:has([data-subnav]) {
   --subnav-offset: var(--subnav-h);
 }
@@ -139,7 +145,8 @@ html:has([data-subnav]) {
   /* Michroma is a logo treatment now: the wordmark and, optionally, a model
      nameplate. Every heading, number, nav item and button is Inter Tight. */
   --font-brand: var(--font-michroma), "Arial Black", sans-serif;
-  --font-display: var(--font-inter-tight), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    var(--font-inter-tight), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }

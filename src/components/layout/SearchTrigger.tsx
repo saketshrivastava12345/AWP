@@ -25,13 +25,13 @@ export function SearchTrigger({
       onClick={open}
       aria-keyshortcuts="Control+K Meta+K /"
       className={cn(
-        "group flex h-11 w-full max-w-sm items-center gap-3 rounded-sm border border-line bg-surface-1/60 px-4",
-        "text-left text-sm text-ink-400 transition-colors duration-(--duration-fast)",
-        "hover:border-line-strong hover:text-ink-200",
+        "group flex h-12 w-full max-w-sm items-center gap-3 rounded-control border border-line-strong bg-surface-1 px-4",
+        "text-left text-[15px] text-ink-400 transition-colors duration-(--duration-fast)",
+        "hover:border-ink-500 hover:text-ink-200",
         className,
       )}
     >
-      <Search className="size-4 shrink-0 text-gold-500" aria-hidden="true" />
+      <Search className="size-[18px] shrink-0 text-ink-300" aria-hidden="true" />
       <span className="flex-1 truncate">{children}</span>
       <ShortcutHint keyName="K" className="hidden sm:inline-flex" />
     </button>

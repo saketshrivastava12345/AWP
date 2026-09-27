@@ -26,7 +26,7 @@ export function Switch({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "group inline-flex min-h-10 items-center gap-3 text-left disabled:cursor-not-allowed disabled:opacity-40",
+        "group inline-flex min-h-11 items-center gap-3 text-left disabled:cursor-not-allowed disabled:opacity-40",
         className,
       )}
     >
@@ -40,15 +40,13 @@ export function Switch({
         <span
           className={cn(
             "absolute top-1/2 size-3.5 -translate-y-1/2 rounded-full transition-[left,background-color] duration-(--duration-fast)",
-            checked ? "left-[calc(100%-1.05rem)] bg-gold-300" : "left-0.5 bg-ink-400",
+            checked ? "left-[calc(100%-1.05rem)] bg-gold-400" : "left-0.5 bg-ink-400",
           )}
         />
       </span>
       <span className="flex flex-col">
-        <span className="font-display text-micro tracking-hud text-ink-200 uppercase">
-          {label}
-        </span>
-        {description ? <span className="text-xs text-ink-500">{description}</span> : null}
+        <span className="text-body-s text-ink-200">{label}</span>
+        {description ? <span className="text-caption">{description}</span> : null}
       </span>
     </button>
   );

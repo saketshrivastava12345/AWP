@@ -194,7 +194,7 @@ export function Dialog({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cn(
-          "absolute flex flex-col border-line bg-surface-1 shadow-[0_24px_80px_-24px_rgb(0_0_0/0.8)]",
+          "absolute flex flex-col border-line bg-surface-1 shadow-overlay",
           "focus-visible:outline-none",
           placementClasses[placement],
           className,
@@ -207,17 +207,11 @@ export function Dialog({
         ) : (
           <header className="flex shrink-0 items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
             <div className="min-w-0">
-              <h2
-                id={titleId}
-                className="font-display text-xs tracking-hud text-ink-50 uppercase"
-              >
+              <h2 id={titleId} className="text-h4">
                 {title}
               </h2>
               {description ? (
-                <div
-                  id={descriptionId}
-                  className="mt-1.5 text-sm leading-relaxed text-ink-400"
-                >
+                <div id={descriptionId} className="mt-1 text-body-s text-ink-400">
                   {description}
                 </div>
               ) : null}
@@ -228,7 +222,7 @@ export function Dialog({
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="grid size-10 place-items-center rounded-sm text-ink-400 transition-colors duration-(--duration-fast) hover:bg-surface-3 hover:text-ink-50"
+                className="grid size-11 place-items-center rounded-pill text-ink-300 transition-colors duration-(--duration-fast) hover:bg-white/6 hover:text-ink-50"
               >
                 <X className="size-4" aria-hidden="true" />
               </button>

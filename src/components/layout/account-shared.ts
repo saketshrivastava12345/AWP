@@ -9,9 +9,10 @@
 /**
  * Fixed footprint of the navbar's account control, shared by the "Sign in"
  * link, the signed-in menu button and the streaming fallback, so nothing
- * shifts when the session-dependent slot arrives.
+ * shifts when the session-dependent slot arrives: a 44px icon target below
+ * xl, room for the "Sign in" text link from xl.
  */
-export const ACCOUNT_BOX = "h-10 w-10 shrink-0 xl:w-36";
+export const ACCOUNT_BOX = "h-11 w-11 shrink-0 xl:w-[5.25rem]";
 
 export type AccountSummary = {
   name: string;

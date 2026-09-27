@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { ButtonLink } from "@/components/ui/Button";
 import { SearchTrigger } from "@/components/layout/SearchTrigger";
-import { PRIMARY_NAV, navIndex } from "@/lib/navigation";
+import { PRIMARY_NAV } from "@/lib/navigation";
 
 export const metadata: Metadata = {
   title: "Page not found",
@@ -18,47 +18,25 @@ export const metadata: Metadata = {
  */
 export default function NotFound() {
   return (
-    <section
-      aria-labelledby="not-found-title"
-      className="relative isolate flex flex-1 flex-col overflow-hidden"
-    >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem] tech-grid"
-      />
-      {/* Oversized, cropped figure behind the copy. */}
-      <p
-        aria-hidden="true"
-        className="pointer-events-none absolute top-10 -right-6 -z-10 hidden font-display text-[16rem] leading-none text-white/[0.035] select-none sm:block lg:top-4 lg:right-8 lg:text-[22rem]"
-      >
-        404
-      </p>
-
-      <Container className="py-20 sm:py-28">
+    <section aria-labelledby="not-found-title" className="flex flex-1 flex-col">
+      <Container className="py-20 sm:py-28 lg:py-32">
         <div className="max-w-2xl">
-          <p className="flex items-center gap-3 text-hud text-gold-400">
-            <span aria-hidden="true" className="size-1.5 bg-gold-500" />
-            Error 404 · Not in the catalogue
-          </p>
+          <p className="text-eyebrow">Error 404</p>
 
-          <h1
-            id="not-found-title"
-            className="mt-6 font-display text-3xl leading-tight tracking-display text-ink-50 uppercase sm:text-5xl"
-          >
-            No such vehicle
+          <h1 id="not-found-title" className="mt-4 text-h1">
+            This page isn’t in the catalogue.
           </h1>
 
-          <p className="mt-6 max-w-lg text-sm leading-relaxed text-ink-300 sm:text-base">
-            This address is not in the catalogue. The car, manufacturer or part may have
-            been renamed, or the link may be mistyped. Search for it, or pick up from one
-            of the sections below.
+          <p className="mt-6 max-w-[60ch] text-lead">
+            The car, brand or part may have been renamed, or the link may be mistyped.
+            Search for it, or pick up from one of the sections below.
           </p>
 
           <SearchTrigger className="mt-10 max-w-md">
-            Search cars, marques, parts…
+            Search cars, brands, parts…
           </SearchTrigger>
 
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             <ButtonLink href="/cars">Browse all cars</ButtonLink>
             <ButtonLink href="/" variant="secondary">
               Return home
@@ -66,36 +44,35 @@ export default function NotFound() {
           </div>
         </div>
 
-        <nav aria-label="Sections" className="mt-20 sm:mt-24">
-          <h2 className="text-label">Continue to</h2>
-          <ol className="mt-5 grid gap-px border border-line bg-line sm:grid-cols-2 lg:grid-cols-5">
-            {PRIMARY_NAV.map((link, index) => (
-              <li key={link.href} className="flex bg-void">
+        <nav aria-labelledby="not-found-continue" className="mt-20 max-w-2xl sm:mt-24">
+          <h2 id="not-found-continue" className="text-eyebrow">
+            Continue to
+          </h2>
+          <ul className="mt-4 border-t border-line-subtle">
+            {PRIMARY_NAV.map((link) => (
+              <li key={link.href} className="border-b border-line-subtle">
                 <Link
                   href={link.href}
-                  className="group flex w-full flex-col gap-3 p-5 transition-colors duration-(--duration-fast) hover:bg-surface-1"
+                  className="group flex min-h-16 items-center gap-4 py-3 transition-colors duration-(--duration-fast)"
                 >
-                  <span className="flex items-center justify-between">
-                    <span className="font-mono text-micro text-ink-500 tabular-nums">
-                      {navIndex(index)}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-h4 text-ink-100 transition-colors duration-(--duration-fast) group-hover:text-ink-50">
+                      {link.label}
                     </span>
-                    <ArrowRight
-                      className="size-3.5 text-ink-500 transition-[color,translate] duration-(--duration-fast) group-hover:translate-x-0.5 group-hover:text-gold-300"
-                      aria-hidden="true"
-                    />
+                    {link.description ? (
+                      <span className="block text-body-s text-ink-400">
+                        {link.description}
+                      </span>
+                    ) : null}
                   </span>
-                  <span className="font-display text-sm tracking-hud text-ink-50 uppercase transition-colors duration-(--duration-fast) group-hover:text-gold-200 lg:text-xs">
-                    {link.label}
-                  </span>
-                  {link.description ? (
-                    <span className="text-xs leading-relaxed text-ink-400">
-                      {link.description}
-                    </span>
-                  ) : null}
+                  <ArrowRight
+                    className="size-[18px] shrink-0 text-ink-400 transition-[color,translate] duration-(--duration-base) group-hover:translate-x-1 group-hover:text-ink-50"
+                    aria-hidden="true"
+                  />
                 </Link>
               </li>
             ))}
-          </ol>
+          </ul>
         </nav>
       </Container>
     </section>

@@ -212,9 +212,9 @@ export async function SetupNotice() {
     <div
       role="status"
       data-setup-notice={state.kind}
-      className="fixed inset-x-3 bottom-3 z-(--z-toast) mx-auto max-w-2xl rounded-md border border-gold-500/60 bg-surface-2/95 px-4 py-3 text-sm shadow-lg backdrop-blur-md"
+      className="fixed inset-x-3 bottom-3 z-(--z-toast) mx-auto max-w-2xl rounded-card border border-line-strong bg-surface-2/95 px-4 py-3 text-sm shadow-overlay backdrop-blur-md"
     >
-      <p className="font-display text-micro tracking-hud text-gold-300 uppercase">
+      <p className="text-body-s font-medium text-ink-50">
         Developer notice · {message.title}
       </p>
       <p className="mt-1.5 leading-relaxed text-ink-100">{message.fix}</p>
@@ -223,7 +223,7 @@ export async function SetupNotice() {
           {message.detail}
         </p>
       ) : null}
-      <p className="mt-1.5 text-xs text-ink-500">
+      <p className="mt-1.5 text-caption">
         Shown only by `npm run dev`. Run `npm run doctor` in a terminal for the full
         check.
       </p>

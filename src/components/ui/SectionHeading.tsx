@@ -51,7 +51,7 @@ export function SectionHeading({
         className,
       )}
     >
-      <div className="min-w-0 max-w-3xl">
+      <div className="max-w-3xl min-w-0">
         {overline ? <p className="mb-3 text-eyebrow">{overline}</p> : null}
         <Heading id={id} className={Heading === "h3" ? "text-h3" : "text-h2"}>
           {title}

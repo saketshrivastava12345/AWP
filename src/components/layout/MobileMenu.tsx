@@ -7,7 +7,8 @@ import { ArrowRight, ArrowUpRight, Heart, Search, X } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import { IconButton } from "@/components/ui/IconButton";
 import { ShortcutHint } from "@/components/ui/Kbd";
-import { PRIMARY_NAV, SECONDARY_NAV, isActivePath, navIndex } from "@/lib/navigation";
+import { CONTAINER_GUTTERS } from "@/components/ui/Container";
+import { PRIMARY_NAV, SECONDARY_NAV, isActivePath } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "./BrandMark";
 
@@ -26,8 +27,8 @@ const REVEAL =
 
 /**
  * The phone and tablet navigation: a full-screen panel rather than a
- * shrunken copy of the desktop bar. Large numbered display-type links with a
- * line of context each, the search entry, saved cars and the account.
+ * shrunken copy of the desktop bar. Large sentence-case links with a line of
+ * context each, the search entry on top, saved cars and the account below.
  *
  * Built on the shared Dialog, so Escape, the focus trap, focus return and the
  * scroll lock behave exactly like every other modal. Its header mirrors the
@@ -93,7 +94,12 @@ function MenuContent({
 
   return (
     <>
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-line-subtle px-5 sm:px-8">
+      <div
+        className={cn(
+          "flex h-(--nav-h) shrink-0 items-center justify-between border-b border-line-subtle",
+          CONTAINER_GUTTERS,
+        )}
+      >
         <Wordmark onClick={onClose} />
         <IconButton label="Close menu" onClick={onClose} className="-mr-2.5">
           <X className="size-5" aria-hidden="true" />
@@ -101,40 +107,37 @@ function MenuContent({
       </div>
 
       <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        {/* Decorative engineering grid behind the list. */}
         <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] tech-grid opacity-60"
-        />
-
-        <div className="relative mx-auto flex min-h-full w-full max-w-2xl flex-col px-5 pt-6 pb-[max(1.75rem,env(safe-area-inset-bottom))] sm:px-8 sm:pt-10">
+          className={cn(
+            "relative mx-auto flex min-h-full w-full max-w-2xl flex-col pt-5 pb-[max(1.75rem,env(safe-area-inset-bottom))] sm:pt-8",
+            CONTAINER_GUTTERS,
+          )}
+        >
           <button
             type="button"
             onClick={onOpenSearch}
             style={stagger(0)}
             className={cn(
               REVEAL,
-              "flex h-12 w-full items-center gap-3 rounded-sm border border-line bg-surface-1/80 px-4",
-              "text-left text-sm text-ink-400 transition-colors duration-(--duration-fast)",
-              "hover:border-line-strong hover:text-ink-200",
+              "flex h-12 w-full items-center gap-3 rounded-control border border-line-strong bg-surface-1 px-4",
+              "text-left text-[15px] text-ink-400 transition-colors duration-(--duration-fast)",
+              "hover:border-ink-500 hover:text-ink-200",
             )}
           >
-            <Search className="size-4 shrink-0 text-gold-500" aria-hidden="true" />
-            <span className="flex-1 truncate">
-              Search cars, marques, countries, parts
-            </span>
+            <Search className="size-[18px] shrink-0 text-ink-300" aria-hidden="true" />
+            <span className="flex-1 truncate">Search cars, brands, countries, parts</span>
             <ShortcutHint keyName="K" className="hidden sm:inline-flex" />
           </button>
 
-          <nav aria-label="Menu" className="mt-6 sm:mt-8">
-            <ol className="border-t border-line">
+          <nav aria-label="Menu" className="mt-4 sm:mt-6">
+            <ul>
               {PRIMARY_NAV.map((link, index) => {
                 const active = isActivePath(pathname, link.href);
                 return (
                   <li
                     key={link.href}
                     style={stagger(index + 1)}
-                    className={cn(REVEAL, "border-b border-line")}
+                    className={cn(REVEAL, "border-b border-line-subtle")}
                   >
                     <Link
                       href={link.href}
@@ -142,31 +145,28 @@ function MenuContent({
                       aria-current={
                         active ? (pathname === link.href ? "page" : "true") : undefined
                       }
-                      className="group flex min-h-[4.75rem] items-center gap-4 py-4 sm:min-h-24"
+                      className="group relative flex min-h-20 items-center gap-4 py-4"
                     >
-                      <span
-                        className={cn(
-                          "w-6 shrink-0 self-start pt-1.5 font-mono text-micro tabular-nums",
-                          active ? "text-gold-400" : "text-ink-500",
-                        )}
-                      >
-                        {navIndex(index)}
-                      </span>
+                      {/* Active state: the one place gold appears here. */}
+                      {active ? (
+                        <span
+                          aria-hidden="true"
+                          className="absolute top-1/2 -left-3 h-8 w-0.5 -translate-y-1/2 bg-gold-500 sm:-left-4"
+                        />
+                      ) : null}
                       <span className="min-w-0 flex-1">
                         <span
                           className={cn(
-                            "block font-display text-lg leading-tight tracking-[0.08em] uppercase",
-                            "min-[400px]:text-xl sm:text-[1.625rem]",
-                            "transition-colors duration-(--duration-fast)",
+                            "block text-h2 transition-colors duration-(--duration-fast)",
                             active
-                              ? "text-gold-300"
-                              : "text-ink-50 group-hover:text-gold-200",
+                              ? "text-ink-50"
+                              : "text-ink-100 group-hover:text-ink-50",
                           )}
                         >
                           {link.label}
                         </span>
                         {link.description ? (
-                          <span className="mt-1.5 block text-sm text-ink-400">
+                          <span className="mt-1 block text-body-s text-ink-400">
                             {link.description}
                           </span>
                         ) : null}
@@ -174,18 +174,15 @@ function MenuContent({
                       <ArrowRight
                         aria-hidden="true"
                         className={cn(
-                          "size-4 shrink-0 transition-[color,translate] duration-(--duration-fast)",
-                          "group-hover:translate-x-0.5",
-                          active
-                            ? "text-gold-400"
-                            : "text-ink-500 group-hover:text-gold-300",
+                          "size-5 shrink-0 text-ink-400 transition-[color,translate] duration-(--duration-fast)",
+                          "group-hover:translate-x-1 group-hover:text-ink-50",
                         )}
                       />
                     </Link>
                   </li>
                 );
               })}
-            </ol>
+            </ul>
           </nav>
 
           <div
@@ -199,7 +196,7 @@ function MenuContent({
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex min-h-11 items-center gap-1.5 text-sm text-ink-300 transition-colors hover:text-gold-300"
+                  className="inline-flex min-h-11 items-center gap-1.5 text-body-s text-ink-300 transition-colors hover:text-ink-50"
                 >
                   {link.label}
                   <ArrowUpRight className="size-3.5" aria-hidden="true" />
@@ -211,7 +208,7 @@ function MenuContent({
                   href={link.href}
                   onClick={onClose}
                   aria-current={pathname === link.href ? "page" : undefined}
-                  className="inline-flex min-h-11 items-center text-sm text-ink-300 transition-colors hover:text-gold-300 aria-[current]:text-gold-300"
+                  className="inline-flex min-h-11 items-center text-body-s text-ink-300 transition-colors hover:text-ink-50 aria-[current]:text-ink-50"
                 >
                   {link.label}
                 </Link>
@@ -228,19 +225,19 @@ function MenuContent({
               onClick={onClose}
               aria-current={pathname === "/favorites" ? "page" : undefined}
               className={cn(
-                "group flex h-14 items-center gap-3 rounded-md border border-line bg-surface-1 px-4",
-                "transition-colors duration-(--duration-fast) hover:border-line-strong",
+                "group flex h-14 items-center gap-3 rounded-card bg-surface-1 px-4",
+                "transition-colors duration-(--duration-fast) hover:bg-surface-2",
                 // The count badge is shared with the desktop bar, where it is
                 // pinned to the icon's corner; here it sits inline.
                 "[&_[data-count-badge]]:static [&_[data-count-badge]]:h-5 [&_[data-count-badge]]:min-w-5",
                 "[&_[data-count-badge]]:text-micro",
               )}
             >
-              <Heart className="size-4 shrink-0 text-gold-500" aria-hidden="true" />
-              <span className="flex-1 text-sm text-ink-100">Saved cars</span>
+              <Heart className="size-[18px] shrink-0 text-ink-300" aria-hidden="true" />
+              <span className="flex-1 text-body-s text-ink-50">Saved cars</span>
               {favoritesCount}
               <ArrowRight
-                className="size-4 shrink-0 text-ink-500 transition-colors group-hover:text-gold-300"
+                className="size-4 shrink-0 text-ink-400 transition-colors group-hover:text-ink-50"
                 aria-hidden="true"
               />
             </Link>

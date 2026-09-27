@@ -16,8 +16,8 @@ export function CountBadge({ count, className }: { count: number; className?: st
         aria-hidden="true"
         data-count-badge=""
         className={cn(
-          "pointer-events-none absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full",
-          "bg-gold-500 px-1 font-mono text-nano leading-none font-medium text-void tabular-nums",
+          "pointer-events-none absolute top-0.5 right-0.5 grid h-4 min-w-4 place-items-center rounded-full",
+          "bg-ink-50 px-1 font-sans text-nano leading-none font-semibold text-void tabular-nums",
           className,
         )}
       >
@@ -45,12 +45,12 @@ export function FavoritesLink({
     <Link
       href="/favorites"
       className={cn(
-        "relative grid size-10 shrink-0 place-items-center rounded-sm text-ink-300",
-        "transition-colors duration-(--duration-fast) hover:bg-surface-2 hover:text-gold-300",
+        "relative grid size-11 shrink-0 place-items-center rounded-pill text-ink-200",
+        "transition-colors duration-(--duration-fast) hover:bg-white/6 hover:text-ink-50",
         className,
       )}
     >
-      <Heart className="size-4" aria-hidden="true" />
+      <Heart className="size-[18px]" aria-hidden="true" />
       <span className="sr-only">Saved cars</span>
       {count}
     </Link>

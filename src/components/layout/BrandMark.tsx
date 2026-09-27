@@ -42,12 +42,14 @@ export function Wordmark({
       onClick={onClick}
       aria-label="AURIX home"
       className={cn(
-        "group -mx-1 inline-flex h-11 items-center gap-3 rounded-sm px-1",
+        "group -mx-1 inline-flex h-11 items-center gap-3 rounded-xs px-1",
         className,
       )}
     >
-      <BrandMark className="size-[18px] transition-colors duration-(--duration-fast) group-hover:text-gold-300" />
-      <span className="font-display text-[15px] leading-none tracking-[0.3em] text-ink-50 transition-colors duration-(--duration-fast) group-hover:text-gold-200">
+      <BrandMark className="size-[18px] transition-colors duration-(--duration-fast) group-hover:text-gold-400" />
+      {/* The only Michroma on the page besides an optional nameplate. The
+          trailing tracking is trimmed so the word centres optically. */}
+      <span className="-mr-[0.24em] font-brand text-base leading-none tracking-[0.24em] text-ink-50 md:text-[18px]">
         AURIX
       </span>
     </Link>

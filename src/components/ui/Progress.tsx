@@ -17,7 +17,7 @@ export function Progress({
   const clamped = value === null ? null : Math.max(0, Math.min(100, Math.round(value)));
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <span className="w-24 shrink-0 text-hud">{label}</span>
+      <span className="w-24 shrink-0 text-caption">{label}</span>
       <div
         role="progressbar"
         aria-label={label}

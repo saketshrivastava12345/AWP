@@ -180,8 +180,8 @@ export function CommandPalette() {
       layer="palette"
       initialFocusRef={inputRef}
       className={cn(
-        "top-2 max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-hidden rounded-lg",
-        "border-line-strong bg-surface-1/95 backdrop-blur-xl",
+        "top-2 max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-hidden rounded-card",
+        "border-line bg-surface-1/95 backdrop-blur-xl",
         "sm:top-[12vh] sm:max-h-[min(40rem,calc(100dvh-16vh))] sm:w-[calc(100%-2rem)]",
       )}
       bodyClassName="flex flex-col overflow-hidden p-0 sm:p-0"
@@ -409,8 +409,8 @@ function PalettePanel({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* ---- query row ---- */}
-      <div className="relative flex h-14 shrink-0 items-center gap-3 border-b border-line px-4 transition-colors duration-(--duration-fast) focus-within:border-gold-700 sm:h-16 sm:px-5">
-        <Search className="size-4 shrink-0 text-gold-500" aria-hidden="true" />
+      <div className="relative flex h-14 shrink-0 items-center gap-3 border-b border-line px-4 transition-colors duration-(--duration-fast) focus-within:border-line-strong sm:h-16 sm:px-5">
+        <Search className="size-[18px] shrink-0 text-ink-300" aria-hidden="true" />
         <input
           ref={inputRef}
           value={query}
@@ -430,7 +430,7 @@ function PalettePanel({
           autoCapitalize="none"
           spellCheck={false}
           maxLength={MAX_QUERY_LENGTH}
-          placeholder="Cars, marques, countries, parts…"
+          placeholder="Cars, brands, countries, parts…"
           className={cn(
             "h-full min-w-0 flex-1 bg-transparent text-base text-ink-50 caret-gold-400",
             "placeholder:text-ink-500 focus:outline-none sm:text-[17px]",
@@ -443,7 +443,7 @@ function PalettePanel({
               setQuery("");
               inputRef.current?.focus();
             }}
-            className="grid size-11 shrink-0 place-items-center rounded-sm text-ink-400 transition-colors duration-(--duration-fast) hover:bg-surface-3 hover:text-ink-50 sm:size-9"
+            className="grid size-11 shrink-0 place-items-center rounded-pill text-ink-400 transition-colors duration-(--duration-fast) hover:bg-white/6 hover:text-ink-50"
             aria-label="Clear search"
           >
             <X className="size-4" aria-hidden="true" />
@@ -454,7 +454,7 @@ function PalettePanel({
         <button
           type="button"
           onClick={onClose}
-          className="-mr-1.5 grid h-11 shrink-0 place-items-center rounded-sm px-1.5 text-sm text-ink-300 transition-colors duration-(--duration-fast) hover:bg-surface-3 hover:text-ink-50 sm:h-9"
+          className="-mr-1.5 grid h-11 shrink-0 place-items-center rounded-control px-2 text-[15px] text-ink-200 transition-colors duration-(--duration-fast) hover:bg-white/6 hover:text-ink-50"
           aria-label="Close search"
         >
           <span aria-hidden="true" className="sm:hidden">
@@ -463,7 +463,7 @@ function PalettePanel({
           <Kbd className="hidden sm:inline-flex">Esc</Kbd>
         </button>
 
-        {/* Searching: a gold sweep along the bottom hairline. */}
+        {/* Searching: a sweep along the bottom hairline. */}
         <span
           aria-hidden="true"
           className={cn(
@@ -471,7 +471,7 @@ function PalettePanel({
             pending ? "opacity-100" : "opacity-0",
           )}
         >
-          <span className={cn("block h-full bg-gold-500", styles.sweep)} />
+          <span className={cn("block h-full bg-ink-300", styles.sweep)} />
         </span>
       </div>
 
@@ -486,17 +486,17 @@ function PalettePanel({
             <CircleAlert
               className={cn(
                 "mt-0.5 size-4 shrink-0",
-                failed ? "text-signal-negative" : "text-ink-500",
+                failed ? "text-signal-negative" : "text-ink-400",
               )}
               aria-hidden="true"
             />
             <div>
-              <p className="text-sm text-ink-100">
+              <p className="text-body-s text-ink-100">
                 {failed
                   ? "Live suggestions are unavailable right now."
                   : `Nothing in the catalogue is called “${trimmed}”.`}
               </p>
-              <p className="mt-1 text-xs leading-relaxed text-ink-400">
+              <p className="mt-1 text-caption">
                 The full search still works — it also understands descriptions such as
                 “electric suv” or “under 500 hp”.
               </p>
@@ -528,7 +528,7 @@ function PalettePanel({
                 <div
                   role="presentation"
                   id={labelId}
-                  className="flex items-center gap-2 px-3 pt-1 pb-2 text-hud text-ink-500"
+                  className="flex items-center gap-2 px-3 pt-1 pb-2 text-caption"
                 >
                   <SectionIcon id={section.id} />
                   {section.label}
@@ -551,10 +551,10 @@ function PalettePanel({
                           onClick={(event) => onLinkClick(event, option)}
                           onPointerMove={() => setActiveKey(option.key)}
                           className={cn(
-                            "rounded-xs border px-3 py-2 text-xs transition-colors duration-(--duration-fast)",
+                            "inline-flex min-h-9 items-center rounded-pill border px-3.5 text-sm transition-colors duration-(--duration-fast)",
                             index === activeIndex
-                              ? "border-gold-600 bg-gold-500/10 text-gold-200"
-                              : "border-line text-ink-300",
+                              ? "border-gold-500 bg-surface-3 text-ink-50"
+                              : "border-line-strong text-ink-200",
                           )}
                         >
                           {option.query}
@@ -589,7 +589,7 @@ function PalettePanel({
 
       {/* ---- keyboard legend ---- */}
       <div className="hidden h-11 shrink-0 items-center justify-between gap-4 border-t border-line-subtle px-5 sm:flex">
-        <p className="flex items-center gap-4 text-hud text-ink-500">
+        <p className="flex items-center gap-4 text-caption">
           <span className="flex items-center gap-1.5">
             <Kbd>↑</Kbd>
             <Kbd>↓</Kbd>
@@ -604,8 +604,8 @@ function PalettePanel({
             Close
           </span>
         </p>
-        <p className="flex items-center gap-1.5 text-hud text-ink-500">
-          <Sparkles className="size-3 text-gold-600" aria-hidden="true" />
+        <p className="flex items-center gap-1.5 text-caption">
+          <Sparkles className="size-3.5 text-ink-400" aria-hidden="true" />
           Plain-language search
         </p>
       </div>
@@ -614,7 +614,7 @@ function PalettePanel({
 }
 
 function SectionIcon({ id }: { id: string }) {
-  const className = "size-3 text-gold-600";
+  const className = "size-3.5 text-ink-400";
   switch (id) {
     case "car":
       return <Car className={className} aria-hidden="true" />;
@@ -634,7 +634,7 @@ function SectionIcon({ id }: { id: string }) {
 }
 
 const ROW =
-  "group/opt flex min-h-12 w-full items-center gap-3 rounded-sm px-3 py-2 text-left " +
+  "group/opt flex min-h-12 w-full items-center gap-3 rounded-control px-3 py-2 text-left " +
   "transition-colors duration-(--duration-fast)";
 
 function OptionRow({
@@ -679,10 +679,10 @@ function OptionRow({
         >
           <ResultTile result={result} flag={flag} />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm text-ink-50">
+            <span className="block truncate text-[15px] text-ink-50">
               <Highlighted text={result.title} query={query} />
             </span>
-            <span className="mt-0.5 block truncate text-xs text-ink-400">
+            <span className="mt-0.5 block truncate text-caption">
               {subtitle ? (
                 <Highlighted text={subtitle} query={query} />
               ) : (
@@ -690,12 +690,6 @@ function OptionRow({
               )}
             </span>
           </span>
-          {/* The kind, unless the subtitle line is already saying it. */}
-          {subtitle ? (
-            <span className="hidden shrink-0 text-hud text-ink-500 sm:block">
-              {KIND_LABELS[result.kind].item}
-            </span>
-          ) : null}
           <EnterHint active={active} />
         </Link>
       );
@@ -712,28 +706,28 @@ function OptionRow({
         >
           <span
             aria-hidden="true"
-            className="grid size-12 shrink-0 place-items-center rounded-xs border border-gold-700/60 bg-gold-500/10 text-gold-300"
+            className="grid size-12 shrink-0 place-items-center rounded-control bg-surface-3 text-ink-50"
           >
             <ArrowRight className="size-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm text-ink-50">
-              Search all cars for <span className="text-gold-200">“{option.query}”</span>
+            <span className="block truncate text-[15px] text-ink-50">
+              Search all cars for <span className="font-medium">“{option.query}”</span>
             </span>
             {option.understood.length > 0 ? (
               <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-ink-400">Understood as</span>
+                <span className="text-caption">Understood as</span>
                 {option.understood.map((label) => (
                   <span
                     key={label}
-                    className="rounded-xs border border-gold-800 px-1.5 py-0.5 font-mono text-micro text-gold-300"
+                    className="rounded-pill border border-line-strong px-2 py-0.5 text-xs text-ink-200"
                   >
                     {label}
                   </span>
                 ))}
               </span>
             ) : (
-              <span className="mt-0.5 block truncate text-xs text-ink-400">
+              <span className="mt-0.5 block truncate text-caption">
                 Full catalogue search with filters
               </span>
             )}
@@ -747,17 +741,17 @@ function OptionRow({
         <div {...common} onClick={onActivate} className={cn(rowClass, "cursor-pointer")}>
           <span
             aria-hidden="true"
-            className="grid size-8 shrink-0 place-items-center text-ink-500"
+            className="grid size-8 shrink-0 place-items-center text-ink-400"
           >
             <Clock className="size-4" />
           </span>
-          <span className="min-w-0 flex-1 truncate text-sm text-ink-200">
+          <span className="min-w-0 flex-1 truncate text-[15px] text-ink-200">
             {option.query}
           </span>
           <ArrowUpLeft
             className={cn(
               "size-4 shrink-0 transition-opacity",
-              active ? "text-gold-400 opacity-100" : "opacity-0",
+              active ? "text-ink-300 opacity-100" : "opacity-0",
             )}
             aria-hidden="true"
           />
@@ -773,11 +767,11 @@ function OptionRow({
         >
           <span
             aria-hidden="true"
-            className="grid size-8 shrink-0 place-items-center text-ink-500"
+            className="grid size-8 shrink-0 place-items-center text-ink-400"
           >
             <Trash className="size-3.5" />
           </span>
-          <span className="flex-1 text-xs text-ink-400">Clear recent searches</span>
+          <span className="flex-1 text-caption">Clear recent searches</span>
         </div>
       );
 
@@ -792,7 +786,7 @@ function EnterHint({ active }: { active: boolean }) {
     <CornerDownLeft
       className={cn(
         "hidden size-4 shrink-0 transition-opacity duration-(--duration-fast) sm:block",
-        active ? "text-gold-400 opacity-100" : "opacity-0",
+        active ? "text-ink-300 opacity-100" : "opacity-0",
       )}
       aria-hidden="true"
     />
@@ -805,7 +799,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
     <>
       {parts.map((part, index) =>
         part.match ? (
-          <mark key={index} className="bg-transparent text-gold-300">
+          <mark key={index} className="bg-transparent font-semibold text-inherit">
             {part.text}
           </mark>
         ) : (
@@ -817,7 +811,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 }
 
 const TILE =
-  "relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xs border border-line bg-surface-2";
+  "relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-control bg-surface-2";
 
 function ResultTile({ result, flag }: { result: SearchResult; flag: string | null }) {
   switch (result.kind) {
@@ -832,7 +826,7 @@ function ResultTile({ result, flag }: { result: SearchResult; flag: string | nul
     case "manufacturer":
       return (
         <span aria-hidden="true" className={TILE}>
-          <span className="font-display text-base text-gold-300">
+          <span className="font-display text-lg text-ink-200">
             {result.title.trim().charAt(0).toUpperCase()}
           </span>
         </span>
@@ -908,10 +902,10 @@ function LoadingRows() {
     <div className="pt-2" aria-hidden="true">
       {[0, 1, 2].map((row) => (
         <div key={row} className="flex min-h-16 items-center gap-3 px-3 py-2">
-          <span className="size-12 shrink-0 animate-pulse rounded-xs bg-surface-3" />
+          <span className="size-12 shrink-0 animate-pulse rounded-control bg-surface-3" />
           <span className="flex-1 space-y-2">
-            <span className="block h-2.5 w-2/5 animate-pulse rounded-xs bg-surface-3" />
-            <span className="block h-2 w-1/4 animate-pulse rounded-xs bg-surface-2" />
+            <span className="block h-3 w-2/5 animate-pulse rounded-xs bg-surface-3" />
+            <span className="block h-2.5 w-1/4 animate-pulse rounded-xs bg-surface-2" />
           </span>
         </div>
       ))}

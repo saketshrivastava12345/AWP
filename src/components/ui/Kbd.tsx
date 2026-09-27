@@ -13,8 +13,8 @@ export function Kbd({
   return (
     <kbd
       className={cn(
-        "inline-flex h-5 min-w-5 items-center justify-center rounded-xs border border-line-strong",
-        "bg-surface-2 px-1 font-mono text-nano text-ink-300",
+        "inline-flex h-5 min-w-5 items-center justify-center rounded-xs border border-line",
+        "bg-surface-2 px-1 font-sans text-nano leading-none text-ink-300",
         className,
       )}
     >

@@ -31,14 +31,16 @@ type GlassCardProps<T extends ElementType> = GlassCardOwnProps & {
 } & Omit<ComponentPropsWithoutRef<T>, keyof GlassCardOwnProps | "as">;
 
 /**
- * The standard raised surface: a hairline border over a barely-lifted ground.
+ * The standard raised surface: a borderless card on surface-1 that moves to
+ * surface-2 on hover when it is interactive. (Cards lost their hairline
+ * border in the redesign; a caller can still add `border border-line`.)
  */
 export function GlassCard<T extends ElementType = "div">({
   children,
   className,
   as,
   interactive = false,
-  edgeLight = true,
+  edgeLight = false,
   blur = false,
   ...rest
 }: GlassCardProps<T>) {
@@ -50,12 +52,11 @@ export function GlassCard<T extends ElementType = "div">({
   return (
     <Component
       className={cn(
-        "relative rounded-md border border-line",
-        blur ? "bg-surface-1/70 backdrop-blur-md" : "bg-surface-1/80",
+        "relative rounded-card",
+        blur ? "bg-surface-1/70 backdrop-blur-md" : "bg-surface-1",
         edgeLight && "edge-light",
         interactive &&
-          "transition-colors duration-(--duration-fast) ease-cinematic " +
-            "hover:border-line-strong hover:bg-surface-2/80",
+          "transition-colors duration-(--duration-base) ease-standard hover:bg-surface-2",
         className,
       )}
       {...rest}

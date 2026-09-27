@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import styles from "./chrome.module.css";
 
 /**
- * A one-pixel gold rule that fills as the page scrolls.
+ * A one-pixel rule that fills as the page scrolls. Neutral, not gold: it is
+ * reading progress, not an active state. Used by SubNav's `progress` option.
  *
  * It never re-renders React. Browsers with scroll-driven animations run it
  * entirely in CSS (see chrome.module.css); elsewhere a passive, rAF-coalesced
@@ -51,7 +52,7 @@ export function ScrollProgress({ className }: { className?: string }) {
       ref={barRef}
       aria-hidden="true"
       className={cn(
-        "pointer-events-none absolute inset-x-0 top-0 h-px bg-gold-500",
+        "pointer-events-none absolute inset-x-0 top-0 h-px bg-ink-300",
         styles.progress,
         className,
       )}

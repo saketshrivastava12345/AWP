@@ -33,5 +33,5 @@ export const BRAND_COLORS = {
   ink50: "#f7f7f8",
   ink300: "#a1a1ae",
   ink400: "#8a8a96",
-  ink500: "#787882",
+  ink500: "#83838e",
 } as const;

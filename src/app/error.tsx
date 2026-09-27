@@ -28,30 +28,27 @@ export default function ErrorPage({
   }, [error]);
 
   return (
-    <section className="relative isolate flex flex-1 flex-col overflow-hidden">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 tech-grid opacity-70"
-      />
-      <Container className="flex flex-1 flex-col justify-center py-24 sm:py-32">
+    <section className="flex flex-1 flex-col">
+      <Container className="flex flex-1 flex-col justify-center py-20 sm:py-28 lg:py-32">
         <div className="max-w-2xl">
-          <p className="flex items-center gap-3 text-hud text-signal-negative">
-            <span aria-hidden="true" className="size-1.5 bg-signal-negative" />
-            System fault
+          <p className="flex items-center gap-2 text-eyebrow">
+            <span
+              aria-hidden="true"
+              className="size-1.5 rounded-full bg-signal-negative"
+            />
+            Something went wrong
           </p>
 
-          <h1 className="mt-6 font-display text-2xl leading-tight tracking-display text-ink-50 uppercase sm:text-4xl">
-            This page failed to load
-          </h1>
+          <h1 className="mt-4 text-h1">This page failed to load.</h1>
 
-          <p className="mt-5 max-w-lg text-sm leading-relaxed text-ink-300 sm:text-base">
+          <p className="mt-6 max-w-[60ch] text-lead">
             Something went wrong while fetching it. If the catalogue database was briefly
             unreachable, trying again usually resolves it.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-3">
             <Button onClick={() => retry()}>
-              <RotateCcw className="size-3.5" aria-hidden="true" />
+              <RotateCcw aria-hidden="true" />
               Try again
             </Button>
             <ButtonLink href="/" variant="secondary">
@@ -60,8 +57,9 @@ export default function ErrorPage({
           </div>
 
           {error.digest ? (
-            <p className="mt-12 border-t border-line-subtle pt-5 font-mono text-xs text-ink-500">
-              Reference <span className="text-ink-300 select-all">{error.digest}</span>
+            <p className="mt-12 border-t border-line-subtle pt-5 text-caption">
+              Reference{" "}
+              <span className="font-mono text-ink-300 select-all">{error.digest}</span>
             </p>
           ) : null}
         </div>

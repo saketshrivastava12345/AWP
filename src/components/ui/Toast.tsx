@@ -110,8 +110,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 }
               }}
               className={cn(
-                "pointer-events-auto flex w-full max-w-sm animate-panel-in items-start gap-3 rounded-md border",
-                "bg-surface-2/95 px-4 py-3 shadow-[0_18px_50px_-20px_rgb(0_0_0/0.9)] backdrop-blur-md",
+                "pointer-events-auto flex w-full max-w-sm animate-panel-in items-start gap-3 rounded-card border",
+                "bg-surface-2/95 px-4 py-3 shadow-overlay backdrop-blur-md",
                 toast.tone === "error"
                   ? "border-signal-negative/50"
                   : "border-line-strong",
@@ -124,7 +124,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     ? "text-signal-positive"
                     : toast.tone === "error"
                       ? "text-signal-negative"
-                      : "text-gold-400",
+                      : "text-ink-300",
                 )}
                 aria-hidden="true"
               />
@@ -140,7 +140,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => dismiss(toast.id)}
                 aria-label="Dismiss notification"
-                className="-mt-1 -mr-2 grid size-8 place-items-center rounded-sm text-ink-500 hover:text-ink-100"
+                className="-my-1.5 -mr-2 grid size-11 place-items-center rounded-pill text-ink-400 hover:text-ink-50"
               >
                 <X className="size-3.5" aria-hidden="true" />
               </button>

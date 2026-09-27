@@ -14,28 +14,29 @@ import { MARK_PATHS, MARK_STROKES, MARK_VIEWBOX } from "@/components/layout/bran
 const COLORS = {
   void: "#06060a",
   line: "rgba(255,255,255,0.1)",
+  lineStrong: "rgba(255,255,255,0.18)",
   gold: "#c8a34a",
   ink50: "#f7f7f8",
   ink300: "#a1a1ae",
-  ink500: "#787882",
+  ink400: "#8a8a96",
 } as const;
 
-const label = {
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-  fontSize: "0.6875rem",
-  letterSpacing: "0.18em",
+const eyebrow = {
+  fontSize: "0.75rem",
+  fontWeight: 500,
+  letterSpacing: "0.08em",
   textTransform: "uppercase",
 } as const;
 
 const button = {
   display: "inline-flex",
   alignItems: "center",
-  height: "2.75rem",
+  height: "3rem",
   padding: "0 1.5rem",
-  borderRadius: "2px",
-  fontSize: "0.6875rem",
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
+  borderRadius: "4px",
+  fontFamily: "inherit",
+  fontSize: "0.9375rem",
+  fontWeight: 500,
   textDecoration: "none",
   cursor: "pointer",
 } as const;
@@ -89,22 +90,31 @@ export default function GlobalError({
                 strokeWidth={MARK_STROKES.bar}
               />
             </svg>
-            <span style={{ fontSize: "0.9375rem", letterSpacing: "0.3em" }}>AURIX</span>
+            <span style={{ fontSize: "1rem", letterSpacing: "0.24em" }}>AURIX</span>
           </div>
 
-          <p style={{ ...label, color: COLORS.gold, margin: "3rem 0 0" }}>System fault</p>
+          <p style={{ ...eyebrow, color: COLORS.ink400, margin: "3rem 0 0" }}>
+            Something went wrong
+          </p>
           <h1
             style={{
-              fontSize: "1.75rem",
+              fontSize: "clamp(2rem, 6vw, 2.75rem)",
               fontWeight: 400,
-              letterSpacing: "0.04em",
-              lineHeight: 1.25,
+              letterSpacing: "-0.02em",
+              lineHeight: 1.1,
               margin: "1rem 0 0",
             }}
           >
-            AURIX could not start
+            AURIX could not start.
           </h1>
-          <p style={{ color: COLORS.ink300, lineHeight: 1.7, margin: "1rem 0 0" }}>
+          <p
+            style={{
+              color: COLORS.ink300,
+              fontSize: "1.0625rem",
+              lineHeight: 1.55,
+              margin: "1.25rem 0 0",
+            }}
+          >
             An unexpected error stopped the application from loading. Trying again usually
             resolves it.
           </p>
@@ -136,7 +146,7 @@ export default function GlobalError({
               href="/"
               style={{
                 ...button,
-                border: `1px solid ${COLORS.line}`,
+                border: `1px solid ${COLORS.lineStrong}`,
                 color: COLORS.ink50,
               }}
             >
@@ -147,10 +157,8 @@ export default function GlobalError({
           {error.digest ? (
             <p
               style={{
-                ...label,
-                letterSpacing: "0.04em",
-                textTransform: "none",
-                color: COLORS.ink500,
+                fontSize: "0.8125rem",
+                color: COLORS.ink400,
                 borderTop: `1px solid ${COLORS.line}`,
                 margin: "3rem 0 0",
                 paddingTop: "1.25rem",

@@ -184,10 +184,10 @@ export function LoadingScreen() {
 
       <div aria-hidden="true" className="relative z-10 w-full max-w-md px-8 text-center">
         <BrandMark className="mx-auto size-7" />
-        <p className="mt-6 font-display text-2xl tracking-[0.42em] text-ink-50 sm:text-3xl">
+        <p className="mt-6 -mr-[0.36em] font-brand text-2xl tracking-[0.36em] text-ink-50 sm:text-3xl">
           AURIX
         </p>
-        <p className="mt-5 text-label">{siteConfig.tagline}</p>
+        <p className="mt-4 text-body-s text-ink-400">{siteConfig.tagline}</p>
 
         <div className="relative mt-12 h-px w-full overflow-hidden bg-surface-3">
           <div
@@ -196,13 +196,9 @@ export function LoadingScreen() {
           />
         </div>
 
-        <div className="mt-5 flex items-baseline justify-between font-mono text-micro">
-          <span className="tracking-[0.12em] text-ink-500 uppercase">
-            Loading vehicle systems
-          </span>
-          <span className="tabular text-gold-300">
-            {String(rounded).padStart(3, "0")}%
-          </span>
+        <div className="mt-4 flex items-baseline justify-between text-caption">
+          <span>Loading</span>
+          <span className="tabular text-ink-200">{rounded}%</span>
         </div>
       </div>
     </div>

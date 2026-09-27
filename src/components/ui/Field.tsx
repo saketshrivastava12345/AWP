@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
  */
 
 const CONTROL =
-  "w-full min-w-0 rounded-sm border bg-surface-1 px-3 text-sm text-ink-100 " +
-  "placeholder:text-ink-600 transition-colors duration-(--duration-fast) " +
+  "w-full min-w-0 rounded-control border bg-surface-1 px-3.5 text-[15px] text-ink-50 " +
+  "placeholder:text-ink-500 transition-colors duration-(--duration-fast) " +
   "hover:border-ink-500 focus-visible:border-gold-500 " +
   "disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-signal-negative";
 
@@ -26,7 +26,7 @@ export function Input({
   return (
     <input
       aria-invalid={invalid || undefined}
-      className={cn(CONTROL, "h-11 border-line-strong", className)}
+      className={cn(CONTROL, "h-12 border-line-strong", className)}
       {...props}
     />
   );
@@ -70,23 +70,23 @@ export function FormField({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <label htmlFor={id} className="text-label">
+    <div className={cn("flex min-w-0 flex-col gap-2", className)}>
+      <label htmlFor={id} className="text-body-s font-medium text-ink-200">
         {label}
         {required ? (
-          <span className="ml-1 text-gold-400" aria-hidden="true">
+          <span className="ml-1 text-ink-400" aria-hidden="true">
             *
           </span>
         ) : null}
       </label>
       {children}
       {hint ? (
-        <p id={`${id}-hint`} className="text-xs leading-relaxed text-ink-500">
+        <p id={`${id}-hint`} className="text-caption">
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={`${id}-error`} role="alert" className="text-xs text-signal-negative">
+        <p id={`${id}-error`} role="alert" className="text-caption text-signal-negative">
           {error}
         </p>
       ) : null}

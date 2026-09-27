@@ -18,11 +18,16 @@ export type SubNavItem = {
 };
 
 /**
- * The band, below the navbar and this bar, in which a section counts as the
- * one being read: from 120px under the top of the viewport down to 45% of
- * its height.
+ * The reading line: a section is "current" while it crosses a horizontal line
+ * just below where an anchor jump lands it (navbar + this bar + 16px scroll
+ * padding, plus a little), so clicking an item always activates that item.
  */
-const ROOT_MARGIN = "-120px 0px -55% 0px";
+function readingLine(): number {
+  const style = getComputedStyle(document.documentElement);
+  const navH = Number.parseFloat(style.getPropertyValue("--nav-h")) || 64;
+  const subH = Number.parseFloat(style.getPropertyValue("--subnav-h")) || 48;
+  return Math.round(navH + subH + 24);
+}
 
 function sectionId(href: string): string | null {
   return href.startsWith("#") && href.length > 1 ? href.slice(1) : null;
@@ -64,11 +69,11 @@ export function SubNav({
   const idsKey = ids.join(" ");
   const [active, setActive] = useState<string | null>(ids[0] ?? null);
 
-  // Which tracked section is being read. The observer reports changes in
-  // batches; entries are applied in order so the LAST report for a section
-  // wins (the first can be stale — see CLAUDE.md), and the earliest section
-  // in the band is the active one. With nothing in the band (a gap between
-  // sections) the previous choice stands.
+  // Which tracked section is being read: the one crossing the reading line.
+  // The observer reports changes in batches; entries are applied in order so
+  // the LAST report for a section wins (the first can be stale — see
+  // CLAUDE.md). With nothing on the line (a gap between sections) the
+  // previous choice stands.
   useEffect(() => {
     const order = idsKey ? idsKey.split(" ") : [];
     const targets = order
@@ -77,16 +82,40 @@ export function SubNav({
     if (targets.length === 0) return;
 
     const visible = new Map<string, boolean>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) visible.set(entry.target.id, entry.isIntersecting);
-        const first = order.find((id) => visible.get(id));
-        if (first) setActive(first);
-      },
-      { rootMargin: ROOT_MARGIN },
-    );
-    for (const target of targets) observer.observe(target);
-    return () => observer.disconnect();
+    let observer: IntersectionObserver | null = null;
+    const observe = () => {
+      observer?.disconnect();
+      visible.clear();
+      const line = readingLine();
+      const below = Math.max(0, window.innerHeight - line - 1);
+      observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) visible.set(entry.target.id, entry.isIntersecting);
+          const first = order.find((id) => visible.get(id));
+          if (first) setActive(first);
+        },
+        { rootMargin: `-${line}px 0px -${below}px 0px` },
+      );
+      for (const target of targets) observer.observe(target);
+    };
+
+    observe();
+    // The line is measured in pixels from the top, so a new viewport height
+    // needs a new observer.
+    let frame = 0;
+    const onResize = () => {
+      if (frame === 0)
+        frame = window.requestAnimationFrame(() => {
+          frame = 0;
+          observe();
+        });
+    };
+    window.addEventListener("resize", onResize, { passive: true });
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
   }, [idsKey]);
 
   // Keep the active item visible in the horizontal scroller. Written straight
@@ -95,7 +124,9 @@ export function SubNav({
   useEffect(() => {
     const list = listRef.current;
     if (!list || !active || list.scrollWidth <= list.clientWidth) return;
-    const item = list.querySelector<HTMLElement>(`[data-subnav-id="${CSS.escape(active)}"]`);
+    const item = list.querySelector<HTMLElement>(
+      `[data-subnav-id="${CSS.escape(active)}"]`,
+    );
     if (!item) return;
     const left = item.offsetLeft - (list.clientWidth - item.offsetWidth) / 2;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -124,8 +155,10 @@ export function SubNav({
           className={cn(
             "no-scrollbar flex h-full min-w-0 flex-1 items-stretch gap-6 overflow-x-auto lg:gap-8",
             // Faded edges on narrow screens; the list reaches into the
-            // gutter by the fade's width so the first label is not faded.
-            "max-lg:-mx-5 max-lg:edge-fade-x max-lg:px-5",
+            // gutter by the fade's width so the first label is not faded
+            // (on the right only when no action sits there).
+            "max-lg:-ml-5 max-lg:edge-fade-x max-lg:px-5",
+            !action && "max-lg:-mr-5",
           )}
         >
           {items.map((item) => {
