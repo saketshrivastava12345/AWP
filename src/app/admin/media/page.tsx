@@ -92,13 +92,13 @@ export default async function AdminMediaPage({
             />
             <p className="mt-3 text-xs text-ink-500">
               Model-wide photographs live on each{" "}
-              <Link href="/admin/models" className="text-gold-300 hover:text-gold-200">
+              <Link href="/admin/models" className="text-ink-50 underline-offset-4 hover:underline">
                 model
               </Link>
               .
             </p>
           </Panel>
-          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line">
+          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line-subtle bg-line-subtle">
             {(
               [
                 ["Photographs", photos.length],
@@ -108,8 +108,8 @@ export default async function AdminMediaPage({
               ] as const
             ).map(([label, value]) => (
               <div key={label} className="bg-surface-1 px-4 py-3">
-                <dt className="text-label">{label}</dt>
-                <dd className="tabular mt-1 font-display text-lg text-ink-50">
+                <dt className="text-caption">{label}</dt>
+                <dd className="mt-1 text-figure text-ink-50">
                   {formatNumber(value, "0")}
                 </dd>
               </div>
@@ -130,14 +130,14 @@ export default async function AdminMediaPage({
                     }
                     aria-current={view === tab.value ? "page" : undefined}
                     className={cn(
-                      "inline-flex min-h-9 items-center gap-2 rounded-sm border px-3 text-xs transition-colors",
+                      "inline-flex min-h-11 items-center gap-2 rounded-pill border px-4 text-body-s transition-colors duration-(--duration-fast)",
                       view === tab.value
-                        ? "border-gold-600 text-gold-300"
-                        : "border-line text-ink-400 hover:text-ink-100",
+                        ? "border-line-strong bg-surface-2 text-ink-50"
+                        : "border-line-subtle text-ink-300 hover:text-ink-50",
                     )}
                   >
                     {tab.label}
-                    <span className="font-mono text-ink-500">{tab.count}</span>
+                    <span className="text-caption tabular-nums">{tab.count}</span>
                   </Link>
                 </li>
               ))}
@@ -148,7 +148,7 @@ export default async function AdminMediaPage({
 
           {view === "attention" ? (
             withIssues.length === 0 ? (
-              <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+              <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
                 Every file exists and every record names its source, licence and author.
               </p>
             ) : (
@@ -194,7 +194,7 @@ export default async function AdminMediaPage({
                               </Badge>
                             ) : null}
                             {missing.length ? (
-                              <Badge tone="gold" className="whitespace-nowrap">
+                              <Badge tone="hybrid" className="whitespace-nowrap">
                                 No {missing.join(", ")}
                               </Badge>
                             ) : null}
@@ -203,7 +203,7 @@ export default async function AdminMediaPage({
                         <td className={`${TD} text-right`}>
                           <Link
                             href={row.ownerHref}
-                            className="text-xs whitespace-nowrap text-gold-300 hover:text-gold-200"
+                            className="text-body-s whitespace-nowrap text-ink-50 underline-offset-4 hover:underline"
                           >
                             Open media
                           </Link>
@@ -218,7 +218,7 @@ export default async function AdminMediaPage({
 
           {view === "photos" ? (
             photos.length === 0 ? (
-              <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+              <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
                 No photographs yet.
               </p>
             ) : (
@@ -252,13 +252,13 @@ export default async function AdminMediaPage({
                               url={row.url}
                               missing={localFileMissing(row.url)}
                             />
-                            {row.is_primary ? <Badge tone="gold">Primary</Badge> : null}
+                            {row.is_primary ? <Badge>Primary</Badge> : null}
                           </div>
                         </td>
                         <td className={TD}>
                           <Link
                             href={row.ownerHref}
-                            className="text-ink-100 hover:text-gold-300"
+                            className="text-ink-50 underline-offset-4 hover:underline"
                           >
                             {row.ownerTitle}
                           </Link>
@@ -278,7 +278,7 @@ export default async function AdminMediaPage({
                             {formatBytes(row.file_size_bytes)}
                           </span>
                         </td>
-                        <td className={`${TD} font-mono text-xs whitespace-nowrap`}>
+                        <td className={`${TD} text-xs whitespace-nowrap text-ink-400 tabular-nums`}>
                           {formatDate(row.updated_at)}
                         </td>
                       </tr>
@@ -291,7 +291,7 @@ export default async function AdminMediaPage({
 
           {view === "models" ? (
             models.length === 0 ? (
-              <p className="rounded-md border border-dashed border-line px-5 py-8 text-sm text-ink-400">
+              <p className="rounded-card border border-dashed border-line px-5 py-8 text-sm text-ink-400">
                 No 3D models yet. Vehicles use the procedural model built from their
                 published dimensions.
               </p>
@@ -323,16 +323,16 @@ export default async function AdminMediaPage({
                         <td className={TD}>
                           <Link
                             href={row.ownerHref}
-                            className="text-ink-100 hover:text-gold-300"
+                            className="text-ink-50 underline-offset-4 hover:underline"
                           >
                             {row.ownerTitle}
                           </Link>
                         </td>
                         <td className={TD}>
                           {row.is_exact_model ? (
-                            <Badge tone="positive">Exact vehicle</Badge>
+                            <Badge tone="gold">Exact vehicle</Badge>
                           ) : (
-                            <Badge tone="gold">Representation</Badge>
+                            <Badge>Representation</Badge>
                           )}
                         </td>
                         <td className={TD_NUM}>{formatBytes(row.file_size_bytes)}</td>
