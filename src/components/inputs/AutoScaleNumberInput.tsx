@@ -135,6 +135,8 @@ export function AutoScaleNumberInput({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
+  const prefixRef = useRef<HTMLSpanElement>(null);
+  const suffixRef = useRef<HTMLSpanElement>(null);
 
   const commit = (nextRaw: string) => {
     if (value === undefined) setInternal(nextRaw);
@@ -184,9 +186,15 @@ export function AutoScaleNumberInput({
     const currentSize = parseFloat(style.fontSize) || maxFontSize;
     const spacing = (letterSpacingPx(style) / currentSize) * maxFontSize;
     const text = display || placeholder;
-    let needed = measureTextWidth(prefix + text + suffix, font, spacing);
-    if (prefix) needed += AFFIX_GAP_EM * maxFontSize;
-    if (suffix) needed += AFFIX_GAP_EM * maxFontSize;
+    let needed = measureTextWidth(text, font, spacing);
+    // The symbols sit in their own (text) font: Michroma has no rupee or
+    // euro glyph, so they are measured with the span's real font.
+    for (const affix of [prefixRef.current, suffixRef.current]) {
+      if (!affix || !affix.textContent) continue;
+      const affixFont = fontShorthand(getComputedStyle(affix), maxFontSize);
+      needed +=
+        measureTextWidth(affix.textContent, affixFont) + AFFIX_GAP_EM * maxFontSize;
+    }
     const scale = needed > 0 ? Math.min(1, available / needed) : 1;
     const size = Math.max(minFontSize, Math.floor(maxFontSize * scale * 100) / 100);
     row.style.fontSize = `${size}px`;
@@ -217,7 +225,7 @@ export function AutoScaleNumberInput({
       .join(" ") || undefined;
 
   const affixClasses =
-    "shrink-0 whitespace-pre text-[length:inherit] text-cyan-300 [html:not(.js)_&]:text-[28px]";
+    "shrink-0 font-sans font-medium whitespace-pre text-[length:inherit] text-cyan-300 [html:not(.js)_&]:text-[28px]";
 
   return (
     <div className={cn("group/amount flex min-w-0 flex-col gap-2", className)}>
@@ -257,7 +265,7 @@ export function AutoScaleNumberInput({
           style={{ fontSize: `${maxFontSize}px`, gap: `${AFFIX_GAP_EM}em` }}
         >
           {prefix ? (
-            <span aria-hidden="true" className={affixClasses}>
+            <span ref={prefixRef} aria-hidden="true" className={affixClasses}>
               {prefix}
             </span>
           ) : null}
@@ -299,7 +307,7 @@ export function AutoScaleNumberInput({
             )}
           />
           {suffix ? (
-            <span aria-hidden="true" className={affixClasses}>
+            <span ref={suffixRef} aria-hidden="true" className={affixClasses}>
               {suffix}
             </span>
           ) : null}
