@@ -68,4 +68,3 @@ export const POSTER_NOTES: Record<HeroPosterReason, string | null> = {
   "low-power": "Still drawing — 3D is off on this device to save power",
   failed: "Still drawing — the 3D scene could not start",
 };
-

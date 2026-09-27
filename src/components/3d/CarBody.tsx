@@ -26,7 +26,14 @@ function applyGhost(fades: Fade[], edges: THREE.LineBasicMaterial, amount: numbe
   for (const { material, base, ghost } of fades) {
     const opacity = THREE.MathUtils.lerp(base, ghost, amount);
     material.opacity = opacity;
-    material.transparent = opacity < 0.999;
+    const transparent = opacity < 0.999;
+    // Toggling `transparent` changes the compiled shader program; without
+    // needsUpdate three keeps the old one and the shell stays solid (seen on
+    // the LOW quality tier, where nothing else forces a rebuild).
+    if (material.transparent !== transparent) {
+      material.transparent = transparent;
+      material.needsUpdate = true;
+    }
     // A ghosted shell must not hide what is behind it in the depth buffer.
     material.depthWrite = amount < 0.35 && base >= 1;
   }

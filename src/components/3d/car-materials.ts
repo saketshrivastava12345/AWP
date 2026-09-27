@@ -419,7 +419,12 @@ export function setDim(kit: MaterialKit, amount: number): void {
     }
     const dimmed = amount > 0.001;
     material.opacity = (data.baseOpacity ?? 1) * (1 - 0.8 * Math.min(1, amount));
-    material.transparent = dimmed || (data.baseTransparent ?? false);
+    const transparent = dimmed || (data.baseTransparent ?? false);
+    // A change of `transparent` needs a shader rebuild (see applyGhost).
+    if (material.transparent !== transparent) {
+      material.transparent = transparent;
+      material.needsUpdate = true;
+    }
     material.depthWrite = amount < 0.5 ? (data.baseDepthWrite ?? true) : false;
   }
 }
