@@ -13,6 +13,7 @@ import type { HistoryPoint } from "@/lib/pricing/engine";
 import { nearestPointIndex, stepChart, type PlottedPoint } from "@/lib/pricing/chart";
 import { formatDate, formatPrice, formatPriceCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { SourceLink } from "./PriceProvenance";
 
 /**
  * The recorded price over time for the market scope and figure type on show.
@@ -355,9 +356,12 @@ function HistoryTable({
               </th>
               <th
                 scope="col"
-                className="py-2 text-right text-xs font-normal text-ink-400"
+                className="py-2 pr-4 text-right text-xs font-normal text-ink-400"
               >
                 Change
+              </th>
+              <th scope="col" className="py-2 text-xs font-normal text-ink-400">
+                Source
               </th>
             </tr>
           </thead>
@@ -375,7 +379,7 @@ function HistoryTable({
                 <td className="tabular py-2.5 pr-4 text-right font-mono whitespace-nowrap text-ink-100">
                   {formatPrice(point.amount, currency)}
                 </td>
-                <td className="tabular py-2.5 text-right font-mono whitespace-nowrap text-ink-300">
+                <td className="tabular py-2.5 pr-4 text-right font-mono whitespace-nowrap text-ink-300">
                   {point.previous === null
                     ? "—"
                     : point.amount === point.previous
@@ -384,6 +388,13 @@ function HistoryTable({
                           Math.abs(point.amount - point.previous),
                           currency,
                         )}`}
+                </td>
+                <td className="py-1 text-xs text-ink-400">
+                  <span className="block">{point.source}</span>
+                  <span className="tabular block font-mono whitespace-nowrap">
+                    Verified {formatDate(point.last_verified_at)}
+                  </span>
+                  <SourceLink price={point} compact />
                 </td>
               </tr>
             ))}

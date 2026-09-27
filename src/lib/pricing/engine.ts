@@ -192,7 +192,9 @@ export function buildBreakdown(price: MarketPrice): PriceBreakdown {
     return amount === null ? [] : [{ key, label: COMPONENT_LABELS[key], amount }];
   });
 
-  const published = toNumber(price.on_road_price);
+  // A published total only counts on an on-road row; on a listed row it would
+  // be shown under the listed type's label.
+  const published = isOnRoadType(price.price_type) ? toNumber(price.on_road_price) : null;
   if (published !== null) {
     return {
       currency: price.currency,
@@ -237,12 +239,16 @@ export type HistoryPoint = {
   amount: number;
   currency: string;
   id: string;
+  /** Provenance of this row: rows in one series can come from different sources. */
+  source: string;
+  source_url: string;
+  last_verified_at: string;
 };
 
 /**
  * The price over time for one market scope and figure type: every recorded
  * row with the same country/region/city, type and currency, oldest first.
- * The on-road total is used where the row publishes one.
+ * On-road rows plot their published total; listed rows plot the listed price.
  */
 export function priceHistory(
   history: readonly MarketPrice[],
@@ -261,7 +267,9 @@ export function priceHistory(
         row.currency === like.currency,
     )
     .flatMap((row) => {
-      const amount = toNumber(row.on_road_price) ?? toNumber(row.ex_showroom_price);
+      const amount = isOnRoadType(row.price_type)
+        ? toNumber(row.on_road_price)
+        : toNumber(row.ex_showroom_price);
       return amount === null
         ? []
         : [
@@ -271,6 +279,9 @@ export function priceHistory(
               amount,
               currency: row.currency,
               id: row.id,
+              source: row.source,
+              source_url: row.source_url,
+              last_verified_at: row.last_verified_at,
             },
           ];
     });

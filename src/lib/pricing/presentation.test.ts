@@ -303,6 +303,8 @@ describe("pricedMarkets", () => {
       amount: 1300,
       currency: "INR",
       label: "On-road price",
+      source: "Test source",
+      last_verified_at: "2026-09-01",
     });
     expect(markets[0]?.selection).toEqual({
       countryId: IN,

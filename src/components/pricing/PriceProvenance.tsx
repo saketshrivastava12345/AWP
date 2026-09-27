@@ -31,7 +31,8 @@ export function SourceLink({
       className={cn(
         "inline-flex items-center gap-1 rounded-xs font-display tracking-button text-gold-300 uppercase",
         "transition-colors duration-(--duration-fast) hover:text-gold-200",
-        compact ? "min-h-6 text-[9px]" : "min-h-11 text-[10px]",
+        // 44px touch target on phones; the compact link tightens from md up.
+        compact ? "min-h-11 text-[9px] md:min-h-6" : "min-h-11 text-[10px]",
         className,
       )}
     >

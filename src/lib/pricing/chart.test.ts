@@ -4,7 +4,16 @@ import { dayNumber, nearestPointIndex, niceTicks, stepChart } from "./chart";
 
 // Arbitrary test amounts, not prices.
 function point(date: string, amount: number, until: string | null = null): HistoryPoint {
-  return { id: date, date, until, amount, currency: "INR" };
+  return {
+    id: date,
+    date,
+    until,
+    amount,
+    currency: "INR",
+    source: "Test source",
+    source_url: "https://example.com/test",
+    last_verified_at: "2026-09-01",
+  };
 }
 
 describe("dayNumber", () => {

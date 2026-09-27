@@ -209,8 +209,14 @@ export type PricedMarket = {
   selection: MarketSelection;
   label: string;
   scope: PriceScope;
-  /** The published figure recorded there, for the quick-select list. */
-  figure: { amount: number; currency: string; label: string } | null;
+  /** The published figure recorded there, with its provenance, for the quick-select list. */
+  figure: {
+    amount: number;
+    currency: string;
+    label: string;
+    source: string;
+    last_verified_at: string;
+  } | null;
 };
 
 const toNumber = (value: number | string | null): number | null => {
@@ -262,12 +268,20 @@ export function pricedMarkets(
       rows.map((price) => ({ price, scope: scopeOf(price), exact: true })),
     );
     const names = marketNames(geo, selection);
+    const figure = primary ? publishedFigure(primary.price) : null;
     const market: PricedMarket = {
       key,
       selection,
       label: marketLabel(geo, selection),
       scope: scopeOf(first),
-      figure: primary ? publishedFigure(primary.price) : null,
+      figure:
+        primary && figure
+          ? {
+              ...figure,
+              source: primary.price.source,
+              last_verified_at: primary.price.last_verified_at,
+            }
+          : null,
     };
     return { market, sort: [names.country ?? "", names.region ?? "", names.city ?? ""] };
   });

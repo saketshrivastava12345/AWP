@@ -43,8 +43,14 @@ export type CarColor = Tables<"car_colors">;
 export type VariantMarket = Tables<"variant_markets">;
 export type MarketRegion = Tables<"market_regions">;
 export type MarketCity = Tables<"market_cities">;
-/** One sourced price observation. Rows past effective_to are history. */
-export type MarketPrice = Tables<"market_prices">;
+/**
+ * One sourced price observation. Rows past effective_to are history.
+ * created_by (the admin's auth id) is never read by public queries: it would
+ * reveal which accounts are admins.
+ */
+export type MarketPrice = Omit<Tables<"market_prices">, "created_by"> & {
+  created_by?: string | null;
+};
 
 /**
  * Everything the car detail page needs, assembled in one round trip.

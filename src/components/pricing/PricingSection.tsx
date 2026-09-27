@@ -87,7 +87,16 @@ export function PricingSection({
     ? resolved.filter((entry) => entry.price.id !== applied.price.id)
     : [];
   const points = useMemo(
-    () => (applied ? priceHistory(history, applied.price) : []),
+    // Only rows that had started by the in-force row's date: a scheduled
+    // future price is not part of the history yet, and comparing with the
+    // applied row keeps this free of a clock (SSR-safe).
+    () =>
+      applied
+        ? priceHistory(
+            history.filter((row) => row.effective_from <= applied.price.effective_from),
+            applied.price,
+          )
+        : [],
     [applied, history],
   );
 

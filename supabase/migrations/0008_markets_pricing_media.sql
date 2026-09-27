@@ -353,14 +353,14 @@ create index market_prices_city_idx   on public.market_prices (city_id);
 create view public.current_market_prices
 with (security_invoker = true)
 as
-select id, variant_id, country_id, region_id, city_id, currency, price_type,
-       ex_showroom_price, rto_tax, registration_fee, insurance_estimate,
-       handling_charges, fastag, other_charges, on_road_price, source, source_url,
-       effective_from, effective_to, last_verified_at, is_verified, notes,
-       created_at, updated_at
+select latest.*
 from (
   select distinct on (p.variant_id, p.country_id, p.region_id, p.city_id, p.price_type)
-    p.*
+    p.id, p.variant_id, p.country_id, p.region_id, p.city_id, p.currency, p.price_type,
+    p.ex_showroom_price, p.rto_tax, p.registration_fee, p.insurance_estimate,
+    p.handling_charges, p.fastag, p.other_charges, p.on_road_price, p.source, p.source_url,
+    p.effective_from, p.effective_to, p.last_verified_at, p.is_verified, p.notes,
+    p.created_at, p.updated_at
   from public.market_prices p
   where p.effective_from <= current_date
   order by p.variant_id, p.country_id, p.region_id, p.city_id, p.price_type,

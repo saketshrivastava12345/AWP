@@ -144,9 +144,15 @@ export function PricedMarketList({
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm text-ink-100">{market.label}</span>
                   {market.figure ? (
-                    <span className="mt-0.5 block text-xs text-ink-400">
-                      {market.figure.label}
-                    </span>
+                    <>
+                      <span className="mt-0.5 block text-xs text-ink-400">
+                        {market.figure.label}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-ink-500">
+                        {market.figure.source} · verified{" "}
+                        {formatDate(market.figure.last_verified_at)}
+                      </span>
+                    </>
                   ) : null}
                 </span>
                 {market.figure ? (

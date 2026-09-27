@@ -136,6 +136,14 @@ describe("pricesForSelection", () => {
 });
 
 describe("buildBreakdown", () => {
+  it("never labels a total on a listed row as the listed price", () => {
+    const breakdown = buildBreakdown(
+      price({ price_type: "ex_showroom", ex_showroom_price: 1000, on_road_price: 1200 }),
+    );
+    expect(breakdown.total).toBeNull();
+    expect(breakdown.listed).toEqual({ amount: 1000, type: "ex_showroom" });
+  });
+
   it("uses a published on-road total as published, never recalculated", () => {
     const breakdown = buildBreakdown(
       price({
@@ -200,6 +208,15 @@ describe("buildBreakdown", () => {
 });
 
 describe("priceHistory", () => {
+  it("plots the listed price for listed rows even when a total is present", () => {
+    const points = priceHistory(
+      [price({ ex_showroom_price: 1000, on_road_price: 1200 })],
+      price({}),
+    );
+    expect(points.map((point) => point.amount)).toEqual([1000]);
+    expect(points[0]?.source).toBe("Test source");
+  });
+
   it("follows one scope and type, oldest first, and ignores other markets", () => {
     const rows = [
       price({

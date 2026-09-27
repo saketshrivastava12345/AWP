@@ -111,7 +111,7 @@ function framing(width: number, height: number): { fov: number; fit: number } {
   if (aspect >= 1.2) return { fov: BASE_FOV, fit: 1 };
   const fov = aspect < 1 ? PORTRAIT_FOV : BASE_FOV;
   const widen = Math.tan((BASE_FOV / 2) * toRadians) / Math.tan((fov / 2) * toRadians);
-  return { fov, fit: Math.min(3, Math.max(1, (1.2 / aspect) * widen)) };
+  return { fov, fit: Math.min(3.4, Math.max(1, (1.55 / aspect) * widen)) };
 }
 
 /**
@@ -376,7 +376,7 @@ function Scene({
         epoch={epoch}
         contactFrames={quality.liveContactShadows && moving ? Infinity : 1}
         extent={extent + 1}
-        size={140 * fit}
+        size={140}
       />
       {/* The lane markings belong to the drive: the car stands still at the
           hero, so the road appears only once the story begins. */}
@@ -434,7 +434,7 @@ export function HeroScene(props: HeroSceneProps) {
       // PCF: three r186 dropped PCFSoft (R3F's default) and warns about it.
       shadows={quality.shadows ? "percentage" : false}
       gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
-      camera={{ position: [6.2, 1.2, 5.4], fov: BASE_FOV, near: 0.05, far: 400 }}
+      camera={{ position: [6.2, 1.2, 5.4], fov: BASE_FOV, near: 0.05, far: 160 }}
       aria-hidden="true"
       data-scene-active={props.active}
       // Scenery: the page scrolls through it and the parallax is read from

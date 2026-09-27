@@ -83,6 +83,10 @@ export async function getMarketGeography(): Promise<MarketGeography> {
   }
 }
 
+/** Every public column; created_by is deliberately left out (see MarketPrice). */
+const PRICE_COLUMNS =
+  "id, variant_id, country_id, region_id, city_id, currency, price_type, ex_showroom_price, rto_tax, registration_fee, insurance_estimate, handling_charges, fastag, other_charges, on_road_price, source, source_url, effective_from, effective_to, last_verified_at, is_verified, notes, created_at, updated_at";
+
 /**
  * Every price row recorded for a variant: the ones in force today (from the
  * current_market_prices view, the single definition of "current") and the
@@ -97,12 +101,12 @@ export async function getVariantPricing(variantId: string): Promise<VariantPrici
     const [current, history] = await Promise.all([
       supabase
         .from("current_market_prices")
-        .select("*")
+        .select(PRICE_COLUMNS)
         .eq("variant_id", variantId)
         .returns<MarketPrice[]>(),
       supabase
         .from("market_prices")
-        .select("*")
+        .select(PRICE_COLUMNS)
         .eq("variant_id", variantId)
         .order("effective_from", { ascending: false })
         .limit(500)
