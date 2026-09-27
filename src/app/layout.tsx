@@ -75,8 +75,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a
           href="#main"
           className={
-            "sr-only rounded-xs bg-gold-500 px-4 py-2 font-display text-xs tracking-hud text-void " +
-            "uppercase focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-(--z-skip)"
+            "sr-only rounded-control bg-gold-500 px-4 py-2.5 font-display text-sm font-medium text-void " +
+            "focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-(--z-skip)"
           }
         >
           Skip to content
@@ -109,8 +109,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               }
             />
 
-            {/* pt-16 clears the fixed navbar. */}
-            <div className="flex flex-1 flex-col pt-16">
+            {/* Clears the fixed navbar (56px, 64px from md). A full-bleed hero
+                that should run under the transparent bar uses the
+                bleed-under-nav utility. */}
+            <div className="flex flex-1 flex-col pt-(--nav-h)">
               {/* The route-enter animation lives in template.tsx. */}
               <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
                 {children}

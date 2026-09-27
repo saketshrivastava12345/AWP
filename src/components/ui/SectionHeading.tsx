@@ -1,40 +1,66 @@
 import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { ButtonLink } from "@/components/ui/Button";
 
 /**
- * The standard section header: a tracked overline above a display-face title,
- * with optional supporting copy and a trailing action.
+ * The standard section header: an optional eyebrow, a sentence-case title,
+ * an optional lead sentence and a trailing action.
+ *
+ * `action` takes any node; for the common "See all →" case pass `actionHref`
+ * and `actionLabel` instead and it renders a `ButtonLink variant="link"`.
+ * No numbered prefixes ("01 ——") and no second label under the title.
  */
 export function SectionHeading({
   overline,
   title,
   description,
   action,
+  actionHref,
+  actionLabel,
+  as: Heading = "h2",
+  id,
   className,
 }: {
+  /** Eyebrow above the title. At most one per section, never gold. */
   overline?: string;
   title: ReactNode;
+  /** One lead sentence, capped at 60ch. */
   description?: ReactNode;
   action?: ReactNode;
+  /** With `actionLabel`: renders a link-variant button as the action. */
+  actionHref?: string;
+  actionLabel?: string;
+  /** The heading level, for a heading hierarchy without skips. */
+  as?: "h2" | "h3";
+  /** id on the heading, for a section's aria-labelledby. */
+  id?: string;
   className?: string;
 }) {
+  const trailing =
+    action ??
+    (actionHref && actionLabel ? (
+      <ButtonLink href={actionHref} variant="link">
+        {actionLabel}
+      </ButtonLink>
+    ) : null);
+
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between",
+        "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8",
         className,
       )}
     >
-      <div className="max-w-2xl">
-        {overline ? <p className="mb-3 text-label">{overline}</p> : null}
-        <h2 className="font-display text-xl tracking-[0.06em] text-ink-50 sm:text-2xl">
+      <div className="min-w-0 max-w-3xl">
+        {overline ? <p className="mb-3 text-eyebrow">{overline}</p> : null}
+        <Heading id={id} className={Heading === "h3" ? "text-h3" : "text-h2"}>
           {title}
-        </h2>
+        </Heading>
         {description ? (
-          <p className="mt-3 text-sm leading-relaxed text-ink-300">{description}</p>
+          <p className="mt-4 max-w-[60ch] text-lead">{description}</p>
         ) : null}
       </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {trailing ? <div className="shrink-0">{trailing}</div> : null}
     </div>
   );
 }

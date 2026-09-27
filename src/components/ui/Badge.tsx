@@ -4,21 +4,24 @@ import { cn } from "@/lib/utils";
 export type BadgeTone =
   "neutral" | "gold" | "electric" | "hybrid" | "positive" | "negative";
 
-const TONES: Record<BadgeTone, string> = {
-  neutral: "border-line text-ink-300",
-  gold: "border-gold-700 text-gold-300",
-  // Powertrain tones are deliberately desaturated — see the design language
-  // note in CLAUDE.md. They must read as information, not as status lights.
-  electric: "border-signal-electric/35 text-signal-electric",
-  hybrid: "border-signal-hybrid/35 text-signal-hybrid",
-  positive: "border-signal-positive/35 text-signal-positive",
-  negative: "border-signal-negative/35 text-signal-negative",
+/**
+ * Tones are carried by a 6px leading dot, never by the text colour: the label
+ * stays ink-200 so a row of badges reads as information, not status lights.
+ * `neutral` has no dot. `gold` is reserved for "Exact 3D model".
+ */
+const DOTS: Record<BadgeTone, string | null> = {
+  neutral: null,
+  gold: "bg-gold-500",
+  electric: "bg-signal-electric",
+  hybrid: "bg-signal-hybrid",
+  positive: "bg-signal-positive",
+  negative: "bg-signal-negative",
 };
 
 /**
- * A small tracked tag: fuel type, category, status. Set in text-micro (10px),
- * the floor for anything a reader must read — the wide display face at 9px
- * was below comfortable legibility.
+ * A small sentence-case tag: powertrain, status, segment. Inter 12px on a
+ * hairline pill. Pass the label in sentence case ("Plug-in hybrid"); the
+ * badge no longer uppercases it.
  */
 export function Badge({
   children,
@@ -29,15 +32,19 @@ export function Badge({
   tone?: BadgeTone;
   className?: string;
 }) {
+  const dot = DOTS[tone];
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-xs border px-2 py-1 font-display",
-        "text-micro leading-none tracking-hud uppercase",
-        TONES[tone],
+        "inline-flex h-6 items-center gap-1.5 rounded-pill border border-line px-2.5",
+        "font-sans text-xs leading-none font-medium whitespace-nowrap text-ink-200",
+        tone === "gold" && "border-gold-700",
         className,
       )}
     >
+      {dot ? (
+        <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", dot)} />
+      ) : null}
       {children}
     </span>
   );

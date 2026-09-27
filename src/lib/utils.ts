@@ -14,12 +14,37 @@ const twMerge = extendTailwindMerge<"type-preset">({
     theme: {
       text: ["micro", "nano"],
       tracking: ["display", "label", "button", "hud"],
-      ease: ["cinematic", "metal"],
+      ease: ["cinematic", "metal", "standard", "exit"],
+      radius: ["control", "card", "pill"],
     },
     classGroups: {
       // Composite typography utilities from globals.css. Their own group, so
-      // a following colour class adjusts them instead of deleting them.
-      "type-preset": ["text-label", "text-hud"],
+      // a following colour class adjusts them instead of deleting them, and
+      // a later preset replaces an earlier one.
+      "type-preset": [
+        "text-label",
+        "text-hud",
+        "text-display-xl",
+        "text-display-l",
+        "text-h1",
+        "text-h2",
+        "text-h3",
+        "text-h4",
+        "text-lead",
+        "text-body",
+        "text-body-s",
+        "text-caption",
+        "text-eyebrow",
+        "text-figure-xl",
+        "text-figure",
+        "text-data",
+      ],
+    },
+    conflictingClassGroups: {
+      // A preset sets family, size, leading, weight and tracking, so one
+      // passed through `className` replaces a component's default size
+      // classes rather than losing to them in the stylesheet.
+      "type-preset": ["font-size", "leading", "tracking", "font-weight", "font-family"],
     },
   },
 });

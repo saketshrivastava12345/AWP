@@ -35,13 +35,16 @@
      for body text and ink-600 to clear 3:1 — it is reserved for decorative
      and non-essential marks, never for prose. */
   --color-ink-400: #8a8a96; /* 6.0:1  — AA body */
-  --color-ink-500: #787882; /* 4.6:1  — AA body */
-  --color-ink-600: #5b5b64; /* 3.0:1  — decorative / large only */
+  --color-ink-500: #83838e; /* 5.4:1 on void, 4.9:1 on surface-2 — AA body */
+  --color-ink-600: #5b5b64; /* 3.0:1  — decorative only, never meaning */
 
   /* --- Hairline borders --- */
   --color-line-subtle: oklch(1 0 0 / 6%);
   --color-line: oklch(1 0 0 / 10%);
   --color-line-strong: oklch(1 0 0 / 18%);
+
+  /* --- Image overlay for text set on photographs and drawings --- */
+  --color-scrim: oklch(0 0 0 / 55%);
 
   /* --- Muted signal colours (compare winners, powertrain tags).
          Deliberately desaturated so they never read as "gaming UI". --- */
@@ -56,38 +59,55 @@
   --radius-md: 6px;
   --radius-lg: 10px;
   --radius-xl: 16px;
+  /* Role-named radii (rounded-control / rounded-card / rounded-pill). */
+  --radius-control: 4px;
+  --radius-card: 8px;
+  --radius-pill: 999px;
 
   /* --- Motion: slow, weighted, cinematic --- */
   --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-metal: cubic-bezier(0.65, 0, 0.35, 1);
+  /* The default for everything (ease-standard), and for things leaving. */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
-  /* --- Motion system: three speeds, one easing family.
-         fast   = micro (hover, press, toggles)
-         normal = panels, reveals, state changes
-         cinematic = camera moves and hero reveals --- */
-  --duration-fast: 220ms;
-  --duration-normal: 560ms;
-  --duration-cinematic: 1200ms;
+  /* --- Motion system. Used as duration-(--duration-*).
+         fast      = colour, opacity, underline
+         base      = toggles, chips, menus opening, nav condense
+         normal    = panels, sheets, reveals, image hover zoom
+         cinematic = hero entrance and camera moves only --- */
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-normal: 450ms;
+  --duration-cinematic: 900ms;
 
-  /* --- Letter spacing for the wide display face --- */
-  --tracking-display: 0.08em;
-  --tracking-label: 0.22em;
-  /* Buttons and HUD micro-labels. */
-  --tracking-button: 0.14em;
-  --tracking-hud: 0.18em;
+  /* --- Letter spacing. The display face is a grotesk now, so large sizes
+         tighten rather than open up; labels keep only a whisper of tracking. */
+  --tracking-display: -0.02em;
+  --tracking-label: 0.06em;
+  --tracking-button: 0;
+  --tracking-hud: 0.04em;
 
-  /* --- Type scale additions for technical micro-copy. 10px is the floor for
-         anything a reader must read; 9px is for decorative marks only. --- */
-  --text-micro: 0.625rem;
+  /* --- Small type. 12px is the floor for anything a reader must read;
+         11px (nano) is for photo credits and IDs only. --- */
+  --text-micro: 0.75rem;
   --text-micro--line-height: 1.5;
-  --text-nano: 0.5625rem;
-  --text-nano--line-height: 1.4;
+  --text-nano: 0.6875rem;
+  --text-nano--line-height: 1.45;
 }
 
 /* Layer scale. Tailwind v4 has no z-index theme namespace, so these are plain
    custom properties used as z-(--z-modal). One scale means a command palette
    can never open behind a sheet again. */
 :root {
+  /* Chrome geometry. --nav-offset is where sticky bars should sit: the
+     navbar's height, or 0 while the navbar is hidden on scroll-down (only
+     on pages with a SubNav). --subnav-offset is 0 unless a SubNav exists. */
+  --nav-h: 56px;
+  --subnav-h: 48px;
+  --nav-offset: var(--nav-h);
+  --subnav-offset: 0px;
+
   --z-raised: 10;
   --z-sticky: 40;
   --z-nav: 50;
@@ -99,10 +119,27 @@
   --z-skip: 300;
 }
 
+@media (min-width: 768px) {
+  :root {
+    --nav-h: 64px;
+  }
+}
+
+html[data-nav-hidden] {
+  --nav-offset: 0px;
+}
+
+html:has([data-subnav]) {
+  --subnav-offset: var(--subnav-h);
+}
+
 /* Font families reference the next/font variables set on <html>, so they must
    live in an `inline` theme block to be resolved at use-site. */
 @theme inline {
-  --font-display: var(--font-michroma), "Arial Black", sans-serif;
+  /* Michroma is a logo treatment now: the wordmark and, optionally, a model
+     nameplate. Every heading, number, nav item and button is Inter Tight. */
+  --font-brand: var(--font-michroma), "Arial Black", sans-serif;
+  --font-display: var(--font-inter-tight), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
@@ -118,8 +155,9 @@
 
   html {
     scroll-behavior: smooth;
-    /* Anchor targets land below the fixed 64px navbar. */
-    scroll-padding-top: 5rem;
+    /* Anchor targets land below the fixed navbar and, where a page has one,
+       the sticky sub-navigation. */
+    scroll-padding-top: calc(var(--nav-h) + var(--subnav-offset) + 16px);
     -webkit-tap-highlight-color: transparent;
     scrollbar-color: var(--color-surface-4) var(--color-void);
   }
@@ -166,7 +204,7 @@
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-gold-800);
+    background: var(--color-ink-600);
   }
 }
 
@@ -174,15 +212,265 @@
    Utilities
    =========================================================================== */
 
+/* Legacy small-caps label (pre-redesign). Kept so untouched files still
+   render sensibly: Inter 12px, a light 0.06em tracking, still uppercase.
+   New code uses text-eyebrow (at most one per section) or sentence case. */
 @utility text-label {
-  font-family: var(--font-display);
-  font-size: 0.625rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
   /* Not 1: a tracked uppercase label that wraps onto a second line collapses
      into itself at line-height 1. Seen on the loading-screen tagline. */
   line-height: 1.5;
   letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: var(--color-ink-400);
+}
+
+/* ---------------------------------------------------------------------------
+   Type scale. Headings are sentence case, balanced, and never break inside a
+   word (no break-words on headings — "TURBOCHARG / ER"). Each utility sets
+   family, size, line height, weight and tracking; headings and the reading
+   styles also set their default colour, which a text-ink-* class overrides.
+   --------------------------------------------------------------------------- */
+
+@utility text-display-xl {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 7rem);
+  line-height: 0.95;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  color: var(--color-ink-50);
+}
+
+@utility text-display-l {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5.5vw, 4.5rem);
+  line-height: 1.02;
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  color: var(--color-ink-50);
+}
+
+@utility text-h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 4vw, 3.5rem);
+  line-height: 1.08;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--color-ink-50);
+}
+
+@utility text-h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  line-height: 1.12;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  color: var(--color-ink-50);
+}
+
+@utility text-h3 {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  line-height: 1.25;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  color: var(--color-ink-50);
+  @media (min-width: 1024px) {
+    font-size: 1.5rem;
+  }
+}
+
+@utility text-h4 {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1.35;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+  color: var(--color-ink-50);
+}
+
+@utility text-lead {
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-wrap: pretty;
+  color: var(--color-ink-200);
+  @media (min-width: 1024px) {
+    font-size: 1.25rem;
+  }
+}
+
+@utility text-body {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-wrap: pretty;
+  color: var(--color-ink-300);
+}
+
+@utility text-body-s {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+@utility text-caption {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--color-ink-400);
+}
+
+/* At most one per section, never gold. */
+@utility text-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-400);
+}
+
+/* Key figures. Tabular so a row of numbers aligns. */
+@utility text-figure-xl {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 1;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility text-figure {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.1;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Spec-table values and compare cells. */
+@utility text-data {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  font-weight: 400;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+   Layout helpers
+   --------------------------------------------------------------------------- */
+
+/* A full-bleed hero that starts under the (transparent-at-top) navbar:
+   pulls the section up by the nav height and pads it back down, so the
+   image runs to the top edge while the content still clears the bar. */
+@utility bleed-under-nav {
+  margin-top: calc(var(--nav-h) * -1);
+  padding-top: var(--nav-h);
+}
+
+/* Soft fade at both ends of a horizontal scroller (chips, sub-nav tabs), so
+   a cut-off item reads as "scroll for more" rather than as clipped. */
+@utility edge-fade-x {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 20px,
+    black calc(100% - 20px),
+    transparent
+  );
+}
+
+/* Hides a scroller's scrollbar while keeping it scrollable. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Top-down darkening for text or chrome laid over an image. */
+@utility scrim-top {
+  background-image: linear-gradient(
+    to bottom,
+    var(--color-scrim),
+    oklch(0 0 0 / 20%) 60%,
+    transparent
+  );
+}
+
+@utility scrim-bottom {
+  background-image: linear-gradient(
+    to top,
+    var(--color-scrim),
+    oklch(0 0 0 / 20%) 60%,
+    transparent
+  );
+}
+
+/* The key-figure row (StatRow). Two columns with hairlines between columns
+   and rows below lg; one row with vertical hairlines from lg. A caller's
+   lg:grid-cols-N still fixes the column count (variants come later). The lg
+   rules use the same specificity as the phone rules so they replace them. */
+@utility stat-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  & > * {
+    padding-block: 1rem;
+  }
+  & > *:nth-child(odd) {
+    padding-right: 1.25rem;
+  }
+  & > *:nth-child(even) {
+    padding-left: 1.25rem;
+    border-left: 1px solid var(--color-line);
+  }
+  & > *:nth-child(n + 3) {
+    border-top: 1px solid var(--color-line);
+  }
+  @media (min-width: 1024px) {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    & > *:nth-child(n) {
+      padding-block: 0.25rem;
+      padding-inline: 2rem;
+      border-top: 0;
+      border-left: 1px solid var(--color-line);
+    }
+    & > *:first-child {
+      padding-left: 0;
+      border-left: 0;
+    }
+    & > *:last-child {
+      padding-right: 0;
+    }
+  }
+}
+
+/* Overlay surfaces (menus, palette, dialogs, sheets): the one shadow. */
+@utility shadow-overlay {
+  box-shadow: 0 24px 64px -24px rgb(0 0 0 / 0.7);
 }
 
 /* Faint film grain. Applied to full-bleed cinematic sections, never to text
@@ -220,6 +508,8 @@
   }
 }
 
+/* DEPRECATED outside the 3D viewer (gold rules, redesign spec §3.4). Kept so
+   the viewer and untouched files still compile. */
 @utility gold-gradient-text {
   background: linear-gradient(
     180deg,
@@ -257,7 +547,8 @@
   }
 }
 
-/* Four gold corner brackets, the HUD frame used around technical panels. */
+/* Four gold corner brackets, the HUD frame used around technical panels.
+   DEPRECATED outside the 3D viewer; kept for the viewer's own use. */
 @utility hud-corners {
   --hud-c: var(--color-gold-600);
   --hud-l: 10px;
@@ -272,13 +563,14 @@
     linear-gradient(var(--hud-c), var(--hud-c)) bottom right / 1px var(--hud-l) no-repeat;
 }
 
-/* Technical micro-label: mono, tracked, uppercase. Coordinates, IDs, units. */
+/* Technical micro-label: mono, 11px, lightly tracked. IDs, codes, credits.
+   No longer uppercase — nothing here is meant to shout. */
 @utility text-hud {
   font-family: var(--font-mono);
-  font-size: var(--text-micro);
+  font-size: var(--text-nano);
   line-height: 1.5;
   letter-spacing: var(--tracking-hud);
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--color-ink-400);
 }
 
@@ -326,16 +618,16 @@
   animation: overlay-in var(--duration-fast) ease-out backwards;
 }
 @utility animate-panel-in {
-  animation: panel-in-up var(--duration-normal) var(--ease-cinematic) backwards;
+  animation: panel-in-up var(--duration-normal) var(--ease-standard) backwards;
 }
 @utility animate-panel-in-right {
-  animation: panel-in-right var(--duration-normal) var(--ease-cinematic) backwards;
+  animation: panel-in-right var(--duration-normal) var(--ease-standard) backwards;
 }
 @utility animate-panel-in-left {
-  animation: panel-in-left var(--duration-normal) var(--ease-cinematic) backwards;
+  animation: panel-in-left var(--duration-normal) var(--ease-standard) backwards;
 }
 @utility animate-panel-in-bottom {
-  animation: panel-in-bottom var(--duration-normal) var(--ease-cinematic) backwards;
+  animation: panel-in-bottom var(--duration-normal) var(--ease-standard) backwards;
 }
 
 @keyframes shimmer {
@@ -380,7 +672,7 @@
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -398,14 +690,14 @@
    Sheet or drawer opened on a scrolled page were placed relative to the top of
    the page instead of the viewport. */
 @utility animate-page-enter {
-  animation: page-enter 0.45s var(--ease-cinematic) backwards;
+  animation: page-enter var(--duration-normal) var(--ease-standard) backwards;
 }
 
 /* Staggered reveal for grids and stat rows. Pair with an inline
    `animation-delay` so a list can cascade; `backwards` holds each item at its
    first keyframe through the delay, and leaves no transform behind after. */
 @utility animate-rise-in {
-  animation: rise-in 0.6s var(--ease-cinematic) backwards;
+  animation: rise-in var(--duration-normal) var(--ease-standard) backwards;
 }
 
 /* ===========================================================================

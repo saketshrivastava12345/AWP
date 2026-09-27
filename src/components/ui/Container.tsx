@@ -14,15 +14,23 @@ type PolymorphicProps = Record<string, unknown> & {
   className?: string;
 };
 
+/** The page gutters, for chrome that must line up with a Container. */
+export const CONTAINER_GUTTERS = "px-5 sm:px-8 lg:px-12 min-[1440px]:px-16";
+
 export type ContainerProps = {
   children?: ReactNode;
   className?: string;
   as?: ElementType;
-  size?: "default" | "wide" | "narrow";
+  /**
+   * default: 1360px with the standard gutters. narrow: prose (max-w-3xl).
+   * wide: 1600px. bleed: no max width and no gutter, for full-bleed media.
+   */
+  size?: "default" | "wide" | "narrow" | "bleed";
 } & Omit<HTMLAttributes<HTMLElement>, "children" | "className">;
 
 /**
- * Page width and side gutters, defined in exactly one place.
+ * Page width and side gutters, defined in exactly one place: 20px on phones,
+ * 32px from 640px, 48px from 1024px and 64px from 1440px.
  *
  * The gutter is horizontal padding on this element only, so nothing inside
  * needs to reason about edge spacing at small widths. Any other attribute
@@ -42,9 +50,10 @@ export function Container({
     <Component
       {...rest}
       className={cn(
-        "mx-auto w-full px-5 sm:px-8",
+        "mx-auto w-full",
+        size !== "bleed" && CONTAINER_GUTTERS,
         size === "narrow" && "max-w-3xl",
-        size === "default" && "max-w-7xl",
+        size === "default" && "max-w-[1360px]",
         size === "wide" && "max-w-[1600px]",
         className,
       )}
