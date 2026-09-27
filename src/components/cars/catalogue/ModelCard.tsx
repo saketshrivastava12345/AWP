@@ -6,13 +6,14 @@ import { formatNumber, formatYearSpan } from "@/lib/format";
 import type { ModelSummary } from "@/lib/queries/models";
 import { cn } from "@/lib/utils";
 import { Silhouette } from "./Silhouette";
+import { HudCardShell, HudMediaOverlay } from "./HudCardShell";
 import { formatRange } from "./SpecRange";
 
 /**
- * A model line on a maker's catalogue page, in the same borderless shell as
- * the car card: image first, the name, "Model years 2019–present · 992",
- * body style and powertrains as badges, and one line of figures — the
- * spread of published power and how many variants the catalogue holds.
+ * A model line on a maker's catalogue page, in the same HUD shell as the
+ * car card: image first, the name, "Model years 2019–present · 992", body
+ * style and powertrains as badges, and one line of figures — the spread of
+ * published power (glowing) and how many variants the catalogue holds.
  * One stretched link to the model page; no client JavaScript beyond the
  * photograph fallback.
  */
@@ -40,23 +41,11 @@ export function ModelCard({
   ]
     .filter(Boolean)
     .join(" · ");
-  const figures = [
-    model.power ? `${formatRange(model.power)} hp` : null,
-    `${formatNumber(model.variantCount)} ${model.variantCount === 1 ? "variant" : "variants"}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
 
   return (
-    <article
-      className={cn(
-        "group/card relative isolate flex h-full flex-col overflow-hidden rounded-card bg-surface-1",
-        "transition-colors duration-(--duration-base) ease-standard focus-within:bg-surface-2 hover:bg-surface-2",
-        className,
-      )}
-    >
+    <HudCardShell className={className}>
       <div className="relative aspect-[16/10] overflow-hidden bg-surface-2">
-        <div className="absolute inset-0 motion-safe:transition-transform motion-safe:duration-(--duration-normal) motion-safe:ease-standard motion-safe:group-focus-within/card:scale-[1.03] motion-safe:group-hover/card:scale-[1.03]">
+        <div className="absolute inset-0 motion-safe:transition-transform motion-safe:duration-(--duration-slow) motion-safe:ease-standard motion-safe:group-focus-within/card:scale-[1.04] motion-safe:group-hover/card:scale-[1.04]">
           {model.imageUrl ? (
             <CarPhoto
               src={model.imageUrl}
@@ -70,19 +59,23 @@ export function ModelCard({
             <Silhouette bodyType={model.bodyType} fuelType={model.leadFuel} />
           )}
         </div>
+        <HudMediaOverlay />
       </div>
 
       <div className="flex flex-1 flex-col p-5 sm:p-6">
-        <h3 className="text-h3">
+        <p className="truncate font-mono text-[11px] tracking-hud text-cyan-200/80 uppercase">
+          {manufacturerName}
+        </p>
+        <h3 className="mt-1 text-h3 transition-colors duration-(--duration-fast) group-hover/card:text-cyan-100">
           <Link
             href={href}
-            className="outline-none before:absolute before:inset-0 before:z-10 before:rounded-card focus-visible:before:ring-2 focus-visible:before:ring-gold-500 focus-visible:before:ring-inset"
+            className="outline-none before:absolute before:inset-0 before:z-10 before:content-['']"
           >
             <span className="sr-only">{manufacturerName} </span>
             {model.name}
           </Link>
         </h3>
-        {meta ? <p className="mt-1 text-body-s text-ink-400">{meta}</p> : null}
+        {meta ? <p className="mt-1.5 text-body-s text-ink-400">{meta}</p> : null}
 
         <ul
           className="mt-4 flex flex-wrap gap-1.5"
@@ -98,15 +91,51 @@ export function ModelCard({
           ))}
         </ul>
 
-        <div aria-hidden="true" className="min-h-5 flex-1" />
+        <div aria-hidden="true" className="min-h-4 flex-1" />
 
-        <p className="border-t border-line-subtle pt-4 text-body-s text-ink-200">
-          <span className="tabular">{figures}</span>
-          {model.power ? null : (
-            <span className="text-ink-400"> · power not published</span>
-          )}
-        </p>
+        <dl className="relative mt-4 grid grid-cols-2 gap-3 pt-4 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-[linear-gradient(90deg,oklch(0.83_0.13_210/55%),oklch(0.83_0.13_210/12%)_40%,transparent)] before:content-['']">
+          <div
+            className={cn(
+              "flex min-w-0 flex-col-reverse gap-1.5",
+              "before:order-last before:mb-0.5 before:block before:h-px before:w-4 before:content-['']",
+              model.power
+                ? "before:bg-cyan-400 before:shadow-[0_0_6px_var(--color-cyan-400)]"
+                : "before:bg-ink-600",
+            )}
+          >
+            <dt className="font-mono text-[10px] tracking-hud text-ink-400 uppercase">
+              Power{model.power ? null : " · not published"}
+            </dt>
+            <dd className="flex items-baseline gap-1 whitespace-nowrap">
+              {model.power ? (
+                <>
+                  <span className="font-hud text-[17px] leading-tight text-ink-50 tabular-nums glow-text">
+                    {formatRange(model.power)}
+                  </span>
+                  <span className="font-mono text-[10px] tracking-hud text-cyan-200 uppercase">
+                    hp
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span aria-hidden="true" className="font-hud text-lg text-ink-500">
+                    —
+                  </span>
+                  <span className="sr-only">Not available</span>
+                </>
+              )}
+            </dd>
+          </div>
+          <div className="flex min-w-0 flex-col-reverse gap-1.5 before:order-last before:mb-0.5 before:block before:h-px before:w-4 before:bg-cyan-400 before:shadow-[0_0_6px_var(--color-cyan-400)] before:content-['']">
+            <dt className="font-mono text-[10px] tracking-hud text-ink-400 uppercase">
+              Variants
+            </dt>
+            <dd className="font-hud text-[17px] leading-tight text-ink-50 tabular-nums glow-text">
+              {formatNumber(model.variantCount)}
+            </dd>
+          </div>
+        </dl>
       </div>
-    </article>
+    </HudCardShell>
   );
 }

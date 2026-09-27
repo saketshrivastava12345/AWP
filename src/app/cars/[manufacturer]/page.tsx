@@ -12,6 +12,8 @@ import { HierarchyHero } from "@/components/cars/catalogue/HierarchyHero";
 import { CatalogueUnavailable } from "@/components/cars/catalogue/CatalogueUnavailable";
 import { JsonLdScript } from "@/components/cars/catalogue/JsonLdScript";
 import { formatRange } from "@/components/cars/catalogue/SpecRange";
+import { ScrambleText } from "@/components/fx/ScrambleText";
+import { Reveal } from "@/components/fx/Reveal";
 import {
   getCatalogueManufacturerSlugs,
   getManufacturerCatalogue,
@@ -96,13 +98,23 @@ export default async function ManufacturerCataloguePage({
         <Breadcrumbs
           items={[{ label: "Cars", href: "/cars" }, { label: manufacturer.name }]}
         />
-        <h1 className="mt-6 text-display-l">{manufacturer.name}</h1>
+        <p
+          aria-hidden="true"
+          className="mt-6 hud-label text-cyan-300/70"
+        >{`BRAND // ${country.name}`}</p>
+        <h1 className="mt-3 text-display-l">
+          <ScrambleText text={manufacturer.name} />
+        </h1>
         {lead ? <p className="mt-5 max-w-2xl text-lead">{lead}</p> : null}
-        {meta ? <p className="mt-3 text-body-s text-ink-300">{meta}</p> : null}
+        {meta ? (
+          <p className="mt-3 font-mono text-xs tracking-hud text-ink-300 uppercase">
+            {meta}
+          </p>
+        ) : null}
 
         <StatRow className="mt-10 max-w-5xl lg:grid-cols-3">
-          <StatCard label="Models" value={formatNumber(modelCount)} />
-          <StatCard label="Variants" value={formatNumber(variantCount)} />
+          <StatCard label="Models" value={formatNumber(modelCount)} countUp />
+          <StatCard label="Variants" value={formatNumber(variantCount)} countUp />
           <StatCard label="Power" value={power ? formatRange(power) : null} unit="hp" />
         </StatRow>
       </HierarchyHero>
@@ -135,17 +147,30 @@ export default async function ManufacturerCataloguePage({
         aria-labelledby="models-heading"
         className="py-16 lg:py-24"
       >
-        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
-          <h2 id="models-heading" className="text-h2">
-            {modelCount === 1 ? "The model" : "Models"}
-          </h2>
+        <Reveal className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <div>
+            <p className="mb-4 flex items-center gap-3 text-eyebrow">
+              <span
+                aria-hidden="true"
+                className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+              />
+              Line-up
+              <span aria-hidden="true" className="hud-label text-ink-600">
+                {"// 01"}
+              </span>
+            </p>
+            <h2 id="models-heading" className="text-h2">
+              <ScrambleText text={modelCount === 1 ? "The model" : "Models"} />
+            </h2>
+          </div>
           {models.length > 0 ? (
-            <p className="text-body-s text-ink-400">
-              {formatNumber(modelCount)} {modelCount === 1 ? "model" : "models"} ·{" "}
-              {formatNumber(variantCount)} {variantCount === 1 ? "variant" : "variants"}
+            <p className="font-mono text-xs tracking-hud text-ink-400 uppercase">
+              {formatNumber(modelCount)} {modelCount === 1 ? "model" : "models"}{" "}
+              <span aria-hidden="true">//</span> {formatNumber(variantCount)}{" "}
+              {variantCount === 1 ? "variant" : "variants"}
             </p>
           ) : null}
-        </div>
+        </Reveal>
 
         {models.length === 0 ? (
           <EmptyState

@@ -21,7 +21,7 @@ export function getMeasureContext(): CanvasRenderingContext2D | null {
  */
 export function fontShorthand(style: CSSStyleDeclaration, sizePx?: number): string {
   if (sizePx === undefined && style.font) return style.font;
-  const size = sizePx ?? parseFloat(style.fontSize) || 16;
+  const size = (sizePx ?? parseFloat(style.fontSize)) || 16;
   return `${style.fontStyle} ${style.fontWeight} ${size}px ${style.fontFamily}`;
 }
 

@@ -232,7 +232,7 @@ export function AutoScaleNumberInput({
 
       <div
         className={cn(
-          "relative rounded-card hud-panel px-5 py-4 transition-[box-shadow,border-color] duration-(--duration-base)",
+          "relative rounded-card px-5 py-4 transition-[box-shadow,border-color] duration-(--duration-base) hud-panel",
           "focus-within:border-cyan-300 focus-within:shadow-glow-cyan",
           error && "border-signal-negative",
           disabled ? "cursor-not-allowed opacity-50" : "cursor-text",
@@ -246,12 +246,12 @@ export function AutoScaleNumberInput({
       >
         <span
           aria-hidden="true"
-          className="hud-brackets -m-px opacity-0 transition-opacity duration-(--duration-base) group-focus-within/amount:opacity-100 [--hud-l:14px]"
+          className="hud-brackets -m-px opacity-0 transition-opacity duration-(--duration-base) [--hud-l:14px] group-focus-within/amount:opacity-100"
         />
         <div
           ref={rowRef}
           className={cn(
-            "flex min-w-0 items-baseline font-hud leading-none tabular-nums tracking-[-0.02em]",
+            "flex min-w-0 items-baseline font-hud leading-none tracking-[-0.02em] tabular-nums",
             "transition-[font-size] duration-200 ease-(--ease-standard) motion-reduce:transition-none",
           )}
           style={{ fontSize: `${maxFontSize}px`, gap: `${AFFIX_GAP_EM}em` }}

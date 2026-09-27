@@ -23,6 +23,8 @@ import {
   websiteLink,
 } from "@/components/manufacturers/brand";
 import { firstSentence } from "@/components/parts/parts-helpers";
+import { ScrambleText } from "@/components/fx/ScrambleText";
+import { Reveal } from "@/components/fx/Reveal";
 import {
   getAllManufacturerSlugs,
   getManufacturerDetail,
@@ -226,8 +228,9 @@ export default async function ManufacturerPage({
             label="Models"
             value={formatNumber(lineup.length)}
             hint="Models with at least one published variant in the catalogue."
+            countUp
           />
-          <StatCard label="Variants" value={formatNumber(cars.length)} />
+          <StatCard label="Variants" value={formatNumber(cars.length)} countUp />
           <StatCard
             label="Power"
             value={power ? rangeLabel(power, formatNumber) : null}
@@ -251,7 +254,7 @@ export default async function ManufacturerPage({
       >
         <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
           <h2 id="history-heading" className="text-h2 lg:col-span-4">
-            History
+            <ScrambleText text="History" />
           </h2>
           <div className="lg:col-span-8">
             {manufacturer.description ? (
@@ -261,19 +264,25 @@ export default async function ManufacturerPage({
                 No history is recorded for {manufacturer.name} yet.
               </p>
             )}
-            <dl className="mt-10 grid border-t border-line sm:grid-cols-2 sm:gap-x-12">
+            <Reveal
+              as="dl"
+              stagger
+              className="mt-10 grid border-t border-line sm:grid-cols-2 sm:gap-x-12"
+            >
               {facts.map((fact) => (
                 <div
                   key={fact.term}
                   className="flex items-baseline justify-between gap-6 border-b border-line-subtle py-4"
                 >
-                  <dt className="text-body-s text-ink-400">{fact.term}</dt>
+                  <dt className="font-mono text-[11px] tracking-hud text-ink-400 uppercase">
+                    {fact.term}
+                  </dt>
                   <dd className="text-right text-body-s text-ink-100">
                     {fact.detail ?? <span className="text-ink-400">Not available</span>}
                   </dd>
                 </div>
               ))}
-            </dl>
+            </Reveal>
           </div>
         </div>
       </Container>
@@ -296,6 +305,9 @@ export default async function ManufacturerPage({
           >
             <SectionHeading
               id="models-heading"
+              overline="Line-up"
+              code="01"
+              scramble
               title="Models"
               description="Every model with a published variant, newest generation first. Open a model for its catalogue page, or a variant for its full specification."
               actionHref={catalogueHref}
@@ -314,6 +326,9 @@ export default async function ManufacturerPage({
           >
             <SectionHeading
               id="cars-heading"
+              overline="Catalogue"
+              code="02"
+              scramble
               title={`Every ${manufacturer.name} in the catalogue`}
               description="Most powerful first. A figure the maker does not publish is shown as a dash, never estimated."
             />

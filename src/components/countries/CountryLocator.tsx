@@ -11,9 +11,10 @@ import {
 
 /**
  * A small, static locator for a country page: the dot-matrix world, cropped
- * around the country, with its marker. Server-rendered SVG, no script.
- * Renders nothing for a country without recorded coordinates rather than
- * guessing where it is.
+ * around the country, with its marker under a breathing glow and a slowly
+ * turning dashed reticle. Server-rendered SVG, no script; the motion is CSS
+ * and stops under reduced motion. Renders nothing for a country without
+ * recorded coordinates rather than guessing where it is.
  */
 export function CountryLocator({
   slug,
@@ -55,12 +56,16 @@ export function CountryLocator({
               cx={CELL / 2}
               cy={CELL / 2}
               r={CELL * 0.26}
-              fill="var(--color-ink-600)"
+              fill="oklch(0.45 0.045 235)"
             />
           </pattern>
           <clipPath id={`${id}-land`}>
             <path d={landPath()} />
           </clipPath>
+          <radialGradient id={`${id}-glow`}>
+            <stop offset="0%" stopColor="var(--color-cyan-300)" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="var(--color-cyan-400)" stopOpacity="0" />
+          </radialGradient>
         </defs>
         <rect
           x={left}
@@ -71,22 +76,41 @@ export function CountryLocator({
           clipPath={`url(#${id}-land)`}
         />
         {/* Crosshair through the marker. */}
-        <g stroke="var(--color-line-strong)" strokeWidth="0.6" strokeDasharray="2 4">
+        <g stroke="oklch(0.83 0.13 210 / 35%)" strokeWidth="0.6" strokeDasharray="2 4">
           <line x1={left} y1={y} x2={left + width} y2={y} />
           <line x1={x} y1={top} x2={x} y2={top + height} />
         </g>
         <circle
           cx={x}
           cy={y}
+          r={26}
+          fill={`url(#${id}-glow)`}
+          className="animate-pulse-glow"
+        />
+        <circle
+          cx={x}
+          cy={y}
+          r={15}
+          fill="none"
+          stroke="var(--color-cyan-300)"
+          strokeWidth="0.8"
+          strokeDasharray="3 5"
+          className="origin-center animate-spin-slow [transform-box:fill-box]"
+        />
+        <circle
+          cx={x}
+          cy={y}
           r={9}
           fill="none"
-          stroke="var(--color-gold-400)"
+          stroke="var(--color-cyan-300)"
           strokeWidth="1"
         />
-        <circle cx={x} cy={y} r={4.5} className="fill-gold-300" />
+        <circle cx={x} cy={y} r={4.5} className="fill-cyan-200" />
       </svg>
-      <figcaption className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-caption">
-        <span className="tabular-nums">{formatCoordinates(marker.lat, marker.lon)}</span>
+      <figcaption className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 font-mono text-[11px] tracking-hud text-ink-400 uppercase">
+        <span className="tabular-nums text-cyan-200">
+          {formatCoordinates(marker.lat, marker.lon)}
+        </span>
         <span>Approximate centroid</span>
       </figcaption>
     </figure>

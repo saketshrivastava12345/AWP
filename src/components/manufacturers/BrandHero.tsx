@@ -4,6 +4,9 @@ import { Breadcrumbs, type Crumb } from "@/components/ui/Breadcrumbs";
 import { Container } from "@/components/ui/Container";
 import { CarPhoto } from "@/components/cars/CarPhoto";
 import { carSilhouette } from "@/components/cars/car-silhouette";
+import { ScrambleText } from "@/components/fx/ScrambleText";
+import { Parallax } from "@/components/fx/Parallax";
+import { GlowOrbs, GridBackground, Scanlines } from "@/components/fx/Backgrounds";
 import { powertrainKind, type BodyType, type FuelType } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -100,7 +103,12 @@ export function BrandHero({
         className,
       )}
     >
-      <Container className="pt-6 lg:pt-8">
+      {/* Decorative ground: orbs, a drifting grid and scan lines. The beam
+          is left out — the section is only clipped sideways. */}
+      <GlowOrbs tone="cyan" />
+      <GridBackground size={56} className="[mask-image:linear-gradient(to_bottom,black_30%,transparent)]" />
+      <Scanlines />
+      <Container className="relative pt-6 lg:pt-8">
         <Breadcrumbs items={crumbs} />
 
         <div
@@ -111,12 +119,20 @@ export function BrandHero({
         >
           <div className={cn("min-w-0 lg:py-10", visual ? "lg:col-span-5" : "max-w-3xl")}>
             {eyebrow ? (
-              <div className="mb-4 flex items-center gap-3 text-eyebrow">{eyebrow}</div>
+              <div className="mb-4 flex items-center gap-3 text-eyebrow">
+                <span
+                  aria-hidden="true"
+                  className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+                />
+                {eyebrow}
+              </div>
             ) : null}
-            <h1 className="text-display-l hyphens-auto">{title}</h1>
+            <h1 className="text-display-l hyphens-auto">
+              <ScrambleText text={title} />
+            </h1>
             {lead ? <div className="mt-6 max-w-[60ch] text-lead">{lead}</div> : null}
             {facts.length > 0 ? (
-              <p className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-s text-ink-400">
+              <p className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs tracking-hud text-ink-400 uppercase">
                 {facts.map((fact, index) => (
                   <span key={index} className="inline-flex items-center gap-2">
                     {index > 0 ? (
@@ -136,7 +152,10 @@ export function BrandHero({
         </div>
 
         {children ? (
-          <div className="mt-12 pb-12 lg:mt-10 lg:pb-16">{children}</div>
+          <div className="mt-12 pb-10 lg:mt-10 lg:pb-14">
+            {children}
+            <div aria-hidden="true" className="mt-8 h-2.5 w-full hud-ticks opacity-70" />
+          </div>
         ) : null}
         {!children ? <div className="pb-12 lg:pb-16" /> : null}
       </Container>
@@ -144,7 +163,11 @@ export function BrandHero({
   );
 }
 
-/** The photograph: full width on phones, bleeding off the right edge on desktop. */
+/**
+ * The photograph: full width on phones, bleeding off the right edge on
+ * desktop, drifting on a slow parallax inside its masked frame (the layer
+ * is oversized so its edges never show) under faint scan lines.
+ */
 function HeroPhoto({ photo }: { photo: BrandHeroPhoto }) {
   return (
     <figure className="-mx-5 sm:-mx-8 lg:mx-0">
@@ -158,20 +181,26 @@ function HeroPhoto({ photo }: { photo: BrandHeroPhoto }) {
           BLEED_RIGHT,
         )}
       >
-        <CarPhoto
-          src={photo.src}
-          alt={photo.alt}
-          sizes="(min-width: 1024px) 62vw, 100vw"
-          loading="preload"
-          fallback={<DrawingArt bodyType={photo.bodyType} fuelType={photo.fuelType} />}
+        <Parallax speed={-0.1} className="absolute inset-x-0 -inset-y-[12%]">
+          <CarPhoto
+            src={photo.src}
+            alt={photo.alt}
+            sizes="(min-width: 1024px) 62vw, 100vw"
+            loading="preload"
+            fallback={<DrawingArt bodyType={photo.bodyType} fuelType={photo.fuelType} />}
+          />
+        </Parallax>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 [background:repeating-linear-gradient(180deg,oklch(0.9_0.05_220/4%)_0_1px,transparent_1px_4px)]"
         />
       </div>
-      <figcaption className="mt-3 px-5 text-caption sm:px-8 lg:px-0 lg:text-right">
+      <figcaption className="mt-3 px-5 font-mono text-[11px] tracking-hud text-ink-400 uppercase sm:px-8 lg:px-0 lg:text-right">
         Pictured:{" "}
         {photo.href ? (
           <Link
             href={photo.href}
-            className="text-ink-200 underline decoration-ink-600 underline-offset-4 transition-colors duration-(--duration-fast) hover:text-ink-50 hover:decoration-ink-300"
+            className="fx-link text-ink-200 transition-colors duration-(--duration-fast) hover:text-cyan-100"
           >
             {photo.alt}
           </Link>
@@ -208,7 +237,12 @@ function DrawingArt({
         aria-hidden="true"
         fill="none"
       >
-        <path d={shape.body} className="fill-surface-2 stroke-ink-500" strokeWidth={2} />
+        <path
+          d={shape.body}
+          className="fill-surface-2 stroke-cyan-400/60"
+          strokeWidth={2}
+          strokeDasharray="8 5"
+        />
         {shape.glass ? <path d={shape.glass} className="fill-void/60" /> : null}
         {shape.wheels.map((wheel) => (
           <g key={wheel.cx}>

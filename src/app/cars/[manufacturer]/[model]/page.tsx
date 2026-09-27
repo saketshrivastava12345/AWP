@@ -12,6 +12,8 @@ import { HierarchyHero } from "@/components/cars/catalogue/HierarchyHero";
 import { CatalogueUnavailable } from "@/components/cars/catalogue/CatalogueUnavailable";
 import { JsonLdScript } from "@/components/cars/catalogue/JsonLdScript";
 import { SpecRange } from "@/components/cars/catalogue/SpecRange";
+import { ScrambleText } from "@/components/fx/ScrambleText";
+import { Reveal } from "@/components/fx/Reveal";
 import {
   getAllModelPaths,
   getModelCatalogue,
@@ -158,10 +160,19 @@ export default async function ModelPage({
             { label: model.name },
           ]}
         />
-        <p className="mt-6 text-body-s text-ink-300">{manufacturer.name}</p>
-        <h1 className="mt-1 text-display-xl">
+        <p className="mt-6 flex items-center gap-3 font-mono text-xs tracking-hud text-cyan-200 uppercase">
+          <span
+            aria-hidden="true"
+            className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+          />
+          {manufacturer.name}
+          <span aria-hidden="true" className="hud-label text-ink-600">
+            {`// ${category.name}`}
+          </span>
+        </p>
+        <h1 className="mt-2 text-display-xl">
           <span className="sr-only">{manufacturer.name} </span>
-          {model.name}
+          <ScrambleText text={model.name} />
         </h1>
         {generations.length > 0 || span ? (
           <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -171,7 +182,9 @@ export default async function ModelPage({
               </Badge>
             ))}
             {span ? (
-              <span className="text-body-s text-ink-300">Model years {span}</span>
+              <span className="font-mono text-xs tracking-hud text-ink-300 uppercase">
+                Model years {span}
+              </span>
             ) : null}
           </div>
         ) : null}
@@ -213,8 +226,18 @@ export default async function ModelPage({
         aria-labelledby="overview-heading"
         className="pt-16 lg:pt-24"
       >
+        <p className="mb-4 flex items-center gap-3 text-eyebrow">
+          <span
+            aria-hidden="true"
+            className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+          />
+          Telemetry
+          <span aria-hidden="true" className="hud-label text-ink-600">
+            {"// 01"}
+          </span>
+        </p>
         <h2 id="overview-heading" className="text-h2">
-          Across the range
+          <ScrambleText text="Across the range" />
         </h2>
         <p className="mt-4 max-w-2xl text-lead">
           Lowest to highest published figure among the{" "}
@@ -277,7 +300,7 @@ export default async function ModelPage({
           ) : null}
         </StatRow>
 
-        <div className="mt-16 grid gap-10 lg:grid-cols-12 lg:gap-12">
+        <Reveal className="mt-16 grid gap-10 lg:grid-cols-12 lg:gap-12">
           {remainder ? <p className="text-body lg:col-span-7">{remainder}</p> : null}
           <dl
             className={cn(
@@ -286,13 +309,18 @@ export default async function ModelPage({
             )}
           >
             {facts.map((fact) => (
-              <div key={fact.label} className="border-t border-line-subtle py-4">
-                <dt className="text-caption text-ink-400">{fact.label}</dt>
-                <dd className="mt-1 text-body-s text-ink-100">{fact.value}</dd>
+              <div
+                key={fact.label}
+                className="relative py-4 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-[linear-gradient(90deg,oklch(0.83_0.13_210/45%),oklch(0.9_0.03_230/12%)_60%)] before:content-['']"
+              >
+                <dt className="font-mono text-[10px] tracking-hud text-ink-400 uppercase">
+                  {fact.label}
+                </dt>
+                <dd className="mt-1.5 text-body-s text-ink-100">{fact.value}</dd>
               </div>
             ))}
           </dl>
-        </div>
+        </Reveal>
       </Container>
 
       <Container
@@ -301,14 +329,26 @@ export default async function ModelPage({
         aria-labelledby="variants-heading"
         className="pt-20 lg:pt-28"
       >
-        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
-          <h2 id="variants-heading" className="text-h2">
-            {variants.length === 1 ? "The variant" : "Variants"}
-          </h2>
-          <p className="text-body-s text-ink-400">
+        <Reveal className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <div>
+            <p className="mb-4 flex items-center gap-3 text-eyebrow">
+              <span
+                aria-hidden="true"
+                className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+              />
+              Catalogue
+              <span aria-hidden="true" className="hud-label text-ink-600">
+                {"// 02"}
+              </span>
+            </p>
+            <h2 id="variants-heading" className="text-h2">
+              <ScrambleText text={variants.length === 1 ? "The variant" : "Variants"} />
+            </h2>
+          </div>
+          <p className="font-mono text-xs tracking-hud text-ink-400 uppercase">
             {formatNumber(variants.length)} in the catalogue
           </p>
-        </div>
+        </Reveal>
         <CarGrid
           cars={variants}
           columns={variants.length <= 2 ? "two" : "three"}
@@ -324,10 +364,22 @@ export default async function ModelPage({
           aria-labelledby="generation-heading"
           className="pt-20 lg:pt-28"
         >
+          <p className="mb-4 flex items-center gap-3 text-eyebrow">
+            <span
+              aria-hidden="true"
+              className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+            />
+            Timeline
+            <span aria-hidden="true" className="hud-label text-ink-600">
+              {"// 03"}
+            </span>
+          </p>
           <h2 id="generation-heading" className="text-h2">
-            {generations.length === 1 ? "Generation" : "Generations"}
+            <ScrambleText text={generations.length === 1 ? "Generation" : "Generations"} />
           </h2>
-          <ol
+          <Reveal
+            as="ol"
+            stagger
             className={cn(
               "mt-10 grid gap-x-10 border-t border-line",
               generations.length > 1 && "sm:grid-cols-2 lg:grid-cols-3",
@@ -338,14 +390,14 @@ export default async function ModelPage({
               const genSpan = yearsLabel(generation.year_start, generation.year_end);
               return (
                 <li key={generation.id} className="relative pt-8 pb-4">
-                  {/* A mark on the timeline rule above. */}
+                  {/* A lit mark on the timeline rule above. */}
                   <span
                     aria-hidden="true"
-                    className="absolute -top-[5px] left-0 size-[9px] rounded-full border border-ink-400 bg-void"
+                    className="absolute -top-[5px] left-0 size-[9px] rounded-full border border-cyan-300 bg-void shadow-[0_0_8px_var(--color-cyan-400)]"
                   />
                   <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                     <span className="text-h3">{generation.name}</span>
-                    <span className="tabular text-body-s text-ink-300">
+                    <span className="tabular font-mono text-xs tracking-hud text-cyan-200 uppercase">
                       {genSpan ?? "Years not recorded"}
                     </span>
                   </p>
@@ -360,7 +412,7 @@ export default async function ModelPage({
                 </li>
               );
             })}
-          </ol>
+          </Reveal>
         </Container>
       ) : null}
 

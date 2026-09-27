@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { GridBackground, HudFrame, Reveal, Scanlines, ScrambleText } from "@/components/fx";
+import {
+  GridBackground,
+  HudFrame,
+  Reveal,
+  Scanlines,
+  ScrambleText,
+} from "@/components/fx";
 import { siteConfig } from "@/lib/site-config";
 import { AmountDemo } from "./AmountDemo";
 import { CaretDemo } from "./CaretDemo";
@@ -44,7 +50,10 @@ export default function LabPage() {
       >
         <GridBackground variant="floor" />
         <Scanlines />
-        <Container as="header" className="relative pt-14 pb-12 sm:pt-20 lg:pt-24 lg:pb-16">
+        <Container
+          as="header"
+          className="relative pt-14 pb-12 sm:pt-20 lg:pt-24 lg:pb-16"
+        >
           <p className="mb-4 flex items-center gap-3 text-eyebrow">
             <span
               aria-hidden="true"
@@ -55,7 +64,7 @@ export default function LabPage() {
               {"// LAB"}
             </span>
           </p>
-          <h1 className="max-w-4xl text-h1 gradient-text">
+          <h1 className="max-w-4xl gradient-text text-h1">
             <ScrambleText text="Interface lab" />
           </h1>
           <p className="mt-6 max-w-[60ch] text-lead">

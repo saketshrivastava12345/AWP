@@ -36,7 +36,9 @@ export const SETTLE_DISTANCE = 0.05;
 export const SETTLE_VELOCITY = 0.5;
 
 /** The damping at which a spring reaches its target fastest without overshoot. */
-export function criticalDamping(config: Pick<SpringConfig, "mass" | "stiffness">): number {
+export function criticalDamping(
+  config: Pick<SpringConfig, "mass" | "stiffness">,
+): number {
   return 2 * Math.sqrt(config.mass * config.stiffness);
 }
 

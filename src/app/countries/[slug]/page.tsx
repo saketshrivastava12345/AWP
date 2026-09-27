@@ -12,6 +12,8 @@ import { CountryLocator } from "@/components/countries/CountryLocator";
 import { BrandHero } from "@/components/manufacturers/BrandHero";
 import { ManufacturerCard } from "@/components/manufacturers/ManufacturerCard";
 import { SEGMENT_LABELS, SEGMENT_ORDER } from "@/components/manufacturers/brand";
+import { ScrambleText } from "@/components/fx/ScrambleText";
+import { Reveal } from "@/components/fx/Reveal";
 import { getAllCountrySlugs, getCountryDetail } from "@/lib/queries/countries";
 import { breadcrumbJsonLd, serializeJsonLd } from "@/lib/json-ld";
 import { formatNumber } from "@/lib/format";
@@ -126,13 +128,14 @@ export default async function CountryPage({ params }: PageProps<"/countries/[slu
         }
       >
         <StatRow className="lg:grid-cols-3">
-          <StatCard label="Brands" value={formatNumber(makers.length)} />
+          <StatCard label="Brands" value={formatNumber(makers.length)} countUp />
           <StatCard
             label="Models"
             value={formatNumber(modelCount)}
             hint="Models with at least one published variant."
+            countUp
           />
-          <StatCard label="Cars" value={formatNumber(totalCars)} />
+          <StatCard label="Cars" value={formatNumber(totalCars)} countUp />
         </StatRow>
         {country.currency_code ? (
           <p className="mt-8 text-caption">
@@ -153,7 +156,7 @@ export default async function CountryPage({ params }: PageProps<"/countries/[slu
         >
           <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
             <h2 id="history-heading" className="text-h2 lg:col-span-4">
-              Automotive history
+              <ScrambleText text="Automotive history" />
             </h2>
             <p className="max-w-[62ch] text-lead lg:col-span-8">
               {country.automotive_history}
@@ -174,6 +177,9 @@ export default async function CountryPage({ params }: PageProps<"/countries/[slu
       >
         <SectionHeading
           id="brands-heading"
+          overline="Makers"
+          code="01"
+          scramble
           title={`Brands from ${country.name}`}
           description="Grouped by segment, with the models each one builds."
         />
@@ -194,7 +200,11 @@ export default async function CountryPage({ params }: PageProps<"/countries/[slu
                     {group.makers.length} {group.makers.length === 1 ? "brand" : "brands"}
                   </span>
                 </h3>
-                <ul className="mt-6 grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+                <Reveal
+                  as="ul"
+                  stagger
+                  className="mt-6 grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3"
+                >
                   {group.makers.map((maker) => (
                     <li key={maker.id}>
                       <ManufacturerCard
@@ -209,7 +219,7 @@ export default async function CountryPage({ params }: PageProps<"/countries/[slu
                       />
                     </li>
                   ))}
-                </ul>
+                </Reveal>
               </div>
             ))}
           </div>
@@ -225,6 +235,9 @@ export default async function CountryPage({ params }: PageProps<"/countries/[slu
         >
           <SectionHeading
             id="cars-heading"
+            overline="Catalogue"
+            code="02"
+            scramble
             title={`Cars from ${country.name}`}
             description={
               totalCars > cars.length

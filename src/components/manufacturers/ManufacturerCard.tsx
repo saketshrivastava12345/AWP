@@ -22,12 +22,16 @@ export type ManufacturerCardData = Pick<
 };
 
 /**
- * A brand as a card: name, a meta line (segment, founding year, headquarters,
- * and the country unless the card already sits under a country heading), the
- * first sentence of its history, and what the catalogue holds for it.
+ * A brand as a HUD card: name, a mono meta line (segment, founding year,
+ * headquarters, and the country unless the card already sits under a
+ * country heading), the first sentence of its history, and what the
+ * catalogue holds for it as two lit figures.
  *
- * The whole card is one link. No monogram: the maker has no recorded logo,
- * and a letter tile read as a placeholder avatar.
+ * The whole card is one link, lifting with a cyan edge and a spotlight
+ * following the pointer (`fx-card` + `data-spotlight`, driven by the FX
+ * runtime — hence `suppressHydrationWarning`, since the runtime may write
+ * `--mx/--my` before a streamed boundary hydrates). No monogram: the maker
+ * has no recorded logo, and a letter tile read as a placeholder avatar.
  */
 export function ManufacturerCard({
   maker,
@@ -42,14 +46,6 @@ export function ManufacturerCard({
   className?: string;
 }) {
   const Heading = headingLevel;
-  const counts =
-    maker.model_count > 0
-      ? `${plural(maker.model_count, "model", "models")} · ${plural(
-          maker.variant_count,
-          "variant",
-          "variants",
-        )}`
-      : "No published cars yet";
   const meta = [
     SEGMENT_LABELS[maker.segment],
     showCountry ? maker.country?.name : null,
@@ -61,15 +57,24 @@ export function ManufacturerCard({
   return (
     <Link
       href={`/manufacturers/${maker.slug}`}
+      data-spotlight=""
+      suppressHydrationWarning
       className={cn(
-        "group flex h-full flex-col rounded-card bg-surface-1 p-6 sm:p-7",
-        "transition-colors duration-(--duration-base) ease-standard hover:bg-surface-2",
+        "group/card relative flex h-full flex-col rounded-card border border-line bg-surface-1/85 p-6 fx-card sm:p-7",
         className,
       )}
     >
-      <Heading className="text-h3">{maker.name}</Heading>
+      <span
+        aria-hidden="true"
+        className="hud-brackets -m-px [--hud-l:12px] opacity-45 transition-opacity duration-(--duration-base) group-hover/card:opacity-100"
+      />
+      <Heading className="text-h3 transition-colors duration-(--duration-fast) group-hover/card:text-cyan-100">
+        {maker.name}
+      </Heading>
       {meta.length > 0 ? (
-        <p className="mt-2 text-body-s text-ink-400">{meta.join(" · ")}</p>
+        <p className="mt-2 font-mono text-[11px] tracking-hud text-ink-400 uppercase">
+          {meta.join(" · ")}
+        </p>
       ) : null}
 
       {summary ? (
@@ -83,13 +88,38 @@ export function ManufacturerCard({
         </p>
       ) : null}
 
-      <div className="mt-auto flex items-center justify-between gap-4 pt-6">
-        <p className="text-caption">{counts}</p>
-        <span className="inline-flex min-h-11 items-center gap-2 font-display text-[15px] font-medium text-ink-100 transition-colors duration-(--duration-fast) group-hover:text-ink-50">
+      <div className="mt-auto flex items-end justify-between gap-4 pt-6">
+        {maker.model_count > 0 ? (
+          <dl className="flex gap-6">
+            <div className="flex flex-col-reverse gap-1">
+              <dt className="font-mono text-[10px] tracking-hud text-ink-400 uppercase">
+                Models
+              </dt>
+              <dd className="font-hud text-base text-ink-50 tabular-nums glow-text">
+                {maker.model_count}
+              </dd>
+            </div>
+            <div className="flex flex-col-reverse gap-1">
+              <dt className="font-mono text-[10px] tracking-hud text-ink-400 uppercase">
+                Variants
+              </dt>
+              <dd className="font-hud text-base text-ink-50 tabular-nums glow-text">
+                {maker.variant_count}
+              </dd>
+            </div>
+            <span className="sr-only">
+              {plural(maker.model_count, "model", "models")},{" "}
+              {plural(maker.variant_count, "variant", "variants")}
+            </span>
+          </dl>
+        ) : (
+          <p className="text-caption">No published cars yet</p>
+        )}
+        <span className="inline-flex min-h-11 items-center gap-2 font-mono text-[11px] tracking-hud text-ink-200 uppercase transition-colors duration-(--duration-fast) group-hover/card:text-cyan-100">
           View brand
           <ArrowRight
             aria-hidden="true"
-            className="size-[18px] text-ink-400 transition-[translate,color] duration-(--duration-base) ease-standard group-hover:translate-x-1 group-hover:text-ink-50 motion-reduce:translate-x-0"
+            className="size-4 text-cyan-300 transition-[translate,color] duration-(--duration-base) ease-standard group-hover/card:translate-x-1 motion-reduce:translate-x-0"
           />
         </span>
       </div>

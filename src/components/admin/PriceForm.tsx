@@ -22,7 +22,8 @@ import {
 } from "@/lib/pricing/engine";
 import { formatDate, formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ActionForm, SubmitButton } from "./ActionForm";
+import { AutoScaleNumberInput } from "@/components/inputs/AutoScaleNumberInput";
+import { ActionForm, SubmitButton, useFieldError } from "./ActionForm";
 import { CheckboxField, FieldSet, SelectField, TextareaField, TextField } from "./fields";
 
 type Amounts = Record<AmountField["name"], string>;
@@ -46,6 +47,22 @@ function amountsFrom(price: MarketPrice | null): Amounts {
     out[field.name] = value === null || value === undefined ? "" : String(value);
   }
   return out;
+}
+
+/** The two headline amounts get the large auto-scaling entry; the rest stay plain. */
+const HEADLINE_AMOUNTS: ReadonlySet<AmountField["name"]> = new Set([
+  "ex_showroom_price",
+  "on_road_price",
+]);
+
+/**
+ * Grouping for the big amount entry. Indian rupees group in lakhs and
+ * crores; everything else groups in thousands with a "." decimal, which is
+ * also the only decimal the server's parser accepts — so an admin pasting
+ * "1,250,000" never has the comma read as a decimal point.
+ */
+function amountLocaleFor(currency: string): string {
+  return currency.toUpperCase() === "INR" ? "en-IN" : "en-US";
 }
 
 /**
@@ -246,35 +263,40 @@ export function PriceForm({
         >
           {AMOUNT_FIELDS.map((field) => {
             const disabled = field.name === "on_road_price" && listed;
+            const headline = HEADLINE_AMOUNTS.has(field.name);
+            const required =
+              (field.name === "ex_showroom_price" && listed) ||
+              (field.name === "on_road_price" && priceType !== "" && !listed);
+            const hint = disabled
+              ? "Not for listed prices: record a published on-road total as an On-road row."
+              : field.hint;
+            const onChange = (value: string) =>
+              setAmounts((current) => ({ ...current, [field.name]: value }));
             return (
-              <div
-                key={field.name}
-                className={cn(
-                  field.name === "ex_showroom_price" || field.name === "on_road_price"
-                    ? "sm:col-span-2"
-                    : "",
+              <div key={field.name} className={cn(headline && "sm:col-span-2")}>
+                {headline ? (
+                  <HeadlineAmount
+                    field={field}
+                    value={disabled ? "" : amounts[field.name]}
+                    onChange={onChange}
+                    currency={currency}
+                    disabled={disabled}
+                    required={required}
+                    hint={hint}
+                  />
+                ) : (
+                  <TextField
+                    name={field.name}
+                    label={field.label}
+                    inputMode="decimal"
+                    mono
+                    disabled={disabled}
+                    defaultValue={amounts[field.name]}
+                    onChange={onChange}
+                    hint={hint}
+                    required={required}
+                  />
                 )}
-              >
-                <TextField
-                  name={field.name}
-                  label={field.label}
-                  inputMode="decimal"
-                  mono
-                  disabled={disabled}
-                  defaultValue={disabled ? "" : amounts[field.name]}
-                  onChange={(value) =>
-                    setAmounts((current) => ({ ...current, [field.name]: value }))
-                  }
-                  hint={
-                    disabled
-                      ? "Not for listed prices: record a published on-road total as an On-road row."
-                      : field.hint
-                  }
-                  required={
-                    (field.name === "ex_showroom_price" && listed) ||
-                    (field.name === "on_road_price" && priceType !== "" && !listed)
-                  }
-                />
               </div>
             );
           })}
@@ -403,6 +425,50 @@ export function PriceForm({
         </p>
       </aside>
     </ActionForm>
+  );
+}
+
+/**
+ * The listed or on-road price as a large, self-scaling figure. Same field
+ * name, same raw decimal string to the server (through the control's hidden
+ * input), same error from the action; only the entry is different.
+ */
+function HeadlineAmount({
+  field,
+  value,
+  onChange,
+  currency,
+  disabled,
+  required,
+  hint,
+}: {
+  field: AmountField;
+  value: string;
+  onChange: (value: string) => void;
+  currency: string;
+  disabled: boolean;
+  required: boolean;
+  hint: string | undefined;
+}) {
+  const error = useFieldError(field.name);
+  const code = /^[A-Za-z]{3}$/.test(currency) ? currency.toUpperCase() : undefined;
+  return (
+    <AutoScaleNumberInput
+      name={field.name}
+      label={field.label}
+      value={value}
+      onValueChange={onChange}
+      currency={code}
+      locale={amountLocaleFor(currency)}
+      maxDigits={12}
+      decimals={field.rule.scale ?? 0}
+      maxFontSize={48}
+      minFontSize={22}
+      disabled={disabled}
+      required={required}
+      description={hint}
+      error={error}
+    />
   );
 }
 
