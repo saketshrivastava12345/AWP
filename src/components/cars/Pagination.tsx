@@ -23,8 +23,8 @@ export function pageItems(current: number, total: number): (number | "gap")[] {
 }
 
 const CELL =
-  "flex h-11 min-w-11 items-center justify-center rounded-xs border px-3 font-display text-micro " +
-  "tracking-hud uppercase transition-colors duration-(--duration-fast) sm:h-10 sm:min-w-10";
+  "tabular flex h-11 min-w-11 items-center justify-center rounded-control border px-3 text-body-s " +
+  "transition-colors duration-(--duration-fast) ease-standard";
 
 /**
  * Server-side pagination. Every control is a real link, so pages are
@@ -57,7 +57,7 @@ export function Pagination({
         aria-label={label}
         className={cn(
           CELL,
-          "border-line text-ink-300 hover:border-gold-600 hover:text-gold-300",
+          "border-line-strong text-ink-200 hover:border-ink-400 hover:text-ink-50",
         )}
       >
         <Icon className="size-4" aria-hidden="true" />
@@ -73,9 +73,8 @@ export function Pagination({
     <nav aria-label="Pagination" className={cn("flex items-center gap-1.5", className)}>
       {arrow("prev")}
 
-      <p className="tabular px-3 font-mono text-xs text-ink-300 sm:hidden">
-        <span className="sr-only">Page </span>
-        {page} <span className="text-ink-500">/</span> {pageCount}
+      <p className="tabular px-3 text-body-s text-ink-300 sm:hidden">
+        Page {page} <span className="text-ink-400">of</span> {pageCount}
       </p>
 
       <ul className="hidden items-center gap-1.5 sm:flex">
@@ -84,7 +83,7 @@ export function Pagination({
             <li
               key={`gap-${index}`}
               aria-hidden="true"
-              className="px-1 font-mono text-xs text-ink-600"
+              className="px-1 text-body-s text-ink-400"
             >
               …
             </li>
@@ -98,8 +97,8 @@ export function Pagination({
                   CELL,
                   "tabular",
                   item === page
-                    ? "border-gold-500 bg-gold-800/15 text-gold-300"
-                    : "border-line text-ink-300 hover:border-gold-600 hover:text-gold-300",
+                    ? "border-gold-500 text-ink-50"
+                    : "border-transparent text-ink-300 hover:border-line-strong hover:text-ink-50",
                 )}
               >
                 {item}

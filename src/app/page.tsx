@@ -1,9 +1,9 @@
-import { ButtonLink } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { CarGrid } from "@/components/cars/CarGrid";
 import { HomeHero } from "@/components/home/HomeHero";
 import { CatalogueIndex } from "@/components/home/CatalogueIndex";
+import { CAROUSEL_TRACK, HomeCarousel } from "@/components/home/HomeCarousel";
 import { WorldTeaser } from "@/components/home/WorldTeaser";
 import { ExploreTeasers } from "@/components/home/ExploreTeasers";
 import { RecentlyViewedStrip } from "@/components/home/RecentlyViewedStrip";
@@ -14,44 +14,46 @@ import { getHomePageData } from "@/lib/queries/home";
  * The home page.
  *
  * Everything on it is read from the catalogue — counts, the car on the hero
- * stage and its story, the featured cars, countries, makers, parts and the
- * rivals in the compare teaser — through the cookie-free static client, so
- * the page prerenders and every section has an honest state for a failed or
- * empty read. The only client-rendered section is the visitor's own recently
- * viewed list, which exists only in their browser (or account).
+ * stage and its story, the segments, the featured cars, countries, brands,
+ * parts and the rivals in the compare teaser — through the cookie-free static
+ * client, so the page prerenders and every section has an honest state for a
+ * failed or empty read. The only client-rendered section is the visitor's own
+ * recently viewed list, which exists only in their browser (or account).
  */
 export default async function HomePage() {
   const data = await getHomePageData();
   const { counts, featured, hero } = data;
 
+  const featuredHeading = (
+    <SectionHeading
+      id="featured-heading"
+      title="The most powerful"
+      description="Ordered by published output, as each maker states it."
+      actionHref="/cars"
+      actionLabel="All cars"
+    />
+  );
+
   return (
     <>
       <HomeHero car={hero} counts={counts} />
 
-      <CatalogueIndex counts={counts} />
+      <CatalogueIndex segments={data.segments} />
 
-      <section
-        aria-labelledby="featured-heading"
-        className="border-t border-line py-20 sm:py-24"
-      >
+      <section aria-labelledby="featured-heading" className="py-16 lg:py-24">
         <Container>
-          <SectionHeading
-            overline="From the collection"
-            title={<span id="featured-heading">The most powerful in the catalogue</span>}
-            description="Ordered by published output, as each maker states it. A figure a maker does not publish is shown as a dash, never estimated."
-            action={
-              <ButtonLink href="/cars" variant="secondary" size="sm">
-                View all
-              </ButtonLink>
-            }
-          />
           {featured.length > 0 ? (
-            <CarGrid cars={featured} className="mt-12" />
+            <HomeCarousel label="most powerful cars" heading={featuredHeading}>
+              <CarGrid cars={featured} className={CAROUSEL_TRACK} />
+            </HomeCarousel>
           ) : (
-            <p className="mt-12 border border-dashed border-line px-6 py-8 text-sm text-ink-400">
-              The collection could not be read just now. The full catalogue is one click
-              away under “View all”.
-            </p>
+            <>
+              {featuredHeading}
+              <p className="mt-10 text-body">
+                The collection could not be read just now. The full catalogue is one
+                click away under “All cars”.
+              </p>
+            </>
           )}
         </Container>
       </section>

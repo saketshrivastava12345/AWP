@@ -89,6 +89,7 @@ export function CompareStart({
                           alt=""
                           bodyType={car.bodyType}
                           powertrain={powertrainKind(car.fuelType)}
+                          caption
                           sizes="(min-width: 1440px) 300px, (min-width: 768px) 22vw, 45vw"
                           frameClassName="aspect-[16/10] w-full rounded-control [&_img]:transition-transform [&_img]:duration-(--duration-normal) [&_img]:ease-standard group-hover:[&_img]:scale-[1.03] motion-reduce:group-hover:[&_img]:scale-100"
                         />

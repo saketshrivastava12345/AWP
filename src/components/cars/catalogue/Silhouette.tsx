@@ -68,7 +68,9 @@ export function Silhouette({
         ))}
       </svg>
       {label ? (
-        <span className="relative text-caption text-ink-400">Drawing · no photograph</span>
+        <span className="relative text-caption text-ink-400">
+          Drawing · no photograph
+        </span>
       ) : (
         <span className="sr-only">Drawing, no photograph</span>
       )}

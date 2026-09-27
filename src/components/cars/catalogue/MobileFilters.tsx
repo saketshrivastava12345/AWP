@@ -6,6 +6,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { FilterPanel, type FilterPanelModel } from "@/components/cars/FilterRail";
 import { cn } from "@/lib/utils";
+import { buttonClasses } from "@/components/ui/Button";
 
 const noop = () => () => {};
 
@@ -56,18 +57,16 @@ export function MobileFilters({
               }
             : undefined
         }
-        className={cn(
-          "inline-flex h-11 items-center gap-2.5 rounded-xs border border-line-strong bg-surface-1 px-4",
-          "font-display text-micro tracking-button text-ink-100 uppercase transition-colors",
-          "hover:border-gold-500 hover:text-gold-300",
-          count > 0 && "border-gold-700",
-          className,
+        className={buttonClasses(
+          "secondary",
+          "sm",
+          cn("h-11 gap-2.5 px-4", count > 0 && "border-ink-400", className),
         )}
       >
-        <SlidersHorizontal className="size-4" aria-hidden="true" />
+        <SlidersHorizontal aria-hidden="true" />
         Filters
         {count > 0 ? (
-          <span className="tabular grid min-w-5 place-items-center rounded-full bg-gold-500 px-1.5 py-0.5 font-mono text-[10px] leading-none text-void">
+          <span className="tabular grid h-5 min-w-5 place-items-center rounded-pill bg-ink-50 px-1.5 text-xs leading-none font-medium text-void">
             {count}
             <span className="sr-only"> active</span>
           </span>

@@ -46,11 +46,11 @@ export function NoResults({
                   <Link
                     href={suggestion.href}
                     scroll={false}
-                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line-strong px-4 text-xs text-ink-200 transition-colors hover:border-gold-600 hover:text-gold-200 sm:min-h-9"
+                    className="inline-flex min-h-11 items-center gap-2 rounded-pill border border-line-strong px-4 text-body-s text-ink-100 transition-colors duration-(--duration-fast) hover:border-ink-400 hover:bg-white/5 hover:text-ink-50"
                   >
                     Remove {suggestion.label}
                     {suggestion.count !== null ? (
-                      <span className="tabular font-mono text-[10px] text-gold-400">
+                      <span className="tabular text-caption text-ink-400">
                         {formatNumber(suggestion.count)}{" "}
                         {suggestion.count === 1 ? "car" : "cars"}
                       </span>
@@ -61,7 +61,7 @@ export function NoResults({
             </ul>
           ) : null}
           {hasFilters || query ? (
-            <ButtonLink href={clearHref} variant="secondary" size="sm" scroll={false}>
+            <ButtonLink href={clearHref} variant="secondary" size="md" scroll={false}>
               {hasFilters ? "Clear all filters" : "Show every car"}
             </ButtonLink>
           ) : null}

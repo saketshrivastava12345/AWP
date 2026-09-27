@@ -37,16 +37,7 @@ export function CountryLocator({
   const id = `locator-${slug.replace(/[^a-z0-9-]/gi, "")}`;
 
   return (
-    <figure
-      className={cn(
-        "relative overflow-hidden border border-line bg-surface-1/60",
-        className,
-      )}
-    >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-2 opacity-60 hud-corners"
-      />
+    <figure className={cn("relative", className)}>
       <svg
         viewBox={`${left.toFixed(1)} ${top.toFixed(1)} ${width} ${height.toFixed(1)}`}
         className="block h-auto w-full"
@@ -70,10 +61,6 @@ export function CountryLocator({
           <clipPath id={`${id}-land`}>
             <path d={landPath()} />
           </clipPath>
-          <radialGradient id={`${id}-glow`}>
-            <stop offset="0%" stopColor="var(--color-gold-400)" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="var(--color-gold-400)" stopOpacity="0" />
-          </radialGradient>
         </defs>
         <rect
           x={left}
@@ -84,11 +71,10 @@ export function CountryLocator({
           clipPath={`url(#${id}-land)`}
         />
         {/* Crosshair through the marker. */}
-        <g stroke="var(--color-gold-700)" strokeWidth="0.6" strokeDasharray="2 4">
+        <g stroke="var(--color-line-strong)" strokeWidth="0.6" strokeDasharray="2 4">
           <line x1={left} y1={y} x2={left + width} y2={y} />
           <line x1={x} y1={top} x2={x} y2={top + height} />
         </g>
-        <circle cx={x} cy={y} r={26} fill={`url(#${id}-glow)`} />
         <circle
           cx={x}
           cy={y}
@@ -99,9 +85,9 @@ export function CountryLocator({
         />
         <circle cx={x} cy={y} r={4.5} className="fill-gold-300" />
       </svg>
-      <figcaption className="flex items-center justify-between gap-3 border-t border-line-subtle px-4 py-2.5 text-hud">
-        <span>{formatCoordinates(marker.lat, marker.lon)}</span>
-        <span className="text-ink-500">Approx. centroid</span>
+      <figcaption className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-caption">
+        <span className="tabular-nums">{formatCoordinates(marker.lat, marker.lon)}</span>
+        <span>Approximate centroid</span>
       </figcaption>
     </figure>
   );

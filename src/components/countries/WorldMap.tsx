@@ -7,10 +7,8 @@ import {
   CELL,
   MAP_HEIGHT,
   MAP_WIDTH,
-  formatCoordinates,
   hoverCardPlacement,
   landPath,
-  markerFor,
   markerRadius,
   placeMarkers,
   project,
@@ -66,24 +64,18 @@ export function WorldMap({
     title: `${uid}-title`,
     dots: `${uid}-dots`,
     land: `${uid}-land`,
-    glow: `${uid}-glow`,
   };
 
   const land = useMemo(() => landPath(), []);
   const { placed, unplaced } = useMemo(() => placeMarkers(countries), [countries]);
   const active = placed.find((marker) => marker.slug === activeSlug) ?? null;
-  const activeCoordinates = active ? markerFor(active.slug) : null;
   const card = active ? hoverCardPlacement(active.x, active.y) : null;
 
   const activeRadius = active ? markerRadius(active.country.variant_count) : 0;
 
   return (
     <figure className={cn("relative", className)}>
-      <div className="relative overflow-hidden border border-line bg-surface-1/50">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-2 opacity-60 hud-corners"
-        />
+      <div className="relative">
 
         <svg
           viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT.toFixed(2)}`}
@@ -111,10 +103,6 @@ export function WorldMap({
             <clipPath id={ids.land}>
               <path d={land} />
             </clipPath>
-            <radialGradient id={ids.glow}>
-              <stop offset="0%" stopColor="var(--color-gold-400)" stopOpacity="0.45" />
-              <stop offset="100%" stopColor="var(--color-gold-400)" stopOpacity="0" />
-            </radialGradient>
           </defs>
 
           {/* Graticule: a faint technical grid every 30 degrees. */}
@@ -153,19 +141,9 @@ export function WorldMap({
             aria-hidden="true"
           />
 
-          {/* The active marker's glow sits under every marker. The markers
-              keep a fixed DOM order (moving the focused one would break the
-              Tab order), so its highlight ring is drawn in a layer above them. */}
-          {active ? (
-            <circle
-              cx={active.x}
-              cy={active.y}
-              r={activeRadius * 3.4}
-              fill={`url(#${ids.glow})`}
-              className="pointer-events-none animate-overlay-in"
-              aria-hidden="true"
-            />
-          ) : null}
+          {/* The markers keep a fixed DOM order (moving the focused one would
+              break the Tab order), so the active highlight ring is drawn in a
+              layer above them. */}
 
           {placed.map((marker) => {
             const { country } = marker;
@@ -193,25 +171,24 @@ export function WorldMap({
                   <circle
                     r={radius + 3.5}
                     fill="none"
-                    stroke="var(--color-gold-500)"
+                    stroke={isActive ? "var(--color-gold-400)" : "var(--color-ink-400)"}
                     strokeWidth={isActive ? 1.2 : 0.8}
-                    strokeOpacity={isActive ? 0.95 : 0.35}
+                    strokeOpacity={isActive ? 0.95 : 0.4}
                     className="pointer-events-none transition-[stroke-opacity] duration-(--duration-fast)"
                   />
                   <circle
                     r={radius}
                     className={cn(
                       "pointer-events-none transition-[fill] duration-(--duration-fast)",
-                      isActive ? "fill-gold-300" : "fill-gold-600",
+                      isActive ? "fill-gold-400" : "fill-ink-200",
                     )}
                   />
                   {/* Keyboard focus ring: SVG links draw no outline of their own. */}
                   <circle
                     r={radius + 7.5}
                     fill="none"
-                    stroke="var(--color-gold-300)"
-                    strokeWidth="1.6"
-                    strokeDasharray="3 2.5"
+                    stroke="var(--color-gold-500)"
+                    strokeWidth="2"
                     className="pointer-events-none opacity-0 group-focus-visible:opacity-100"
                   />
                   {/* The hit area: a little larger than the marker (small ones
@@ -221,11 +198,10 @@ export function WorldMap({
                     x={label.x}
                     y={label.y}
                     textAnchor={label.anchor}
-                    fontSize="12"
-                    letterSpacing="1.2"
+                    fontSize="13"
                     className={cn(
-                      "font-mono transition-[fill] duration-(--duration-fast)",
-                      isActive ? "fill-gold-200" : "fill-ink-400",
+                      "font-sans transition-[fill] duration-(--duration-fast)",
+                      isActive ? "fill-ink-50" : "fill-ink-400",
                     )}
                     aria-hidden="true"
                   >
@@ -250,19 +226,6 @@ export function WorldMap({
           ) : null}
         </svg>
 
-        {/* HUD readout of the active marker. */}
-        <p
-          aria-hidden="true"
-          className="tabular pointer-events-none absolute top-3 left-3 border border-line-subtle bg-void/80 px-2.5 py-1 text-hud backdrop-blur-sm"
-        >
-          {active && activeCoordinates
-            ? `${active.country.iso_code} · ${formatCoordinates(
-                activeCoordinates.lat,
-                activeCoordinates.lon,
-              )}`
-            : "Hover or focus a marker"}
-        </p>
-
         {/* Hover card. Informational only (the marker is the link), so it never
             takes the pointer and screen readers get the marker's label instead. */}
         {active && card ? (
@@ -277,48 +240,32 @@ export function WorldMap({
               })`,
             }}
           >
-            <div className="edge-light border border-line-strong bg-surface-2/95 p-4 shadow-2xl shadow-black/50 backdrop-blur-md">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl leading-none">{active.country.flag_emoji}</span>
-                <div className="min-w-0">
-                  <p className="truncate font-display text-xs tracking-button text-ink-50 uppercase">
-                    {active.country.name}
-                  </p>
-                  <p className="mt-1 text-hud">{active.country.iso_code}</p>
-                </div>
-              </div>
-              <dl className="mt-4 space-y-1.5 border-t border-line-subtle pt-3">
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt className="text-label text-[9px]">Manufacturers</dt>
-                  <dd className="tabular font-mono text-sm text-ink-50">
-                    {active.country.manufacturer_count}
-                  </dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt className="text-label text-[9px]">Cars</dt>
-                  <dd className="tabular font-mono text-sm text-ink-50">
-                    {active.country.variant_count}
-                  </dd>
-                </div>
-              </dl>
+            <div className="rounded-card border border-line bg-surface-2 p-4 shadow-overlay">
+              <p className="flex items-center gap-2.5 text-h4">
+                <span className="text-xl leading-none">{active.country.flag_emoji}</span>
+                <span className="min-w-0 truncate">{active.country.name}</span>
+              </p>
+              <p className="mt-1 text-caption">
+                {active.country.manufacturer_count}{" "}
+                {active.country.manufacturer_count === 1 ? "brand" : "brands"} ·{" "}
+                {active.country.variant_count}{" "}
+                {active.country.variant_count === 1 ? "car" : "cars"}
+              </p>
               {active.country.makers.length > 0 ? (
-                <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-ink-300">
+                <p className="mt-3 line-clamp-2 text-body-s text-ink-200">
                   {active.country.makers.map((maker) => maker.name).join(" · ")}
                 </p>
               ) : null}
-              <p className="mt-3 font-display text-[9px] tracking-hud text-gold-300 uppercase">
-                Open country →
-              </p>
             </div>
           </div>
         ) : null}
       </div>
 
-      <figcaption className="mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-xs text-ink-500">
+      <figcaption className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-caption">
         <span className="inline-flex items-center gap-2">
           <svg viewBox="0 0 34 12" className="h-3 w-8" aria-hidden="true">
-            <circle cx="5" cy="6" r="2.5" className="fill-gold-600" />
-            <circle cx="22" cy="6" r="5" className="fill-gold-600" />
+            <circle cx="5" cy="6" r="2.5" className="fill-ink-200" />
+            <circle cx="22" cy="6" r="5" className="fill-ink-200" />
           </svg>
           Marker area grows with the number of catalogued cars.
         </span>

@@ -46,44 +46,33 @@ export function CompareWith({
       <DetailHeading
         id={headingId}
         level={headingLevel}
-        eyebrow="Compare"
         title="Compare with"
         description={`Put the ${self.name} side by side with another car — every published figure, row by row, with nothing converted or estimated.`}
       />
 
-      <ul className="mt-6 grid gap-px overflow-hidden rounded-xs border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="mt-8 grid gap-x-8 sm:grid-cols-2 lg:grid-cols-4">
         {offered.map((rival) => (
-          <li key={rival.slug} className="bg-void">
-            <Link
-              href={compareHref([self.slug, rival.slug])}
-              className="group/compare flex h-full min-h-20 flex-col justify-between gap-3 px-5 py-4 transition-colors duration-(--duration-fast) hover:bg-surface-1"
-            >
-              <span className="text-hud text-ink-500">vs</span>
-              <span className="flex items-center justify-between gap-3 text-sm leading-snug text-ink-100 group-hover/compare:text-gold-200">
-                <span className="min-w-0">
+          <li key={rival.slug} className="border-t border-line">
+            <Link href={compareHref([self.slug, rival.slug])} className={ROW}>
+              <span className="text-caption">vs</span>
+              <span className="flex items-start justify-between gap-3">
+                <span className="min-w-0 text-h4 text-ink-100 transition-colors duration-(--duration-fast) group-hover/compare:text-ink-50">
                   <span className="sr-only">Compare the {self.name} with the </span>
                   {rival.name}
                 </span>
-                <ArrowLeftRight
-                  className="size-3.5 shrink-0 text-ink-500 group-hover/compare:text-gold-300"
-                  aria-hidden="true"
-                />
+                <ArrowLeftRight className={ICON} aria-hidden="true" />
               </span>
             </Link>
           </li>
         ))}
-        <li className="bg-void">
-          <Link
-            href={compareHref([self.slug])}
-            className="group/compare flex h-full min-h-20 flex-col justify-between gap-3 px-5 py-4 transition-colors duration-(--duration-fast) hover:bg-surface-1"
-          >
-            <span className="text-hud text-gold-400">Any car</span>
-            <span className="flex items-center justify-between gap-3 text-sm leading-snug text-ink-100 group-hover/compare:text-gold-200">
-              <span>Choose from the catalogue</span>
-              <ArrowRight
-                className="size-3.5 shrink-0 text-ink-500 group-hover/compare:text-gold-300"
-                aria-hidden="true"
-              />
+        <li className="border-t border-line">
+          <Link href={compareHref([self.slug])} className={ROW}>
+            <span className="text-caption">Any car</span>
+            <span className="flex items-start justify-between gap-3">
+              <span className="text-h4 text-ink-100 transition-colors duration-(--duration-fast) group-hover/compare:text-ink-50">
+                Choose from the catalogue
+              </span>
+              <ArrowRight className={ICON} aria-hidden="true" />
             </span>
           </Link>
         </li>
@@ -91,3 +80,11 @@ export function CompareWith({
     </section>
   );
 }
+
+const ROW =
+  "group/compare flex h-full min-h-24 flex-col justify-between gap-2 py-5 " +
+  "transition-colors duration-(--duration-fast)";
+
+const ICON =
+  "mt-1 size-4 shrink-0 text-ink-400 transition-[color,translate] duration-(--duration-base) " +
+  "group-hover/compare:translate-x-1 group-hover/compare:text-ink-50 motion-reduce:group-hover/compare:translate-x-0";

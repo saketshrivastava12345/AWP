@@ -23,7 +23,7 @@ export function CountryAtlas({ countries }: { countries: CountryListItem[] }) {
         className="hidden md:block"
       />
 
-      <ul className="mt-10 grid gap-4 sm:grid-cols-2 md:mt-14 lg:grid-cols-3">
+      <ul className="mt-10 grid gap-4 sm:grid-cols-2 sm:gap-6 md:mt-16 lg:grid-cols-3">
         {countries.map((country) => (
           <li key={country.id}>
             <CountryCard

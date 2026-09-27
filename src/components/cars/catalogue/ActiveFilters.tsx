@@ -33,21 +33,14 @@ export function ActiveFilters({
               href={chip.href}
               scroll={false}
               className={cn(
-                "group/chip inline-flex min-h-11 max-w-full items-center gap-2 rounded-full border py-1 pr-2.5 pl-3.5 text-xs sm:min-h-8",
-                "transition-colors duration-(--duration-fast)",
-                chip.source === "text"
-                  ? "border-line bg-transparent text-ink-200 hover:border-ink-500"
-                  : "border-gold-800 bg-gold-800/10 text-gold-200 hover:border-gold-600",
+                // 36px drawn, 44px to touch.
+                "group/chip relative inline-flex h-9 max-w-full items-center gap-2 rounded-pill border border-line-strong py-1 pr-3 pl-3.5 text-body-s text-ink-100",
+                "after:absolute after:inset-x-0 after:-inset-y-1 after:content-['']",
+                "transition-colors duration-(--duration-fast) ease-standard hover:border-ink-400 hover:bg-white/5 hover:text-ink-50",
               )}
             >
               {chip.source !== "filter" ? (
-                <Search
-                  className={cn(
-                    "size-3 shrink-0",
-                    chip.source === "search" ? "text-gold-400" : "text-ink-400",
-                  )}
-                  aria-hidden="true"
-                />
+                <Search className="size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
               ) : null}
               <span className="truncate">{chip.label}</span>
               <span className="sr-only">
@@ -58,7 +51,7 @@ export function ActiveFilters({
                     : " — remove filter"}
               </span>
               <X
-                className="size-3.5 shrink-0 text-ink-400 transition-colors group-hover/chip:text-ink-50"
+                className="size-4 shrink-0 text-ink-400 transition-colors group-hover/chip:text-ink-50"
                 aria-hidden="true"
               />
             </Link>
@@ -69,7 +62,7 @@ export function ActiveFilters({
         <Link
           href={clearHref}
           scroll={false}
-          className="inline-flex min-h-11 items-center px-2 text-xs text-ink-400 underline-offset-4 transition-colors hover:text-gold-300 hover:underline sm:min-h-8"
+          className="inline-flex min-h-11 items-center px-2 text-body-s text-ink-200 underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink-50 hover:decoration-ink-400"
         >
           Clear all
         </Link>

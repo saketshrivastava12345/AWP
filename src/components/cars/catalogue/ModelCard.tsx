@@ -31,7 +31,9 @@ export function ModelCard({
   className?: string;
 }) {
   const years =
-    model.years.start !== null ? formatYearSpan(model.years.start, model.years.end) : null;
+    model.years.start !== null
+      ? formatYearSpan(model.years.start, model.years.end)
+      : null;
   const meta = [
     years ? `Model years ${years}` : null,
     model.generations.map((generation) => generation.name).join(", ") || null,
@@ -49,7 +51,7 @@ export function ModelCard({
     <article
       className={cn(
         "group/card relative isolate flex h-full flex-col overflow-hidden rounded-card bg-surface-1",
-        "transition-colors duration-(--duration-base) ease-standard hover:bg-surface-2 focus-within:bg-surface-2",
+        "transition-colors duration-(--duration-base) ease-standard focus-within:bg-surface-2 hover:bg-surface-2",
         className,
       )}
     >
@@ -82,7 +84,10 @@ export function ModelCard({
         </h3>
         {meta ? <p className="mt-1 text-body-s text-ink-400">{meta}</p> : null}
 
-        <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Body style and powertrains">
+        <ul
+          className="mt-4 flex flex-wrap gap-1.5"
+          aria-label="Body style and powertrains"
+        >
           <li>
             <Badge>{BODY_LABELS[model.bodyType]}</Badge>
           </li>
