@@ -54,7 +54,7 @@ export function CarDNA({
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,18rem)_1fr] lg:gap-16">
         {shown.length >= 3 ? (
-          <Reveal variant="scale" className="mx-auto w-full max-w-[18rem] lg:mx-0">
+          <Reveal variant="scale" className="mx-auto w-full max-w-[18rem] px-8 lg:mx-0">
             <Radar metrics={shown} />
           </Reveal>
         ) : null}
@@ -141,7 +141,7 @@ function Radar({ metrics }: { metrics: (DnaMetric & { value: number })[] }) {
   return (
     <svg
       viewBox={`0 0 ${size} ${size}`}
-      className="h-auto w-full"
+      className="h-auto w-full overflow-visible"
       role="img"
       aria-label={`Car DNA radar: ${metrics
         .map((metric) => `${metric.label} ${ordinal(metric.value)} percentile`)

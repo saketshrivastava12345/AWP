@@ -35,7 +35,10 @@ describe("highlightCards", () => {
     expect(
       highlightCards(
         variant({
-          variant: { fuel_type: "petrol", drive_type: null } as VariantDetail["variant"],
+          variant: {
+            fuel_type: "petrol",
+            drive_type: null,
+          } as unknown as VariantDetail["variant"],
         }),
       ),
     ).toEqual([]);
@@ -83,9 +86,15 @@ describe("highlightCards", () => {
   it("never gives an electric car an engine card, and never a petrol car an electric one", () => {
     const ev = highlightCards(
       variant({
-        variant: { fuel_type: "electric", drive_type: "awd" } as VariantDetail["variant"],
-        engine: { configuration: "V8", displacement_cc: 4000 } as VariantDetail["engine"],
-        ev: { battery_kwh: 100, range_km: 600 } as VariantDetail["ev"],
+        variant: {
+          fuel_type: "electric",
+          drive_type: "awd",
+        } as unknown as VariantDetail["variant"],
+        engine: {
+          configuration: "V8",
+          displacement_cc: 4000,
+        } as unknown as VariantDetail["engine"],
+        ev: { battery_kwh: 100, range_km: 600 } as unknown as VariantDetail["ev"],
       }),
     );
     expect(ev.map((card) => card.id)).toEqual([
@@ -94,7 +103,7 @@ describe("highlightCards", () => {
     ]);
 
     const petrol = highlightCards(
-      variant({ ev: { battery_kwh: 100 } as VariantDetail["ev"] }),
+      variant({ ev: { battery_kwh: 100 } as unknown as VariantDetail["ev"] }),
     );
     expect(petrol.map((card) => card.id)).toEqual(["highlight-drivetrain"]);
   });
@@ -139,7 +148,7 @@ describe("buildShowcaseCards", () => {
   it("puts the car's own numbers first, then its features", () => {
     const cards = buildShowcaseCards(
       variant({
-        performance: { top_speed_kmh: 250 } as VariantDetail["performance"],
+        performance: { top_speed_kmh: 250 } as unknown as VariantDetail["performance"],
         features: [
           {
             feature: {

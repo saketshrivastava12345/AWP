@@ -200,6 +200,13 @@ export function AutoScaleNumberInput({
     }
     const scale = needed > 0 ? Math.min(1, available / needed) : 1;
     const size = Math.max(minFontSize, Math.floor(maxFontSize * scale * 100) / 100);
+    // Shrink instantly, grow smoothly: while a transition is still shrinking
+    // the text it overflows the box and the input scrolls to keep the caret
+    // in view, hiding the leading digits for a moment. A snap on the same
+    // keystroke is invisible; the ease back up on deletion is the pleasant
+    // part.
+    const current = parseFloat(row.style.fontSize) || maxFontSize;
+    row.style.transitionProperty = size < current ? "none" : "";
     row.style.fontSize = `${size}px`;
   }, [display, placeholder, prefix, suffix, maxFontSize, minFontSize]);
 

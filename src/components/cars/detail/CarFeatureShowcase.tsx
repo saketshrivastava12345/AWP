@@ -179,7 +179,7 @@ export function CarFeatureShowcase({
           </div>
 
           {/* ------------------------------------------------ Track */}
-          <div className="mt-5 [html.js_&]:overflow-hidden">
+          <div className="mt-3 py-2 [html.js_&]:overflow-hidden">
             <ul
               ref={trackRef}
               aria-live="polite"

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useId, useMemo, useState } from "react";
 import { ArrowRight, Search, SearchX, X } from "lucide-react";
-import { Input } from "@/components/ui/Field";
+import { AnimatedCaretInput } from "@/components/inputs/AnimatedCaretInput";
 import { IconButton } from "@/components/ui/IconButton";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { ScrambleText } from "@/components/fx/ScrambleText";
@@ -94,7 +94,9 @@ export function PartsExplorer({ categories }: { categories: ExplorerCategory[] }
               className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-ink-400"
               aria-hidden="true"
             />
-            <Input
+            {/* The glowing caret glides to the cursor (native caret under
+                reduced motion); the field itself is a plain input. */}
+            <AnimatedCaretInput
               id={inputId}
               type="search"
               value={query}
@@ -109,7 +111,14 @@ export function PartsExplorer({ categories }: { categories: ExplorerCategory[] }
               autoComplete="off"
               spellCheck={false}
               aria-describedby={countId}
-              className="h-11 pr-12 pl-10 [&::-webkit-search-cancel-button]:appearance-none"
+              wrapperClassName="w-full"
+              caretClassName="bg-cyan-300 shadow-[0_0_8px_var(--color-cyan-400)]"
+              className={cn(
+                "h-11 w-full min-w-0 rounded-control border border-line-strong bg-surface-1/80 pr-12 pl-10",
+                "text-[15px] text-ink-50 transition-colors duration-(--duration-fast) placeholder:text-ink-500",
+                "hover:border-cyan-700 focus-visible:border-cyan-300 focus-visible:shadow-[0_0_0_3px_oklch(0.83_0.13_210/18%),0_0_18px_-4px_oklch(0.8_0.14_210/45%)]",
+                "[&::-webkit-search-cancel-button]:appearance-none",
+              )}
             />
             {query ? (
               <IconButton
