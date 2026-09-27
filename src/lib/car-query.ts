@@ -90,11 +90,11 @@ export const SORT_OPTIONS = {
   "range-desc": {
     label: "Range",
     description: "Longest range",
-    // Grouped by test cycle first (WLTP, NEDC, EPA, CLTC, ARAI — reverse
-    // alphabetical), longest within each: an ARAI figure is not ranked
+    // Grouped by test cycle first (in the enum's declared order: WLTP, EPA,
+    // ARAI, NEDC, CLTC), longest within each: an ARAI figure is not ranked
     // against a WLTP one, the same rule the compare page applies.
     orders: [
-      { column: "range_standard", ascending: false },
+      { column: "range_standard", ascending: true },
       { column: "range_km", ascending: false },
     ],
   },

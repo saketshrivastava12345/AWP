@@ -228,7 +228,7 @@ export default async function ManufacturerPage({
           <StatCard
             label="Power range"
             value={power ? powerLabel(power) : null}
-            unit={power ? "hp" : undefined}
+            unit={power ? "PS / hp" : undefined}
             hint={
               power
                 ? `Lowest and highest published output across ${power.count} of ${cars.length} variants, as the maker publishes it: European makers quote metric PS, US and Japanese makers SAE net hp.`

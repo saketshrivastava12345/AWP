@@ -18,7 +18,11 @@ export type ToastInput = {
   title: string;
   description?: string;
   tone?: ToastTone;
-  /** Milliseconds; 0 keeps it until dismissed. Default 4000. */
+  /**
+   * Milliseconds; 0 keeps it until dismissed. Default 4000, or 0 for errors,
+   * which must stay until read (WCAG 2.2.1). The timer pauses while the toast
+   * is hovered or holds focus.
+   */
   duration?: number;
 };
 
@@ -34,19 +38,41 @@ const ToastContext = createContext<((toast: ToastInput) => void) | null>(null);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
+  const timers = useRef(new Map<number, number>());
 
   const dismiss = useCallback((id: number) => {
+    const timer = timers.current.get(id);
+    if (timer !== undefined) window.clearTimeout(timer);
+    timers.current.delete(id);
     setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
+
+  const startTimer = useCallback(
+    (id: number, duration: number) => {
+      if (duration <= 0) return;
+      const previous = timers.current.get(id);
+      if (previous !== undefined) window.clearTimeout(previous);
+      timers.current.set(
+        id,
+        window.setTimeout(() => dismiss(id), duration),
+      );
+    },
+    [dismiss],
+  );
+
+  const pauseTimer = useCallback((id: number) => {
+    const timer = timers.current.get(id);
+    if (timer !== undefined) window.clearTimeout(timer);
+    timers.current.delete(id);
   }, []);
 
   const push = useCallback(
     (toast: ToastInput) => {
       const id = nextId.current++;
       setToasts((current) => [...current.slice(-3), { ...toast, id }]);
-      const duration = toast.duration ?? 4000;
-      if (duration > 0) window.setTimeout(() => dismiss(id), duration);
+      startTimer(id, durationOf(toast));
     },
-    [dismiss],
+    [startTimer],
   );
 
   const value = useMemo(() => push, [push]);
@@ -70,6 +96,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={toast.id}
               role={toast.tone === "error" ? "alert" : "status"}
+              onMouseEnter={() => pauseTimer(toast.id)}
+              onMouseLeave={(event) => {
+                if (!event.currentTarget.contains(document.activeElement)) {
+                  startTimer(toast.id, durationOf(toast));
+                }
+              }}
+              onFocus={() => pauseTimer(toast.id)}
+              onBlur={(event) => {
+                const next = event.relatedTarget;
+                if (!(next instanceof Node && event.currentTarget.contains(next))) {
+                  startTimer(toast.id, durationOf(toast));
+                }
+              }}
               className={cn(
                 "pointer-events-auto flex w-full max-w-sm animate-panel-in items-start gap-3 rounded-md border",
                 "bg-surface-2/95 px-4 py-3 shadow-[0_18px_50px_-20px_rgb(0_0_0/0.9)] backdrop-blur-md",
@@ -122,3 +161,7 @@ export function useToast(): (toast: ToastInput) => void {
 }
 
 function noop() {}
+
+function durationOf(toast: ToastInput): number {
+  return toast.duration ?? (toast.tone === "error" ? 0 : 4000);
+}

@@ -44,10 +44,18 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <div className={cn("edge-light bg-surface-1/60 px-5 py-6", className)}>
-      <dt className="flex items-center gap-1.5 text-label">
-        {label}
+      {/* The 20px hint button is pulled into the 15px label line box with
+          negative margin, so hinted and plain labels are the same height and
+          the values beneath them line up. A long label wraps instead of
+          overflowing a narrow card. */}
+      <dt className="flex min-w-0 items-start gap-1.5 text-label">
+        <span className="min-w-0 break-words">{label}</span>
         {hint ? (
-          <InfoHint label={`About ${label}`} side="bottom" className="font-sans">
+          <InfoHint
+            label={`About ${label}`}
+            side="bottom"
+            className="-my-[2.5px] shrink-0 font-sans"
+          >
             {hint}
           </InfoHint>
         ) : null}

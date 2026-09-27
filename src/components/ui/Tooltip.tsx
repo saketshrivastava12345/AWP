@@ -40,6 +40,8 @@ export function Tooltip({
   const id = useId();
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const [focused, setFocused] = useState(false);
+  // Escape hides the bubble without moving focus or hover (WCAG 1.4.13).
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     const trigger = wrapperRef.current?.querySelector<HTMLElement>(FOCUSABLE);
@@ -59,8 +61,18 @@ export function Tooltip({
       ref={wrapperRef}
       className={cn("group/tip relative inline-flex", className)}
       // Focus events bubble in React, so this sees focus on any trigger.
-      onFocus={() => setFocused(true)}
+      onFocus={() => {
+        setFocused(true);
+        setDismissed(false);
+      }}
       onBlur={() => setFocused(false)}
+      onMouseEnter={() => setDismissed(false)}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && !dismissed) {
+          setDismissed(true);
+          event.stopPropagation();
+        }
+      }}
     >
       {children}
       <span
@@ -77,6 +89,8 @@ export function Tooltip({
           side === "bottom" && "top-[calc(100%+6px)] left-1/2 -translate-x-1/2",
           side === "left" && "top-1/2 right-[calc(100%+6px)] -translate-y-1/2",
           side === "right" && "top-1/2 left-[calc(100%+6px)] -translate-y-1/2",
+          // Last, so it wins over both the hover and the focus rule.
+          dismissed && "hidden group-hover/tip:hidden",
         )}
       >
         {content}

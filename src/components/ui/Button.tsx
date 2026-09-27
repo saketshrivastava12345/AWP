@@ -47,7 +47,7 @@ type SharedProps = {
 
 type ButtonProps = SharedProps &
   ComponentProps<"button"> & {
-    /** Shows a spinner, disables the button and marks it busy. */
+    /** Shows a spinner, blocks activation and marks it busy (focus is kept). */
     loading?: boolean;
   };
 
@@ -59,14 +59,23 @@ export function Button({
   type = "button",
   loading = false,
   disabled,
+  onClick,
   ...props
 }: ButtonProps) {
+  // While loading the button stays focusable (aria-disabled, not disabled):
+  // disabling the focused element would drop keyboard focus to <body>.
   return (
     <button
       type={type}
-      className={buttonClasses(variant, size, className)}
-      disabled={disabled || loading}
+      className={buttonClasses(
+        variant,
+        size,
+        cn(loading && "pointer-events-none opacity-40", className),
+      )}
+      disabled={disabled}
+      aria-disabled={loading || undefined}
       aria-busy={loading || undefined}
+      onClick={loading ? (event) => event.preventDefault() : onClick}
       {...props}
     >
       {loading ? (

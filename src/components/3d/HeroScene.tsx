@@ -96,7 +96,7 @@ const SCRATCH = {
 const IDLE_FPS = 30;
 
 const BASE_FOV = 32;
-const PORTRAIT_FOV = 44;
+const PORTRAIT_FOV = 32;
 const toRadians = Math.PI / 180;
 
 /**
