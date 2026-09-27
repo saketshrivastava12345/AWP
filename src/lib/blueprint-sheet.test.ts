@@ -93,7 +93,11 @@ describe("blueprintSheet — proportions follow the published dimensions", () =>
   });
 
   it("emits finite path data only", () => {
-    for (const input of [carreraS, suv, { ...carreraS, bodyType: "pickup", lengthMm: null }]) {
+    for (const input of [
+      carreraS,
+      suv,
+      { ...carreraS, bodyType: "pickup", lengthMm: null },
+    ]) {
       for (const v of blueprintSheet(input).views) {
         for (const shape of v.shapes) {
           expect(shape.d).not.toMatch(/NaN|Infinity/);
@@ -154,7 +158,10 @@ describe("blueprintSheet — dimension lines", () => {
     expect(dims(sheet)).toEqual([]);
     expect(sheet.missing).toEqual(["length", "width", "height", "wheelbase"]);
     // Still a whole drawing, at the pickup's typical size.
-    expect(span(xs(sheet.outlines.side))).toBeCloseTo(FALLBACK_SIZE.pickup.length * 1000, 3);
+    expect(span(xs(sheet.outlines.side))).toBeCloseTo(
+      FALLBACK_SIZE.pickup.length * 1000,
+      3,
+    );
     expect(sheet.views).toHaveLength(4);
   });
 
@@ -174,7 +181,9 @@ describe("blueprintSheet — dimension lines", () => {
   });
 
   it("dimensions a track only when the data has one", () => {
-    expect(dims(blueprintSheet(carreraS)).some((d) => d.id.endsWith("Track"))).toBe(false);
+    expect(dims(blueprintSheet(carreraS)).some((d) => d.id.endsWith("Track"))).toBe(
+      false,
+    );
     const sheet = blueprintSheet({ ...carreraS, frontTrackMm: 1590 });
     const tracks = dims(sheet).filter((d) => d.id.endsWith("Track"));
     expect(tracks.map((d) => `${d.view}:${d.id}=${d.valueMm}`)).toEqual([

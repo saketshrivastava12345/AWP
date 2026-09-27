@@ -56,14 +56,7 @@ export type ViewId = "side" | "front" | "top" | "rear";
  *   ground  the ground line
  */
 export type ShapeRole =
-  | "body"
-  | "near"
-  | "glass"
-  | "tyre"
-  | "detail"
-  | "hidden"
-  | "centre"
-  | "ground";
+  "body" | "near" | "glass" | "tyre" | "detail" | "hidden" | "centre" | "ground";
 
 export type SheetShape = { role: ShapeRole; d: string };
 
@@ -183,7 +176,10 @@ function catmull(points: readonly P[], segment: number, t: number): P {
   const t3 = t2 * t;
   const f = (a: number, b: number, c: number, d: number) =>
     0.5 *
-    (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+    (2 * b +
+      (-a + c) * t +
+      (2 * a - 5 * b + 4 * c - d) * t2 +
+      (-a + 3 * b - 3 * c + d) * t3);
   return [f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])];
 }
 
@@ -210,7 +206,11 @@ function evalCatmull(points: readonly P[], weights: readonly number[], t: number
     target -= weights[segment] ?? 1;
     segment += 1;
   }
-  return catmull(points, segment, Math.min(1, Math.max(0, target / (weights[segment] ?? 1))));
+  return catmull(
+    points,
+    segment,
+    Math.min(1, Math.max(0, target / (weights[segment] ?? 1))),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -295,8 +295,10 @@ function loft(geometry: DrawingGeometry) {
     let bottom = GC;
     const frontStart = frontAxleX + arch;
     const rearStart = rearAxleX - arch;
-    if (x > frontStart) bottom += def.chin * H * smooth((x - frontStart) / (L - frontStart));
-    else if (x < rearStart) bottom += def.tailLift * H * smooth((rearStart - x) / rearStart);
+    if (x > frontStart)
+      bottom += def.chin * H * smooth((x - frontStart) / (L - frontStart));
+    else if (x < rearStart)
+      bottom += def.tailLift * H * smooth((rearStart - x) / rearStart);
     let sill = bottom;
     bottom = Math.max(bottom, over);
 
@@ -357,7 +359,8 @@ function loft(geometry: DrawingGeometry) {
     const [x, y] = evalCatmull(sidePoints(s), SIDE_WEIGHTS, t);
     return [x, Math.min(s.belt, Math.max(y, s.bottom))];
   };
-  const glassAt = (s: Section, t: number): P => evalCatmull(glassPoints(s), GLASS_WEIGHTS, t);
+  const glassAt = (s: Section, t: number): P =>
+    evalCatmull(glassPoints(s), GLASS_WEIGHTS, t);
 
   /** The right half of a cross-section, from the underside centre round to the roof centre. */
   const halfSection = (s: Section): P[] => {
@@ -413,7 +416,10 @@ function endOnOutline(sections: readonly P[][], rays = 300): P[] {
   const angles = new Set<number>();
   for (let k = 1; k < rays; k += 1) angles.add(-Math.PI / 2 + (Math.PI * k) / rays);
   for (const poly of sections) {
-    const widest = poly.reduce<P | null>((best, p) => (!best || p[0] > best[0] ? p : best), null);
+    const widest = poly.reduce<P | null>(
+      (best, p) => (!best || p[0] > best[0] ? p : best),
+      null,
+    );
     if (widest && widest[0] > 1) angles.add(Math.atan2(widest[1] - cy, widest[0]));
   }
   const out: P[] = [[0, minY]];
@@ -567,10 +573,7 @@ function roundedRect(
   return points;
 }
 
-function gridPaths(
-  box: SheetView["viewBox"],
-  step: number,
-): string {
+function gridPaths(box: SheetView["viewBox"], step: number): string {
   const parts: string[] = [];
   const x0 = Math.ceil(box.x / step) * step;
   const y0 = Math.ceil(box.y / step) * step;
@@ -616,7 +619,10 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
     for (let k = -4; k <= 4; k += 1) stations.add((axle + (k / 4) * arch * 1.05) / L);
   }
   // The roof's highest knot, so the silhouette reaches the published height.
-  const peak = def.roof.reduce((best, k) => (k[1] > best[1] ? k : best), def.roof[0] ?? [0.5, 1]);
+  const peak = def.roof.reduce(
+    (best, k) => (k[1] > best[1] ? k : best),
+    def.roof[0] ?? [0.5, 1],
+  );
   stations.add(peak[0]);
   const us = [...stations].filter((u) => u >= 0 && u <= 1).sort((a, b) => a - b);
   const sections = us.map((u) => body.section(u));
@@ -625,12 +631,19 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
   const frontStartU = (frontAxleX + arch) / L;
   const rearStartU = (rearAxleX - arch) / L;
   const silhouetteHalf = endOnOutline(halves);
-  const noseHalf = endOnOutline(halves.filter((_, i) => (sections[i]?.u ?? 0) >= frontStartU));
-  const tailHalf = endOnOutline(halves.filter((_, i) => (sections[i]?.u ?? 1) <= rearStartU));
+  const noseHalf = endOnOutline(
+    halves.filter((_, i) => (sections[i]?.u ?? 0) >= frontStartU),
+  );
+  const tailHalf = endOnOutline(
+    halves.filter((_, i) => (sections[i]?.u ?? 1) <= rearStartU),
+  );
   const silhouette = mirrored(silhouetteHalf);
 
   const silhouetteTop = silhouetteHalf.reduce((m, p) => Math.max(m, p[1]), 0);
-  const widestAt = silhouetteHalf.reduce<P>((best, p) => (p[0] > best[0] ? p : best), [0, 0]);
+  const widestAt = silhouetteHalf.reduce<P>(
+    (best, p) => (p[0] > best[0] ? p : best),
+    [0, 0],
+  );
 
   // Mirrors (body-geometry.ts): on the glass band just behind the cowl.
   const mirrorU = def.cowl - 0.028;
@@ -660,7 +673,8 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
   };
   const frontRows = endRows(frontTrackMm !== null);
   const rearRows = endRows(rearTrackMm !== null);
-  const below = (rows: number) => (rows === 0 ? EDGE : FIRST + ROW * (rows - 1) + LABEL + 60);
+  const below = (rows: number) =>
+    rows === 0 ? EDGE : FIRST + ROW * (rows - 1) + LABEL + 60;
   const beside = (drawn: boolean) => (drawn ? FIRST + LABEL + 60 : EDGE);
 
   const col1Need = Math.max(L + 2 * EDGE, EDGE + L + beside(published.width));
@@ -694,7 +708,10 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
     from,
     to,
     extensions,
-    label: placement === "beside" ? [to[0], (from[1] + to[1]) / 2] : [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2],
+    label:
+      placement === "beside"
+        ? [to[0], (from[1] + to[1]) / 2]
+        : [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2],
     placement,
   });
   const figure = (value: number | null | undefined) => positive(value) ?? 0;
@@ -703,7 +720,10 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
   const sideMap: Map2 = ([x, y]) => [x, -y];
   const side: SheetShape[] = [];
   side.push({ role: "ground", d: `M${f1(-EDGE * 0.6)} 0H${f1(L + EDGE * 0.6)}` });
-  side.push({ role: "body", d: polyPath(simplify([...geometry.side.body], 0.8), sideMap) });
+  side.push({
+    role: "body",
+    d: polyPath(simplify([...geometry.side.body], 0.8), sideMap),
+  });
 
   // Side glass, split at the B-pillar, with the slanted rear edge of the
   // 3D model's windows (car-shape.ts windowsOf).
@@ -743,7 +763,9 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
     geometry.style !== "gt" &&
     geometry.style !== "sports-rear" &&
     geometry.style !== "supercar";
-  const cuts = fourDoor ? [doorFront, doorRear, def.glassRear[0] + 0.012] : [doorFront, doorRear];
+  const cuts = fourDoor
+    ? [doorFront, doorRear, def.glassRear[0] + 0.012]
+    : [doorFront, doorRear];
   const shut: string[] = [];
   for (const u of cuts) {
     const s = body.section(u);
@@ -753,7 +775,9 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
     const hi = Math.min(s.belt - 15, mid + half);
     if (hi > lo) shut.push(`M${f1(u * L)} ${f1(-lo)}V${f1(-hi)}`);
   }
-  const handles = fourDoor ? [doorRear + 0.03, def.glassRear[0] + 0.04] : [doorRear + 0.035];
+  const handles = fourDoor
+    ? [doorRear + 0.03, def.glassRear[0] + 0.04]
+    : [doorRear + 0.035];
   for (const u of handles) {
     const [, y] = body.sideAt(body.section(u), 0.84);
     shut.push(polyPath(roundedRect(u * L, y, 130, 24, 12), sideMap));
@@ -797,14 +821,16 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
   }
 
   // Wheels: tyre, rim, hub and spokes in the style's pattern.
-  const spokeCount =
-    def.spokes === "six" ? 6 : def.spokes === "mesh" ? 10 : 5;
+  const spokeCount = def.spokes === "six" ? 6 : def.spokes === "mesh" ? 10 : 5;
   for (const wheel of geometry.side.wheels) {
     const cx = wheel.cx;
     const cy = -wheel.cy;
     side.push({ role: "tyre", d: ellipsePath(cx, cy, wheel.r, wheel.r) });
     const hub = wheel.rim * 0.2;
-    const spokes: string[] = [ellipsePath(cx, cy, wheel.rim, wheel.rim), ellipsePath(cx, cy, hub, hub)];
+    const spokes: string[] = [
+      ellipsePath(cx, cy, wheel.rim, wheel.rim),
+      ellipsePath(cx, cy, hub, hub),
+    ];
     for (let k = 0; k < spokeCount; k += 1) {
       const base = (k / spokeCount) * Math.PI * 2 - Math.PI / 2;
       const offsets = def.spokes === "twin" ? [-0.09, 0.09] : [0];
@@ -824,23 +850,47 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
   const axleTop = -(tyreR * 2 + 120);
   side.push({
     role: "centre",
-    d: [rearAxleX, frontAxleX].map((x) => `M${f1(x)} ${f1(axleTop)}V${f1(axleBottom)}`).join(" "),
+    d: [rearAxleX, frontAxleX]
+      .map((x) => `M${f1(x)} ${f1(axleTop)}V${f1(axleBottom)}`)
+      .join(" "),
   });
 
   const sideDims: SheetDimension[] = [];
   if (published.wheelbase) {
     const y = sideRowY("wheelbase");
     sideDims.push(
-      dimension("wheelbase", "WB", figure(input.wheelbaseMm), "horizontal", [rearAxleX, y], [frontAxleX, y], []),
+      dimension(
+        "wheelbase",
+        "WB",
+        figure(input.wheelbaseMm),
+        "horizontal",
+        [rearAxleX, y],
+        [frontAxleX, y],
+        [],
+      ),
     );
   }
   if (published.length) {
     const y = sideRowY("length");
     sideDims.push(
-      dimension("length", "L", figure(input.lengthMm), "horizontal", [0, y], [L, y], [
-        [[0, GAP], [0, y + OVERSHOOT]],
-        [[L, GAP], [L, y + OVERSHOOT]],
-      ]),
+      dimension(
+        "length",
+        "L",
+        figure(input.lengthMm),
+        "horizontal",
+        [0, y],
+        [L, y],
+        [
+          [
+            [0, GAP],
+            [0, y + OVERSHOOT],
+          ],
+          [
+            [L, GAP],
+            [L, y + OVERSHOOT],
+          ],
+        ],
+      ),
     );
   }
   if (published.groundClearance) {
@@ -879,12 +929,21 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
     ),
   );
   top.push({ role: "hidden", d: planTyres.join(" ") });
-  top.push({ role: "body", d: polyPath(simplify([...geometry.plan.outline], 0.8), topMap) });
+  top.push({
+    role: "body",
+    d: polyPath(simplify([...geometry.plan.outline], 0.8), topMap),
+  });
   if (geometry.plan.cabin.length > 0) {
-    top.push({ role: "glass", d: polyPath(simplify([...geometry.plan.cabin], 0.8), topMap) });
+    top.push({
+      role: "glass",
+      d: polyPath(simplify([...geometry.plan.cabin], 0.8), topMap),
+    });
     // The roof panel between the rear glass and the windscreen header, at
     // the roof edge; what shows either side of it is side glass.
-    const cabinUpper = geometry.plan.cabin.slice(0, Math.ceil(geometry.plan.cabin.length / 2));
+    const cabinUpper = geometry.plan.cabin.slice(
+      0,
+      Math.ceil(geometry.plan.cabin.length / 2),
+    );
     const from = def.rearGlass[1];
     const to = def.roofFront;
     if (to > from) {
@@ -917,7 +976,9 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
   // Mirrors.
   top.push({
     role: "body",
-    d: [1, -1].map((s) => ellipsePath(mirror.x, -s * mirror.cx, mirror.rz, mirror.rx)).join(" "),
+    d: [1, -1]
+      .map((s) => ellipsePath(mirror.x, -s * mirror.cx, mirror.rz, mirror.rx))
+      .join(" "),
   });
   if (def.roofRails) {
     const rails: string[] = [];
@@ -953,15 +1014,31 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
       [0, 0],
     )[0];
     topDims.push(
-      dimension("width", "W", figure(input.widthMm), "vertical", [x, W / 2], [x, -W / 2], [
-        [[widestX + GAP, -W / 2], [x + OVERSHOOT, -W / 2]],
-        [[widestX + GAP, W / 2], [x + OVERSHOOT, W / 2]],
-      ]),
+      dimension(
+        "width",
+        "W",
+        figure(input.widthMm),
+        "vertical",
+        [x, W / 2],
+        [x, -W / 2],
+        [
+          [
+            [widestX + GAP, -W / 2],
+            [x + OVERSHOOT, -W / 2],
+          ],
+          [
+            [widestX + GAP, W / 2],
+            [x + OVERSHOOT, W / 2],
+          ],
+        ],
+      ),
     );
   }
 
   // ======================================================= FRONT / REAR
-  const endView = (end: "front" | "rear"): { shapes: SheetShape[]; dims: SheetDimension[] } => {
+  const endView = (
+    end: "front" | "rear",
+  ): { shapes: SheetShape[]; dims: SheetDimension[] } => {
     // Seen from behind, the car's right side is on the viewer's left.
     const map: Map2 = end === "front" ? ([x, y]) => [x, -y] : ([x, y]) => [-x, -y];
     const nearHalf = end === "front" ? noseHalf : tailHalf;
@@ -1006,7 +1083,8 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
         )
         .join(" "),
     });
-    if (nearHalf.length > 0) shapes.push({ role: "near", d: polyPath(mirrored(nearHalf), map) });
+    if (nearHalf.length > 0)
+      shapes.push({ role: "near", d: polyPath(mirrored(nearHalf), map) });
 
     const details: string[] = [];
     if (end === "front") {
@@ -1016,10 +1094,14 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
       if (header < base) {
         const screen: Point[] = [];
         const n = 16;
-        for (let k = 0; k <= n; k += 1) screen.push(body.topAt(body.section(base), lerp(0.035, 0.965, k / n)));
-        for (let k = 1; k <= 8; k += 1) screen.push(body.topAt(body.section(lerp(base, header, k / 8)), 0.965));
-        for (let k = 1; k <= n; k += 1) screen.push(body.topAt(body.section(header), lerp(0.965, 0.035, k / n)));
-        for (let k = 1; k < 8; k += 1) screen.push(body.topAt(body.section(lerp(header, base, k / 8)), 0.035));
+        for (let k = 0; k <= n; k += 1)
+          screen.push(body.topAt(body.section(base), lerp(0.035, 0.965, k / n)));
+        for (let k = 1; k <= 8; k += 1)
+          screen.push(body.topAt(body.section(lerp(base, header, k / 8)), 0.965));
+        for (let k = 1; k <= n; k += 1)
+          screen.push(body.topAt(body.section(header), lerp(0.965, 0.035, k / n)));
+        for (let k = 1; k < 8; k += 1)
+          screen.push(body.topAt(body.section(lerp(header, base, k / 8)), 0.035));
         shapes.push({ role: "glass", d: polyPath(screen, map) });
       }
 
@@ -1092,10 +1174,14 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
       if (hi > lo) {
         const pane: Point[] = [];
         const n = 16;
-        for (let k = 0; k <= n; k += 1) pane.push(body.topAt(body.section(lo), lerp(0.075, 0.925, k / n)));
-        for (let k = 1; k <= 6; k += 1) pane.push(body.topAt(body.section(lerp(lo, hi, k / 6)), 0.925));
-        for (let k = 1; k <= n; k += 1) pane.push(body.topAt(body.section(hi), lerp(0.925, 0.075, k / n)));
-        for (let k = 1; k < 6; k += 1) pane.push(body.topAt(body.section(lerp(hi, lo, k / 6)), 0.075));
+        for (let k = 0; k <= n; k += 1)
+          pane.push(body.topAt(body.section(lo), lerp(0.075, 0.925, k / n)));
+        for (let k = 1; k <= 6; k += 1)
+          pane.push(body.topAt(body.section(lerp(lo, hi, k / 6)), 0.925));
+        for (let k = 1; k <= n; k += 1)
+          pane.push(body.topAt(body.section(hi), lerp(0.925, 0.075, k / n)));
+        for (let k = 1; k < 6; k += 1)
+          pane.push(body.topAt(body.section(lerp(hi, lo, k / 6)), 0.075));
         shapes.push({ role: "glass", d: polyPath(pane, map) });
       }
       // Tail lamps: a full-width bar on the styles that use one, else a pair.
@@ -1115,7 +1201,9 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
         const w = outer - inner;
         if (w > 80) {
           for (const s of [1, -1])
-            details.push(polyPath(roundedRect(s * (inner + w / 2), tailY, w, 60, 18), map));
+            details.push(
+              polyPath(roundedRect(s * (inner + w / 2), tailY, w, 60, 18), map),
+            );
         }
       }
       // Lower trim panel.
@@ -1133,9 +1221,14 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
       }
       if (input.rearWing) {
         const blade = roundedRect(0, wingY + 15, W * 0.84, 40, 12);
-        const post = (s: number) => polyPath(roundedRect(s * W * 0.2, wingY - 150, 18, 300, 4), map);
-        const plate = (s: number) => polyPath(roundedRect(s * W * 0.42, wingY + 10, 12, 130, 4), map);
-        shapes.push({ role: "near", d: [polyPath(blade, map), post(1), post(-1), plate(1), plate(-1)].join(" ") });
+        const post = (s: number) =>
+          polyPath(roundedRect(s * W * 0.2, wingY - 150, 18, 300, 4), map);
+        const plate = (s: number) =>
+          polyPath(roundedRect(s * W * 0.42, wingY + 10, 12, 130, 4), map);
+        shapes.push({
+          role: "near",
+          d: [polyPath(blade, map), post(1), post(-1), plate(1), plate(-1)].join(" "),
+        });
       }
     }
     if (details.length > 0) shapes.push({ role: "detail", d: details.join(" ") });
@@ -1151,27 +1244,66 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
     if (trackMm !== null) {
       const y = rowY("frontTrack");
       dims.push(
-        dimension(end === "front" ? "frontTrack" : "rearTrack", "T", trackMm, "horizontal", [-track / 2, y], [track / 2, y], [
-          [[-track / 2, GAP], [-track / 2, y + OVERSHOOT]],
-          [[track / 2, GAP], [track / 2, y + OVERSHOOT]],
-        ]),
+        dimension(
+          end === "front" ? "frontTrack" : "rearTrack",
+          "T",
+          trackMm,
+          "horizontal",
+          [-track / 2, y],
+          [track / 2, y],
+          [
+            [
+              [-track / 2, GAP],
+              [-track / 2, y + OVERSHOOT],
+            ],
+            [
+              [track / 2, GAP],
+              [track / 2, y + OVERSHOOT],
+            ],
+          ],
+        ),
       );
     }
     if (published.width) {
       const y = rowY("width");
       dims.push(
-        dimension("width", "W", figure(input.widthMm), "horizontal", [-W / 2, y], [W / 2, y], [
-          [[-W / 2, -widestAt[1] + GAP], [-W / 2, y + OVERSHOOT]],
-          [[W / 2, -widestAt[1] + GAP], [W / 2, y + OVERSHOOT]],
-        ]),
+        dimension(
+          "width",
+          "W",
+          figure(input.widthMm),
+          "horizontal",
+          [-W / 2, y],
+          [W / 2, y],
+          [
+            [
+              [-W / 2, -widestAt[1] + GAP],
+              [-W / 2, y + OVERSHOOT],
+            ],
+            [
+              [W / 2, -widestAt[1] + GAP],
+              [W / 2, y + OVERSHOOT],
+            ],
+          ],
+        ),
       );
     }
     if (heightDim) {
       const roofHalf = halfWidthOf(silhouetteHalf, silhouetteTop - 4);
       dims.push(
-        dimension("height", "H", figure(input.heightMm), "vertical", [hx, 0], [hx, -H], [
-          [[roofHalf + GAP, -H], [hx + OVERSHOOT, -H]],
-        ]),
+        dimension(
+          "height",
+          "H",
+          figure(input.heightMm),
+          "vertical",
+          [hx, 0],
+          [hx, -H],
+          [
+            [
+              [roofHalf + GAP, -H],
+              [hx + OVERSHOOT, -H],
+            ],
+          ],
+        ),
       );
     }
     return { shapes, dims };
@@ -1181,7 +1313,12 @@ export function blueprintSheet(input: SheetInput): BlueprintSheet {
   const rear = endView("rear");
 
   // ---------------------------------------------------------------- views
-  const box = (x: number, y: number, width: number, height: number) => ({ x, y, width, height });
+  const box = (x: number, y: number, width: number, height: number) => ({
+    x,
+    y,
+    width,
+    height,
+  });
   const sideBox = box(x1, y1, col1, row1);
   const frontBox = box(x2, y1, col2, row1);
   const topBox = box(x1, -row2 / 2, col1, row2);

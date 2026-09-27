@@ -87,9 +87,15 @@ export function BlueprintSheet({
   const carName = `${detail.manufacturer.name} ${detail.model.name}`;
   const summary = [
     `Blueprint of the ${carName} as a ${bodyLabel}, in four views — side, front, top and rear — at one scale.`,
-    lengthMm !== null && sheet.published.length ? `Length ${formatNumber(lengthMm)} mm.` : null,
-    widthMm !== null && sheet.published.width ? `Width ${formatNumber(widthMm)} mm.` : null,
-    heightMm !== null && sheet.published.height ? `Height ${formatNumber(heightMm)} mm.` : null,
+    lengthMm !== null && sheet.published.length
+      ? `Length ${formatNumber(lengthMm)} mm.`
+      : null,
+    widthMm !== null && sheet.published.width
+      ? `Width ${formatNumber(widthMm)} mm.`
+      : null,
+    heightMm !== null && sheet.published.height
+      ? `Height ${formatNumber(heightMm)} mm.`
+      : null,
     wheelbaseMm !== null && sheet.published.wheelbase
       ? `Wheelbase ${formatNumber(wheelbaseMm)} mm.`
       : null,
@@ -110,7 +116,8 @@ export function BlueprintSheet({
     { label: "Kerb weight", value: withUnit(figure(dims?.kerb_weight_kg), "kg") },
     {
       label: "Seats",
-      value: figure(dims?.seating_capacity) === null ? null : String(dims?.seating_capacity),
+      value:
+        figure(dims?.seating_capacity) === null ? null : String(dims?.seating_capacity),
     },
     { label: "Boot", value: withUnit(figure(dims?.boot_capacity_l), "L") },
   ];
@@ -133,8 +140,8 @@ export function BlueprintSheet({
       <figure className="mt-10">
         <div
           className={cn(
-            "relative hud-panel p-px [--panel-bg:var(--bp-bg)]",
-            "[--bp-bg:oklch(0.205_0.047_252)] [--bp-body:oklch(0.235_0.05_250)] [--bp-glass:oklch(0.3_0.062_236)] [--bp-tyre:oklch(0.15_0.03_256)] [--bp-rule:oklch(0.83_0.1_210/22%)]",
+            "relative p-px hud-panel [--panel-bg:var(--bp-bg)]",
+            "[--bp-bg:oklch(0.205_0.047_252)] [--bp-body:oklch(0.235_0.05_250)] [--bp-glass:oklch(0.3_0.062_236)] [--bp-rule:oklch(0.83_0.1_210/22%)] [--bp-tyre:oklch(0.15_0.03_256)]",
           )}
         >
           <span aria-hidden="true" className="hud-brackets [--hud-l:16px]" />
@@ -233,7 +240,13 @@ const ROLE_CLASS: Record<ShapeRole, string> = {
   ground: cn("stroke-cyan-200/55", W_FINE),
 };
 
-const DRAWN: ReadonlySet<ShapeRole> = new Set(["body", "near", "glass", "tyre", "detail"]);
+const DRAWN: ReadonlySet<ShapeRole> = new Set([
+  "body",
+  "near",
+  "glass",
+  "tyre",
+  "detail",
+]);
 
 function SheetCell({ view, index }: { view: SheetView; index: number }) {
   const { x, y, width, height } = view.viewBox;
