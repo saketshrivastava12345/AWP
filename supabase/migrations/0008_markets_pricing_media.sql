@@ -70,7 +70,10 @@ create table public.market_regions (
   display_order smallint not null default 0,
   created_at    timestamptz not null default now(),
   unique (country_id, slug),
-  unique (country_id, name)
+  unique (country_id, name),
+  -- Target of market_prices' composite FK: a region cannot move country
+  -- while prices reference it.
+  constraint market_regions_id_country_key unique (id, country_id)
 );
 
 comment on table public.market_regions is
@@ -84,7 +87,8 @@ create table public.market_cities (
   display_order smallint not null default 0,
   created_at    timestamptz not null default now(),
   unique (region_id, slug),
-  unique (region_id, name)
+  unique (region_id, name),
+  constraint market_cities_id_region_key unique (id, region_id)
 );
 
 -- ---------------------------------------------------------------------------
@@ -146,6 +150,7 @@ create table public.car_generations (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
   unique (model_id, slug),
+  constraint car_generations_id_model_key unique (id, model_id),
   constraint car_generations_year_order
     check (year_end is null or year_start is null or year_end >= year_start)
 );
@@ -181,6 +186,16 @@ $fn$;
 create trigger car_variants_generation_model
   before insert or update of generation_id, model_id on public.car_variants
   for each row execute function public.tg_car_variants_generation_model();
+
+-- The trigger only guards the variant side. The composite FK also stops a
+-- generation being moved to another model while variants point at it
+-- (NO ACTION on update). Deleting a generation still just clears
+-- generation_id, never model_id.
+alter table public.car_variants
+  add constraint car_variants_generation_same_model
+    foreign key (generation_id, model_id)
+    references public.car_generations (id, model_id)
+    on delete set null (generation_id);
 
 -- Backfill one generation per model from the existing free-text column. On a
 -- fresh database this finds nothing (the seed runs later and does the same).
@@ -263,6 +278,17 @@ create table public.market_prices (
     check (price_type in ('on_road', 'estimated_on_road') or ex_showroom_price is not null),
   constraint market_prices_on_road_types_have_total
     check (price_type not in ('on_road', 'estimated_on_road') or on_road_price is not null),
+  -- A published total belongs only to an on-road row; on a listed row it
+  -- would be shown under the listed type's label.
+  constraint market_prices_total_only_on_road
+    check (price_type in ('on_road', 'estimated_on_road') or on_road_price is null),
+  -- Region/city must stay inside the stated country/region, including when
+  -- the region or city itself is edited later (the trigger below only sees
+  -- writes to this table).
+  constraint market_prices_region_in_country
+    foreign key (region_id, country_id) references public.market_regions (id, country_id),
+  constraint market_prices_city_in_region
+    foreign key (city_id, region_id) references public.market_cities (id, region_id),
   constraint market_prices_one_per_scope_and_date
     unique nulls not distinct (variant_id, country_id, region_id, city_id, price_type, effective_from)
 );
@@ -318,19 +344,29 @@ create index market_prices_market_idx
 create index market_prices_region_idx on public.market_prices (region_id);
 create index market_prices_city_idx   on public.market_prices (city_id);
 
--- The rows in force today: the latest effective_from per variant, market and
--- price type. NULL region/city compare equal in DISTINCT ON, which is exactly
--- the "national price" scope.
+-- The rows in force today: per variant, market and price type, take the
+-- latest row that has started, then drop it if it has ended. Filtering on
+-- effective_to first would let an older, superseded open-ended row resurface
+-- once the newer row is closed. NULL region/city compare equal in DISTINCT ON,
+-- which is exactly the "national price" scope. created_by is left out: it
+-- would reveal which accounts are admins.
 create view public.current_market_prices
 with (security_invoker = true)
 as
-select distinct on (p.variant_id, p.country_id, p.region_id, p.city_id, p.price_type)
-  p.*
-from public.market_prices p
-where p.effective_from <= current_date
-  and (p.effective_to is null or p.effective_to >= current_date)
-order by p.variant_id, p.country_id, p.region_id, p.city_id, p.price_type,
-         p.effective_from desc, p.last_verified_at desc;
+select id, variant_id, country_id, region_id, city_id, currency, price_type,
+       ex_showroom_price, rto_tax, registration_fee, insurance_estimate,
+       handling_charges, fastag, other_charges, on_road_price, source, source_url,
+       effective_from, effective_to, last_verified_at, is_verified, notes,
+       created_at, updated_at
+from (
+  select distinct on (p.variant_id, p.country_id, p.region_id, p.city_id, p.price_type)
+    p.*
+  from public.market_prices p
+  where p.effective_from <= current_date
+  order by p.variant_id, p.country_id, p.region_id, p.city_id, p.price_type,
+           p.effective_from desc, p.last_verified_at desc
+) latest
+where latest.effective_to is null or latest.effective_to >= current_date;
 
 -- ---------------------------------------------------------------------------
 -- Media: provenance, gallery shot types, 3D-model metadata
@@ -642,7 +678,9 @@ security invoker
 set search_path = public, extensions, pg_temp
 as $fn$
 declare
-  cleaned text := lower(trim(regexp_replace(coalesce(q, ''), '[^[:alnum:][:space:]-]', ' ', 'g')));
+  -- Capped here as well as in the app: the function is callable directly by
+  -- anon through /rest/v1/rpc, and unbounded input is slow or overflows.
+  cleaned text := lower(trim(regexp_replace(left(coalesce(q, ''), 80), '[^[:alnum:][:space:]-]', ' ', 'g')));
   lim     integer := least(greatest(coalesce(per_kind, 6), 1), 20);
   tsq     tsquery;
 begin
@@ -652,7 +690,7 @@ begin
 
   select to_tsquery('simple', string_agg(quote_literal(w) || ':*', ' & '))
     into tsq
-    from regexp_split_to_table(cleaned, '\s+') as w
+    from unnest((regexp_split_to_array(cleaned, '\s+'))[1:8]) as w
    where w <> '';
 
   return query
@@ -782,6 +820,17 @@ grant select, insert, update, delete on public.recently_viewed to authenticated;
 revoke all on public.recently_viewed from anon;
 
 grant select on public.current_market_prices to anon, authenticated;
+
+-- market_prices.created_by is the admin's auth id; anon must not read it.
+-- (Signed-in users keep table-wide SELECT for now because the admin queries
+-- select "*"; see the pricing report.)
+revoke select on public.market_prices from anon;
+grant select (id, variant_id, country_id, region_id, city_id, currency, price_type,
+              ex_showroom_price, rto_tax, registration_fee, insurance_estimate,
+              handling_charges, fastag, other_charges, on_road_price, source, source_url,
+              effective_from, effective_to, last_verified_at, is_verified, notes,
+              created_at, updated_at)
+  on public.market_prices to anon;
 grant select on public.car_catalog to anon, authenticated;
 
 -- profiles_delete_admin relied on default privileges; make it explicit.
