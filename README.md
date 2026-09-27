@@ -68,26 +68,31 @@ cp .env.example .env.local      # then fill it in — see sections 3 and 4
 npm run dev                     # http://localhost:3000
 ```
 
+If pages come up empty or the terminal fills with `TypeError: fetch failed`,
+run **`npm run doctor`**: it checks `.env.local`, the project URL, DNS, the
+key, the migrations and the seed in order, and prints the one thing to fix.
+
 The app also starts **without** a Supabase project: every page renders its
 empty state instead of crashing. That is useful for checking the UI, but you
 need the database for any real content.
 
 ### All commands
 
-| Command                           | Purpose                                                                 |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| `npm run dev`                     | Development server (Turbopack)                                          |
-| `npm run build`                   | Production build                                                        |
-| `npm run start`                   | Serve the production build                                              |
-| `npm run lint` / `lint:fix`       | ESLint                                                                  |
-| `npm run typecheck`               | Generates Next's route types (`next typegen`), then `tsc --noEmit`      |
-| `npm run test` / `test:watch`     | Vitest unit tests                                                       |
-| `npm run format` / `format:check` | Prettier                                                                |
-| `npm run verify`                  | lint → typecheck → test → build (what CI runs, plus `format:check`)     |
-| `npm run db:push`                 | Apply `supabase/migrations/` to the hosted database                     |
-| `npm run db:seed`                 | Apply `supabase/seed.sql` (idempotent — safe to re-run)                 |
-| `npm run db:verify`               | Row counts for every table plus checks of the views and search function |
-| `npm run db:types`                | Regenerate `src/types/database.ts` from the hosted schema               |
+| Command                           | Purpose                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| `npm run dev`                     | Development server (Turbopack)                                           |
+| `npm run build`                   | Production build                                                         |
+| `npm run start`                   | Serve the production build                                               |
+| `npm run lint` / `lint:fix`       | ESLint                                                                   |
+| `npm run typecheck`               | Generates Next's route types (`next typegen`), then `tsc --noEmit`       |
+| `npm run test` / `test:watch`     | Vitest unit tests                                                        |
+| `npm run format` / `format:check` | Prettier                                                                 |
+| `npm run verify`                  | lint → typecheck → test → build (what CI runs, plus `format:check`)      |
+| `npm run db:push`                 | Apply `supabase/migrations/` to the hosted database                      |
+| `npm run db:seed`                 | Apply `supabase/seed.sql` (idempotent — safe to re-run)                  |
+| `npm run db:verify`               | Row counts for every table plus checks of the views and search function  |
+| `npm run db:types`                | Regenerate `src/types/database.ts` from the hosted schema                |
+| `npm run doctor`                  | Checks the setup step by step: env file, URL, DNS, key, migrations, seed |
 
 > **Windows note.** `.gitattributes` forces LF line endings, so `format:check`
 > passes regardless of `core.autocrlf`. The first `npm run build` needs
@@ -622,6 +627,19 @@ polished one.
   tag rather than a 404 status.
 - The admin panel cannot yet delete an engine or transmission that no vehicle
   uses any more; that needs SQL.
+
+### If something goes wrong
+
+Run `npm run doctor` first; it names the failing step. The usual causes:
+
+| Symptom                                       | Cause and fix                                                                                                                                                                                                    |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Every page logs `TypeError: fetch failed`     | The app cannot reach the project URL at all: the example URL is still in `.env.local`, the URL is mistyped, the project was deleted, or a firewall/VPN/proxy blocks Node (Node's `fetch` ignores `HTTPS_PROXY`). |
+| `401 Invalid API key`                         | The publishable key lost characters when pasted; copy it again in one piece.                                                                                                                                     |
+| "The database is older than this code" banner | Run `npm run db:push`, then `npm run db:seed`.                                                                                                                                                                   |
+| Pages are empty but `doctor` passes           | Run `npm run db:seed`; the catalogue tables exist but hold no rows.                                                                                                                                              |
+| `EBADENGINE` on install, or odd test errors   | Node is older than 22.12.                                                                                                                                                                                        |
+| Every car says "Price data unavailable"       | Expected: no prices ship with the project. Add them, with a source, in `/admin`.                                                                                                                                 |
 
 ---
 

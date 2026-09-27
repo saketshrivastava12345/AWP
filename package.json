@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:types": "node scripts/gen-types.mjs",
+    "doctor": "node scripts/doctor.mjs",
     "db:push": "node scripts/db-push.mjs",
     "db:seed": "node scripts/run-sql.mjs supabase/seed.sql",
     "db:verify": "node scripts/run-sql.mjs supabase/verify.sql",

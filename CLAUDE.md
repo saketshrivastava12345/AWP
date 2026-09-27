@@ -9,19 +9,20 @@ Content hierarchy: **Country → Manufacturer → Model → Variant → Specific
 
 ## Commands
 
-| Command                           | Purpose                                                      |
-| --------------------------------- | ------------------------------------------------------------ |
-| `npm run dev`                     | Dev server (Turbopack) on http://localhost:3000              |
-| `npm run build`                   | Production build                                             |
-| `npm run lint` / `lint:fix`       | ESLint                                                       |
-| `npm run typecheck`               | `next typegen` then `tsc --noEmit`                           |
-| `npm run test` / `test:watch`     | Vitest unit tests                                            |
-| `npm run format` / `format:check` | Prettier                                                     |
-| `npm run verify`                  | lint → typecheck → test → build (run before finishing)       |
-| `npm run db:push`                 | Apply `supabase/migrations/` (add `-- --dry-run` to preview) |
-| `npm run db:seed`                 | Apply `supabase/seed.sql` (idempotent — safe to re-run)      |
-| `npm run db:verify`               | Row counts for every table, views and the search function    |
-| `npm run db:types`                | Regenerate `src/types/database.ts` from the hosted schema    |
+| Command                           | Purpose                                                       |
+| --------------------------------- | ------------------------------------------------------------- |
+| `npm run dev`                     | Dev server (Turbopack) on http://localhost:3000               |
+| `npm run build`                   | Production build                                              |
+| `npm run lint` / `lint:fix`       | ESLint                                                        |
+| `npm run typecheck`               | `next typegen` then `tsc --noEmit`                            |
+| `npm run test` / `test:watch`     | Vitest unit tests                                             |
+| `npm run format` / `format:check` | Prettier                                                      |
+| `npm run verify`                  | lint → typecheck → test → build (run before finishing)        |
+| `npm run db:push`                 | Apply `supabase/migrations/` (add `-- --dry-run` to preview)  |
+| `npm run db:seed`                 | Apply `supabase/seed.sql` (idempotent — safe to re-run)       |
+| `npm run db:verify`               | Row counts for every table, views and the search function     |
+| `npm run db:types`                | Regenerate `src/types/database.ts` from the hosted schema     |
+| `npm run doctor`                  | Check .env.local, DNS, the key, migrations and seed, in order |
 
 Next 16 generates the global `LayoutProps` / `PageProps` route types into
 `.next/types`, so a bare `tsc --noEmit` fails on a clean checkout. `typecheck`
