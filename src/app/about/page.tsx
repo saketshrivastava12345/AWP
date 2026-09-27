@@ -256,21 +256,6 @@ function SubTitle({ children }: { children: ReactNode }) {
   return <h3 className="text-h3">{children}</h3>;
 }
 
-/**
- * Deed URL for a ported Creative Commons licence ("CC BY-SA 3.0 de"), which
- * the shared helper does not read. Only the licence's own jurisdiction code
- * is used; anything else stays unlinked rather than guessed.
- */
-function portedLicenseUrl(license: string | null | undefined): string | null {
-  const match = /^CC[ -]?(BY(?:-NC)?(?:-SA|-ND)?)[ -]?(\d\.\d)[ -]([a-z]{2})$/i.exec(
-    license?.trim().replace(/\s+/g, " ") ?? "",
-  );
-  if (!match) return null;
-  const [, terms, version, jurisdiction] = match;
-  if (!terms || !version || !jurisdiction) return null;
-  return `https://creativecommons.org/licenses/${terms.toLowerCase()}/${version}/${jurisdiction.toLowerCase()}/`;
-}
-
 /** One credit as table cells that stack into labelled lines on small screens. */
 function CreditCells({
   entry,
@@ -280,7 +265,7 @@ function CreditCells({
   showFidelity: boolean;
 }) {
   const credit = entry.credit;
-  const licenseHref = credit?.licenseUrl ?? portedLicenseUrl(credit?.license);
+  const licenseHref = credit?.licenseUrl ?? null;
   const cell =
     "block py-1 align-top md:table-cell md:border-b md:border-line-subtle md:py-4 md:pr-6 " +
     "before:mr-2 before:text-caption before:content-[attr(data-label)] md:before:content-none";

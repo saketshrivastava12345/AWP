@@ -47,6 +47,9 @@ describe("credits", () => {
     expect(licenseUrl("CC BY-NC-SA 3.0")).toBe(
       "https://creativecommons.org/licenses/by-nc-sa/3.0/",
     );
+    expect(licenseUrl("CC BY-SA 3.0 de")).toBe(
+      "https://creativecommons.org/licenses/by-sa/3.0/de/",
+    );
     expect(licenseUrl("CC0")).toBe("https://creativecommons.org/publicdomain/zero/1.0/");
     expect(licenseUrl("All rights reserved")).toBeNull();
     expect(licenseUrl(null)).toBeNull();

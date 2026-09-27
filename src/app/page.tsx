@@ -3,7 +3,6 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { CarGrid } from "@/components/cars/CarGrid";
 import { HomeHero } from "@/components/home/HomeHero";
 import { CatalogueIndex } from "@/components/home/CatalogueIndex";
-import { CAROUSEL_TRACK, HomeCarousel } from "@/components/home/HomeCarousel";
 import { WorldTeaser } from "@/components/home/WorldTeaser";
 import { ExploreTeasers } from "@/components/home/ExploreTeasers";
 import { RecentlyViewedStrip } from "@/components/home/RecentlyViewedStrip";
@@ -24,16 +23,6 @@ export default async function HomePage() {
   const data = await getHomePageData();
   const { counts, featured, hero } = data;
 
-  const featuredHeading = (
-    <SectionHeading
-      id="featured-heading"
-      title="The most powerful"
-      description="Ordered by published output, as each maker states it."
-      actionHref="/cars"
-      actionLabel="All cars"
-    />
-  );
-
   return (
     <>
       <HomeHero car={hero} counts={counts} />
@@ -42,18 +31,25 @@ export default async function HomePage() {
 
       <section aria-labelledby="featured-heading" className="py-16 lg:py-24">
         <Container>
+          <SectionHeading
+            id="featured-heading"
+            title="The most powerful"
+            description="Ordered by published output, as each maker states it."
+            actionHref="/cars"
+            actionLabel="All cars"
+          />
           {featured.length > 0 ? (
-            <HomeCarousel label="most powerful cars" heading={featuredHeading}>
-              <CarGrid cars={featured} className={CAROUSEL_TRACK} />
-            </HomeCarousel>
+            <CarGrid
+              cars={featured}
+              columns="carousel"
+              label="The most powerful cars"
+              className="mt-10"
+            />
           ) : (
-            <>
-              {featuredHeading}
-              <p className="mt-10 text-body">
-                The collection could not be read just now. The full catalogue is one click
-                away under “All cars”.
-              </p>
-            </>
+            <p className="mt-10 text-body">
+              The collection could not be read just now. The full catalogue is one click
+              away under “All cars”.
+            </p>
           )}
         </Container>
       </section>

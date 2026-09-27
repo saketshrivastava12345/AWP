@@ -100,7 +100,7 @@ export default async function ManufacturerCataloguePage({
         {lead ? <p className="mt-5 max-w-2xl text-lead">{lead}</p> : null}
         {meta ? <p className="mt-3 text-body-s text-ink-300">{meta}</p> : null}
 
-        <StatRow className="mt-10 max-w-3xl lg:grid-cols-3">
+        <StatRow className="mt-10 max-w-5xl lg:grid-cols-3">
           <StatCard label="Models" value={formatNumber(modelCount)} />
           <StatCard label="Variants" value={formatNumber(variantCount)} />
           <StatCard label="Power" value={power ? formatRange(power) : null} unit="hp" />

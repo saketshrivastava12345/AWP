@@ -1,5 +1,6 @@
 import { formatNumber } from "@/lib/format";
 import { StatCard } from "@/components/ui/StatCard";
+import { cn } from "@/lib/utils";
 import type { NumberRange } from "@/lib/queries/models";
 
 /** "385–650", or a single figure when every variant publishes the same one. */
@@ -38,7 +39,12 @@ export function SpecRange({
       value={range ? formatRange(range, decimals) : null}
       unit={unit}
       hint={note}
-      className={className}
+      // A range ("470–800") is twice as wide as a single figure: set it a
+      // step smaller and never break it at the dash.
+      className={cn(
+        "[&_dd]:text-[clamp(2rem,3.4vw,3rem)] [&_dd>span:first-child]:whitespace-nowrap",
+        className,
+      )}
     />
   );
 }

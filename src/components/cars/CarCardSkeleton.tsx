@@ -56,7 +56,10 @@ export function CarGridSkeleton({
 }) {
   if (columns === "carousel") {
     return (
-      <div aria-hidden="true" className={cn("flex gap-4 overflow-hidden sm:gap-6", className)}>
+      <div
+        aria-hidden="true"
+        className={cn("flex gap-4 overflow-hidden sm:gap-6", className)}
+      >
         {Array.from({ length: count }, (_, index) => (
           <div
             key={index}

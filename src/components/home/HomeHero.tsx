@@ -102,7 +102,7 @@ function StageCaption({ car }: { car: HeroCar | null }) {
       <p className="min-w-0">
         <Link
           href={car.href}
-          className="inline-flex min-h-11 items-center text-ink-200 underline-offset-4 transition-colors hover:text-ink-50 hover:underline"
+          className="text-ink-200 underline-offset-4 transition-colors hover:text-ink-50 hover:underline"
         >
           {car.name}
         </Link>
@@ -230,7 +230,7 @@ export function HomeHero({ car, counts }: { car: HeroCar | null; counts: HomeCou
           </div>
 
           <div
-            className="mt-auto flex animate-rise-in flex-col gap-1 pt-8 lg:mt-0 lg:max-w-sm lg:shrink-0 lg:items-end lg:pt-0"
+            className="mt-auto flex animate-rise-in flex-col gap-1 pt-8 lg:mt-0 lg:max-w-md lg:shrink-0 lg:items-end lg:pt-0"
             style={{ animationDelay: "280ms" }}
           >
             <StageCaption car={car} />

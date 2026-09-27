@@ -6,7 +6,7 @@ import { Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { CarCard } from "@/components/cars/CarCard";
 import { FavoriteToggle } from "@/components/cars/FavoriteButton";
-import { CAROUSEL_TRACK, HomeCarousel } from "./HomeCarousel";
+import { CardCarousel } from "@/components/cars/catalogue/CardCarousel";
 
 /**
  * "Continue where you left off": the cars this visitor opened recently (this
@@ -34,39 +34,37 @@ export function RecentlyViewedStrip() {
   return (
     <section aria-labelledby="recent-heading" className="animate-rise-in py-16 lg:py-24">
       <Container>
-        <HomeCarousel
-          label="recently viewed cars"
-          heading={
-            <SectionHeading
-              id="recent-heading"
-              title="Recently viewed"
-              actionHref="/favorites#recently-viewed-heading"
-              actionLabel="Your history"
-            />
-          }
-        >
-          <ul className={`grid ${CAROUSEL_TRACK}`}>
-            {ready.map(({ id, car }) => (
-              <li key={id}>
-                <CarCard
-                  car={car}
-                  sizes={SIZES}
-                  actions={
-                    <FavoriteToggle
-                      appearance="icon"
-                      variantId={id}
-                      carName={carDisplayName(
-                        car.manufacturer_name,
-                        car.model_name,
-                        car.variant_name,
-                      )}
-                    />
-                  }
-                />
-              </li>
-            ))}
-          </ul>
-        </HomeCarousel>
+        <SectionHeading
+          id="recent-heading"
+          title="Recently viewed"
+          actionHref="/favorites#recently-viewed-heading"
+          actionLabel="Your history"
+        />
+        <CardCarousel label="Recently viewed cars" className="mt-10">
+          {ready.map(({ id, car }) => (
+            <li
+              key={id}
+              className="w-[70%] shrink-0 snap-start sm:w-[calc((100%-3rem)/3.2)] lg:w-[calc((100%-4.5rem)/4)]"
+            >
+              <CarCard
+                car={car}
+                variant="compact"
+                sizes={SIZES}
+                actions={
+                  <FavoriteToggle
+                    appearance="icon"
+                    variantId={id}
+                    carName={carDisplayName(
+                      car.manufacturer_name,
+                      car.model_name,
+                      car.variant_name,
+                    )}
+                  />
+                }
+              />
+            </li>
+          ))}
+        </CardCarousel>
       </Container>
     </section>
   );

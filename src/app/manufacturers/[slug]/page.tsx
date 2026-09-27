@@ -219,11 +219,9 @@ export default async function ManufacturerPage({
             : null
         }
       >
-        <StatRow>
-          <StatCard
-            label="Founded"
-            value={manufacturer.founded_year ? String(manufacturer.founded_year) : null}
-          />
+        {/* Founded is in the meta line above and the history below; three
+            figures leave room for a wide power range ("720–1,000 hp"). */}
+        <StatRow className="lg:grid-cols-3">
           <StatCard
             label="Models"
             value={formatNumber(lineup.length)}

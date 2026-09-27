@@ -206,7 +206,7 @@ export function HeroStory({
           // The still's dimension labels step back once the story's cards
           // are over it (see HeroPoster).
           data-story={active > 0 ? "true" : "false"}
-          className="group/stage sticky top-16 h-[calc(100svh-4rem)] overflow-hidden bg-void"
+          className="group/stage sticky top-(--nav-h) h-[calc(100svh-var(--nav-h))] overflow-hidden bg-void"
           aria-hidden="true"
         >
           <div
@@ -252,7 +252,7 @@ export function HeroStory({
             className="pointer-events-none absolute inset-0 z-20 lg:hidden"
             aria-hidden="true"
           >
-            <div className="sticky top-16 h-px bg-line-subtle">
+            <div className="sticky top-(--nav-h) h-px bg-line-subtle">
               <div
                 className="h-px bg-gold-500 transition-[width] duration-500"
                 style={{ width: `${(active / Math.max(1, total - 1)) * 100}%` }}
@@ -262,7 +262,7 @@ export function HeroStory({
         ) : null}
 
         {/* ------------------------------------------------ Content */}
-        <div ref={contentRef} className="relative z-10 -mt-[calc(100svh-4rem)]">
+        <div ref={contentRef} className="relative z-10 -mt-[calc(100svh-var(--nav-h))]">
           {children}
         </div>
 
@@ -286,9 +286,9 @@ export function HeroStory({
                   >
                     <span
                       className={cn(
-                        "font-display text-nano tracking-[0.2em] uppercase transition-colors duration-300",
+                        "text-caption transition-colors duration-300",
                         active === index
-                          ? "text-gold-300"
+                          ? "text-ink-50"
                           : "text-ink-500 group-hover:text-ink-200",
                       )}
                     >

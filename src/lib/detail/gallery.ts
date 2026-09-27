@@ -74,7 +74,8 @@ export type GalleryCredit = {
 };
 
 /**
- * Deed URL for a Creative Commons licence name ("CC BY-SA 4.0", "CC0"), so
+ * Deed URL for a Creative Commons licence name ("CC BY-SA 4.0", "CC0",
+ * "CC BY-SA 3.0 de"), so
  * the credit can link to the licence as the licences themselves ask. Returns
  * null for anything else rather than guessing.
  */
@@ -87,11 +88,16 @@ export function licenseUrl(license: string | null | undefined): string | null {
   if (name === "PUBLIC DOMAIN" || name === "PDM" || name === "PD") {
     return "https://creativecommons.org/publicdomain/mark/1.0/";
   }
-  const match = /^CC[ -]?(BY(?:-NC)?(?:-SA|-ND)?)[ -]?(\d\.\d)$/.exec(name);
+  // A ported licence carries its jurisdiction ("CC BY-SA 3.0 DE"), and its
+  // deed lives one level deeper.
+  const match = /^CC[ -]?(BY(?:-NC)?(?:-SA|-ND)?)[ -]?(\d\.\d)(?:[ -]([A-Z]{2}))?$/.exec(
+    name,
+  );
   if (!match) return null;
-  const [, terms, version] = match;
+  const [, terms, version, jurisdiction] = match;
   if (!terms || !version) return null;
-  return `https://creativecommons.org/licenses/${terms.toLowerCase()}/${version}/`;
+  const base = `https://creativecommons.org/licenses/${terms.toLowerCase()}/${version}/`;
+  return jurisdiction ? `${base}${jurisdiction.toLowerCase()}/` : base;
 }
 
 /**
