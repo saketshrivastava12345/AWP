@@ -928,7 +928,16 @@ export function ProceduralCar({
         // The engine group also carries the radiator in the nose: label the
         // engine itself, not the middle of the two.
         if (name === "engine" && layout.engine)
-          top.set(0, layout.engine.center.y + 0.32 * layout.engine.scale, layout.engine.center.z);
+          top.set(
+            0,
+            layout.engine.center.y + 0.32 * layout.engine.scale,
+            layout.engine.center.z,
+          );
+        // Suspension and driveline span the whole car; label one corner and
+        // the gearbox (or an EV's rear drive unit) rather than the middle.
+        if (name === "suspension")
+          top.copy(layout.anchors.frontSuspension).setY(box.max.y + 0.04);
+        if (name === "transmission") top.copy(layout.anchors.gearbox).setY(top.y + 0.18);
         state.labels.set(name, { object: node, local: top });
       }
       // Wheels and brakes are labelled at one corner each (the near side).
