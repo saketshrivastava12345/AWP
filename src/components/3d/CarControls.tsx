@@ -75,8 +75,8 @@ function ToolButton({
         // so its tooltip can say why.
         aria-disabled={disabled || undefined}
         className={cn(
-          "border border-transparent",
-          pressed && "border-gold-600",
+          "border border-transparent transition-[border-color,box-shadow] duration-(--duration-fast)",
+          pressed && "border-cyan-400/70 glow-cyan",
           disabled &&
             "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-ink-300",
         )}

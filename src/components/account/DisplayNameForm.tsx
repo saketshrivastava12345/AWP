@@ -33,7 +33,7 @@ export function DisplayNameForm({
 
   return (
     <form action={formAction} className={cn("grid gap-2", rowClassName)}>
-      <label htmlFor="display_name" className="text-body text-ink-100 sm:pt-3">
+      <label htmlFor="display_name" className="text-label sm:pt-3.5">
         Display name
       </label>
       <div className="min-w-0">

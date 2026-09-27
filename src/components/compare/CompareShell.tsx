@@ -124,7 +124,14 @@ export function CompareShell({
 
   return (
     <div ref={ref} data-diff={diff ? "on" : "off"} className="group/cmp">
-      <div className="flex flex-col gap-5 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+      <div className="relative flex flex-col gap-5 rounded-card p-5 hud-panel lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+        <span aria-hidden="true" className="hud-brackets -m-px" />
+        <span
+          aria-hidden="true"
+          className="absolute -top-[5px] left-5 bg-void px-1.5 hud-label leading-[10px]"
+        >
+          Console // Comparison
+        </span>
         <CompareCombobox
           options={options}
           truncated={truncated}
@@ -158,7 +165,7 @@ export function CompareShell({
       </div>
 
       {diff && counts.differing === 0 ? (
-        <p className="mt-8 rounded-card bg-surface-1 px-5 py-8 text-center text-body-s text-ink-300">
+        <p className="mt-8 rounded-card px-5 py-8 text-center text-body-s text-ink-300 hud-panel">
           These cars are identical in every catalogued figure.
         </p>
       ) : null}

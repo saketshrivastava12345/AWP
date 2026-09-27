@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Heart, History, ShieldCheck } from "lucide-react";
 import { AuthShell } from "@/components/account/AuthShell";
+import { Reveal } from "@/components/fx";
 import { getAuthUser } from "@/lib/queries/auth";
 import { safeNextPath } from "@/app/auth/next-path";
 import { LoginForm } from "./LoginForm";
@@ -16,25 +17,45 @@ export const metadata: Metadata = {
 type SearchParams = Record<string, string | string[] | undefined>;
 
 const BENEFITS = [
-  { icon: Heart, text: "Saved cars on every device, not just this browser." },
-  { icon: History, text: "Recently viewed cars follow you from phone to laptop." },
-  { icon: ShieldCheck, text: "Private to you, enforced by the database itself." },
+  {
+    icon: Heart,
+    code: "SYNC",
+    text: "Saved cars on every device, not just this browser.",
+  },
+  {
+    icon: History,
+    code: "TRAIL",
+    text: "Recently viewed cars follow you from phone to laptop.",
+  },
+  {
+    icon: ShieldCheck,
+    code: "RLS",
+    text: "Private to you, enforced by the database itself.",
+  },
 ];
 
 function Benefits() {
   return (
-    <ul className="divide-y divide-line-subtle border-y border-line-subtle">
-      {BENEFITS.map(({ icon: Icon, text }) => (
+    <Reveal
+      as="ul"
+      stagger
+      variant="rise"
+      className="divide-y divide-line-subtle border-y border-line-subtle"
+    >
+      {BENEFITS.map(({ icon: Icon, code, text }) => (
         <li key={text} className="flex items-center gap-4 py-4 text-body text-ink-300">
-          <Icon
-            className="size-5 shrink-0 text-ink-400"
-            strokeWidth={1.5}
-            aria-hidden="true"
-          />
-          {text}
+          <span className="relative flex size-9 shrink-0 items-center justify-center rounded-control border border-cyan-700/60 bg-cyan-400/5 text-cyan-300 shadow-[0_0_14px_-4px_oklch(0.8_0.14_210/55%)]">
+            <Icon className="size-4" strokeWidth={1.5} aria-hidden="true" />
+          </span>
+          <span className="min-w-0">
+            <span aria-hidden="true" className="mb-1 block hud-label">
+              {code}
+            </span>
+            {text}
+          </span>
         </li>
       ))}
-    </ul>
+    </Reveal>
   );
 }
 

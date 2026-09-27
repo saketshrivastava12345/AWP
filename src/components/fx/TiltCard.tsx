@@ -40,6 +40,7 @@ export function TiltCard({
       data-tilt={Math.min(8, Math.max(1, max))}
       className={cn("relative", className)}
       style={style}
+      suppressHydrationWarning
     >
       {children}
       {glare ? <span aria-hidden="true" className="fx-tilt-glare" /> : null}

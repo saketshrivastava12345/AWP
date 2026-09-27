@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CloudOff } from "lucide-react";
 import { Container } from "@/components/ui/Container";
+import { GridBackground, Scanlines, ScrambleText } from "@/components/fx";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ButtonLink } from "@/components/ui/Button";
 import { CompareNotice } from "@/components/compare/CompareNotice";
@@ -69,8 +70,16 @@ export async function generateMetadata({
 export default function ComparePage({ searchParams }: PageProps<"/compare">) {
   return (
     <Container className="pt-12 pb-24 sm:pt-16 lg:pt-24 lg:pb-32">
-      <header className="max-w-3xl">
-        <h1 className="text-h1">Compare cars</h1>
+      <header className="relative isolate max-w-3xl overflow-hidden py-2">
+        <GridBackground variant="flat" size={40} />
+        <Scanlines />
+        <p aria-hidden="true" className="flex items-center gap-3 hud-label">
+          <span className="inline-block size-1.5 animate-pulse-glow rounded-full bg-cyan-400" />
+          Telemetry wall // up to {String(MAX_COMPARE).padStart(2, "0")} cars
+        </p>
+        <h1 className="mt-4 gradient-text text-h1">
+          <ScrambleText text="Compare cars" />
+        </h1>
         <p className="mt-4 max-w-[60ch] text-lead">
           Up to {MAX_COMPARE} cars side by side, figure by figure — every gap marked,
           nothing estimated.

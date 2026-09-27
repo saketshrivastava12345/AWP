@@ -111,9 +111,21 @@ export function RecentlyViewed({ className }: { className?: string }) {
   return (
     <section aria-labelledby="recently-viewed-heading" className={className}>
       <div className="flex items-end justify-between gap-4">
-        <h2 id="recently-viewed-heading" className="scroll-mt-32 text-h2">
-          Recently viewed
-        </h2>
+        <div className="min-w-0">
+          <p className="mb-4 flex items-center gap-3 text-eyebrow">
+            <span
+              aria-hidden="true"
+              className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+            />
+            Trail
+            <span aria-hidden="true" className="hud-label text-ink-600">
+              {"// "}RECENT
+            </span>
+          </p>
+          <h2 id="recently-viewed-heading" className="scroll-mt-32 text-h2">
+            Recently viewed
+          </h2>
+        </div>
         <div className="flex items-center gap-2">
           {entries.length > 0 ? (
             <Button
@@ -162,7 +174,11 @@ export function RecentlyViewed({ className }: { className?: string }) {
         </ul>
       ) : shown.length === 0 ? (
         <p className="mt-6 flex items-center gap-3 text-body text-ink-400">
-          <History className="size-5 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+          <History
+            className="size-5 shrink-0 text-cyan-300 drop-shadow-[0_0_6px_oklch(0.8_0.14_210/55%)]"
+            strokeWidth={1.5}
+            aria-hidden="true"
+          />
           Cars you open will appear here
           {signedIn ? ", on every device you sign in on" : ""}.
         </p>
@@ -174,7 +190,13 @@ export function RecentlyViewed({ className }: { className?: string }) {
         >
           {shown.map(({ id, entry }) =>
             entry.status === "ready" ? (
-              <li key={id} className={SLIDE}>
+              <li
+                key={id}
+                className={cn(
+                  SLIDE,
+                  "rounded-card transition-shadow duration-(--duration-base) focus-within:shadow-glow-cyan hover:shadow-glow-cyan",
+                )}
+              >
                 <CarCard
                   car={entry.car}
                   variant="compact"

@@ -10,6 +10,8 @@ import {
 import type { VariantDetail } from "@/types/domain";
 import { CatalogueScale } from "./CatalogueScale";
 import { StatCard, StatRow } from "@/components/ui/StatCard";
+import { CountUp } from "@/components/fx/CountUp";
+import { Reveal } from "@/components/fx/Reveal";
 import { DetailHeading } from "./DetailHeading";
 
 /**
@@ -21,7 +23,9 @@ import { DetailHeading } from "./DetailHeading";
  *               buildPerformancePopulation(await getCatalogueFigures())
  *   headingLevel  2 when used as a chapter's first block (default 3)
  *
- * Four headline figures, shown as published (never animated). Under each, a distribution strip places the car among every
+ * Four headline figures, shown as published: they count up to the published
+ * value on first view, and the server HTML and resting state are that exact
+ * value (fx/CountUp). Under each, a distribution strip places the car among every
  * catalogued car that publishes the same figure — rank, percentile and range.
  * A figure the car does not publish shows "Not available" and no strip; a
  * figure too few cars publish shows no strip either. Secondary figures appear
@@ -100,7 +104,7 @@ export function PerformancePanel({
       />
 
       {/* ------------------------------------------------ Figure strips */}
-      <div className="mt-10 grid gap-x-16 gap-y-12 md:grid-cols-2">
+      <Reveal stagger={110} className="mt-10 grid gap-x-16 gap-y-12 md:grid-cols-2">
         {headline.map((tile) => (
           <FigureStrip
             key={tile.id}
@@ -120,7 +124,7 @@ export function PerformancePanel({
             note="Computed from published power and kerb weight."
           />
         ) : null}
-      </div>
+      </Reveal>
 
       {/* ------------------------------------------- Secondary figures */}
       {secondary.length > 0 ? (
@@ -129,6 +133,7 @@ export function PerformancePanel({
             <StatCard
               key={entry.label}
               size="sm"
+              countUp
               label={entry.label}
               value={
                 entry.decimals === null
@@ -175,15 +180,16 @@ function FigureStrip({
   note?: string;
 }) {
   return (
-    <div className="flex flex-col border-t border-line pt-6">
-      <p className="text-body-s text-ink-300">{label}</p>
+    <div className="flex flex-col pt-6">
+      <span aria-hidden="true" className="-mt-6 mb-6 block hud-rule" />
+      <p className="font-mono text-[12px] tracking-hud text-ink-300 uppercase">{label}</p>
 
       {metric ? (
         <p className="mt-3 flex flex-wrap items-baseline gap-x-2">
-          <span className="text-figure-xl text-ink-50">
-            {formatFigure(metric.value, metric.decimals)}
+          <span className="text-figure-xl text-ink-50 glow-text">
+            <CountUp value={formatFigure(metric.value, metric.decimals)} />
           </span>
-          <span className="text-lead text-ink-300">{unit}</span>
+          <span className="font-mono text-sm text-cyan-200">{unit}</span>
         </p>
       ) : (
         <p className="mt-3 text-lead text-ink-400">{NOT_AVAILABLE}</p>

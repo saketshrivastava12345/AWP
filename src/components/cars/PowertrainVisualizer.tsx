@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { NOT_AVAILABLE } from "@/lib/format";
 import type { DriveType, FuelType } from "@/types/domain";
 import { powertrainKind } from "@/types/domain";
+import { Reveal } from "@/components/fx/Reveal";
 import { DetailHeading } from "@/components/cars/detail/DetailHeading";
 
 const DRIVE_LABELS: Record<DriveType | "none", string> = {
@@ -20,8 +21,9 @@ const DRIVE_LABELS: Record<DriveType | "none", string> = {
  * highlighted from `drive_type`, so the diagram matches the actual car rather
  * than a generic illustration.
  *
- * Pure SVG + CSS: no client component, no JavaScript, and the dash animation
- * stops under the reduced-motion rule in globals.css.
+ * Pure SVG + CSS: no client component, no JavaScript. Energy runs along the
+ * links as a dashed glow (`animate-flow`), which the reduced-motion rule in
+ * globals.css stops.
  */
 
 type Stage = { id: string; label: string; tone: "fuel" | "electric" | "mech" };
@@ -54,11 +56,23 @@ function stagesFor(fuelType: FuelType | null): Stage[] {
   }
 }
 
-/** Tones are a leading dot, as on a Badge; the label stays ink-100. */
-const TONE_DOTS: Record<Stage["tone"], string | null> = {
-  fuel: "bg-ink-300",
-  electric: "bg-signal-electric",
-  mech: null,
+/** Each tone is a node colour: fuel gold, electric cyan, mechanical white. */
+const TONE: Record<Stage["tone"], { dot: string; edge: string; glow: string }> = {
+  fuel: {
+    dot: "bg-gold-400",
+    edge: "border-gold-500/50",
+    glow: "shadow-[0_0_14px_-4px_var(--color-gold-400)]",
+  },
+  electric: {
+    dot: "bg-cyan-300",
+    edge: "border-cyan-400/60",
+    glow: "shadow-[0_0_14px_-4px_var(--color-cyan-400)]",
+  },
+  mech: {
+    dot: "bg-ink-100",
+    edge: "border-line-strong",
+    glow: "",
+  },
 };
 
 /** Which corners receive drive, for the wheel diagram. */
@@ -78,13 +92,14 @@ function drivenWheels(drive: DriveType | null): { front: boolean; rear: boolean 
 
 function WheelDiagram({ drive }: { drive: DriveType | null }) {
   const { front, rear } = drivenWheels(drive);
-  const driven = "fill-gold-500";
+  const driven = "fill-cyan-300";
   const idle = "fill-surface-4";
 
   return (
     <svg
       viewBox="0 0 80 110"
-      className="h-24 w-auto"
+      className="h-28 w-auto"
+      style={{ filter: "drop-shadow(0 0 6px rgb(34 211 238 / 0.35))" }}
       role="img"
       aria-label={`Driven wheels: ${DRIVE_LABELS[drive ?? "none"]}`}
     >
@@ -95,26 +110,48 @@ function WheelDiagram({ drive }: { drive: DriveType | null }) {
         width="36"
         height="94"
         rx="10"
-        className="fill-surface-2 stroke-line"
+        className="fill-surface-2 stroke-cyan-400/40"
         strokeWidth="1"
       />
-      {/* Axles */}
-      <line
-        x1="12"
-        y1="28"
-        x2="68"
-        y2="28"
-        className="stroke-line-strong"
-        strokeWidth="1"
-      />
-      <line
-        x1="12"
-        y1="82"
-        x2="68"
-        y2="82"
-        className="stroke-line-strong"
-        strokeWidth="1"
-      />
+      {/* Axles: a driven axle carries the flow. */}
+      {[
+        { y: 28, on: front },
+        { y: 82, on: rear },
+      ].map((axle) => (
+        <g key={axle.y}>
+          <line
+            x1="12"
+            y1={axle.y}
+            x2="68"
+            y2={axle.y}
+            className="stroke-line-strong"
+            strokeWidth="1"
+          />
+          {axle.on ? (
+            <line
+              x1="12"
+              y1={axle.y}
+              x2="68"
+              y2={axle.y}
+              className="animate-flow stroke-cyan-300"
+              strokeWidth="1.5"
+              strokeDasharray="3 7"
+            />
+          ) : null}
+        </g>
+      ))}
+      {/* Drive shaft between driven axles (all-wheel drive). */}
+      {front && rear ? (
+        <line
+          x1="40"
+          y1="28"
+          x2="40"
+          y2="82"
+          className="animate-flow stroke-cyan-300/70"
+          strokeWidth="1.5"
+          strokeDasharray="3 7"
+        />
+      ) : null}
       {/* Wheels */}
       {[
         { x: 8, y: 20, on: front },
@@ -155,70 +192,97 @@ export function PowertrainVisualizer({
         id="powertrain-heading"
         level={headingLevel}
         title="How power reaches the road"
+        note={`${stages.length} stages`}
       />
 
-      <div className="mt-10 flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-16">
-        <ol className="flex flex-1 flex-wrap items-center gap-y-4">
-          {stages.map((stage, index) => {
-            const dot = TONE_DOTS[stage.tone];
-            return (
-              <li key={stage.id} className="flex items-center">
-                <span className="inline-flex h-9 items-center gap-2 rounded-pill border border-line-strong px-4 text-[13px] leading-none font-medium whitespace-nowrap text-ink-100">
-                  {dot ? (
+      <div className="relative mt-10 rounded-card p-5 hud-panel sm:p-7">
+        <span aria-hidden="true" className="hud-brackets -m-px" />
+        <span
+          aria-hidden="true"
+          className="absolute -top-[5px] left-5 bg-void px-1.5 hud-label leading-[10px]"
+        >
+          Flow // Powertrain
+        </span>
+
+        <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-16">
+          <Reveal
+            as="ol"
+            stagger={90}
+            className="flex flex-1 flex-wrap items-center gap-y-4"
+          >
+            {stages.map((stage, index) => {
+              const tone = TONE[stage.tone];
+              return (
+                <li key={stage.id} className="flex items-center">
+                  <span
+                    className={cn(
+                      "relative inline-flex h-10 items-center gap-2.5 border bg-void/50 px-4 font-mono text-[12px] leading-none tracking-hud whitespace-nowrap text-ink-50 uppercase chamfer-sm",
+                      tone.edge,
+                      tone.glow,
+                    )}
+                  >
                     <span
                       aria-hidden="true"
-                      className={cn("size-1.5 shrink-0 rounded-full", dot)}
+                      className={cn(
+                        "size-1.5 shrink-0 rounded-full",
+                        tone.dot,
+                        stage.tone !== "mech" && "animate-pulse-glow",
+                      )}
                     />
+                    <span aria-hidden="true" className="text-ink-500">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    {stage.label}
+                  </span>
+
+                  {index < stages.length - 1 ? (
+                    <svg
+                      width="40"
+                      height="12"
+                      viewBox="0 0 40 12"
+                      aria-hidden="true"
+                      className="mx-1 shrink-0"
+                      style={{ filter: "drop-shadow(0 0 4px rgb(34 211 238 / 0.6))" }}
+                    >
+                      <line
+                        x1="0"
+                        y1="6"
+                        x2="32"
+                        y2="6"
+                        className="stroke-line-strong"
+                        strokeWidth="1"
+                      />
+                      {/* The moving dash is the energy. strokeDashoffset
+                          animates via CSS, so reduced motion stops it. */}
+                      <line
+                        x1="0"
+                        y1="6"
+                        x2="32"
+                        y2="6"
+                        className="animate-flow stroke-cyan-300"
+                        strokeWidth="1.5"
+                        strokeDasharray="5 9"
+                      />
+                      <path d="M32 2 L38 6 L32 10 Z" className="fill-cyan-300" />
+                    </svg>
                   ) : null}
-                  {stage.label}
-                </span>
+                </li>
+              );
+            })}
+          </Reveal>
 
-                {index < stages.length - 1 ? (
-                  <svg
-                    width="34"
-                    height="10"
-                    viewBox="0 0 34 10"
-                    aria-hidden="true"
-                    className="mx-1 shrink-0"
-                  >
-                    <line
-                      x1="0"
-                      y1="5"
-                      x2="26"
-                      y2="5"
-                      className="stroke-line-strong"
-                      strokeWidth="1"
-                    />
-                    {/* The moving dash is the "flow". strokeDashoffset animates
-                        via CSS, so reduced motion stops it automatically. */}
-                    <line
-                      x1="0"
-                      y1="5"
-                      x2="26"
-                      y2="5"
-                      className="animate-flow stroke-ink-300"
-                      strokeWidth="1.5"
-                      strokeDasharray="4 10"
-                    />
-                    <path d="M26 1.5 L32 5 L26 8.5 Z" className="fill-line-strong" />
-                  </svg>
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-
-        <figure className="flex shrink-0 items-center gap-5">
-          <WheelDiagram drive={driveType} />
-          <figcaption>
-            <p className="text-body-s text-ink-100">
-              {driveType ? DRIVE_LABELS[driveType] : NOT_AVAILABLE}
-            </p>
-            <p className="mt-1 text-caption">
-              {driveType ? "Driven wheels in gold" : "Driven wheels not recorded"}
-            </p>
-          </figcaption>
-        </figure>
+          <figure className="flex shrink-0 items-center gap-5">
+            <WheelDiagram drive={driveType} />
+            <figcaption>
+              <p className="font-mono text-[12px] tracking-hud text-ink-50 uppercase">
+                {driveType ? DRIVE_LABELS[driveType] : NOT_AVAILABLE}
+              </p>
+              <p className="mt-1 text-caption">
+                {driveType ? "Driven wheels lit in cyan" : "Driven wheels not recorded"}
+              </p>
+            </figcaption>
+          </figure>
+        </div>
       </div>
     </section>
   );

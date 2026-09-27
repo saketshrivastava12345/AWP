@@ -56,6 +56,8 @@ export function HeroStory({
   beats,
   railLabels,
   poster,
+  backdrop,
+  sceneOverlay,
   children,
   className,
 }: {
@@ -67,6 +69,13 @@ export function HeroStory({
   railLabels: readonly { id: string; label: string }[];
   /** Server-rendered still composition, shown until (and instead of) the scene. */
   poster: ReactNode;
+  /**
+   * Decoration under everything on the stage (a floor grid, glows): absolute
+   * layers that fill the stage. Hidden behind the canvas once a scene draws.
+   */
+  backdrop?: ReactNode;
+  /** Decoration laid over the drawn scene (a screen-blended floor grid). */
+  sceneOverlay?: ReactNode;
   /** The hero block and the story cards, each marked `data-hero-beat`. */
   children: ReactNode;
   className?: string;
@@ -209,6 +218,8 @@ export function HeroStory({
           className="group/stage sticky top-(--nav-h) h-[calc(100svh-var(--nav-h))] overflow-hidden bg-void"
           aria-hidden="true"
         >
+          {backdrop}
+
           <div
             className={cn(
               "absolute inset-0 transition-opacity duration-(--duration-cinematic)",
@@ -240,6 +251,17 @@ export function HeroStory({
             </div>
           ) : null}
 
+          {showScene && sceneOverlay ? (
+            <div
+              className={cn(
+                "absolute inset-0 transition-opacity duration-(--duration-cinematic)",
+                sceneVisible ? "opacity-100" : "opacity-0",
+              )}
+            >
+              {sceneOverlay}
+            </div>
+          ) : null}
+
           {/* Legibility: darken behind the text column (left on wide screens,
             top on phones where the headline sits above the car). */}
           <div className="pointer-events-none absolute inset-0 bg-linear-to-r from-void/90 via-void/35 to-transparent max-md:bg-linear-to-b max-md:from-void/85 max-md:via-void/25 max-md:to-transparent" />
@@ -254,7 +276,7 @@ export function HeroStory({
           >
             <div className="sticky top-(--nav-h) h-px bg-line-subtle">
               <div
-                className="h-px bg-gold-500 transition-[width] duration-500"
+                className="h-px bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)] transition-[width] duration-500"
                 style={{ width: `${(active / Math.max(1, total - 1)) * 100}%` }}
               />
             </div>
@@ -286,9 +308,9 @@ export function HeroStory({
                   >
                     <span
                       className={cn(
-                        "text-caption transition-colors duration-300",
+                        "font-mono text-[11px] tracking-hud uppercase transition-colors duration-300",
                         active === index
-                          ? "text-ink-50"
+                          ? "text-cyan-200 glow-text-cyan"
                           : "text-ink-500 group-hover:text-ink-200",
                       )}
                     >
@@ -299,8 +321,8 @@ export function HeroStory({
                       className={cn(
                         "block h-px transition-all duration-500",
                         active === index
-                          ? "w-10 bg-gold-500"
-                          : "w-4 bg-line-strong group-hover:w-6",
+                          ? "w-10 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+                          : "w-4 bg-line-strong group-hover:w-6 group-hover:bg-cyan-400/60",
                       )}
                     />
                   </a>

@@ -27,12 +27,13 @@ import { PASSWORD_MAX, PASSWORD_MIN } from "@/app/auth/validation";
 const CREATE_ID = "create-account";
 const SIGN_IN_ID = "sign-in";
 
-/* The tabs share the sticky sub-navigation's underline style. */
+/* HUD tabs: mono uppercase keys with a cyan underline that glows when lit. */
 const TAB =
-  "-mb-px inline-flex h-12 items-center border-b-2 text-body-s rounded-xs " +
-  "transition-colors duration-(--duration-fast) focus-visible:outline-offset-4";
-const TAB_ACTIVE = "border-gold-500 text-ink-50";
-const TAB_IDLE = "border-transparent text-ink-300 hover:text-ink-50";
+  "-mb-px inline-flex h-12 items-center border-b-2 font-mono text-xs tracking-hud uppercase rounded-xs " +
+  "transition-[color,border-color,box-shadow] duration-(--duration-fast) focus-visible:outline-offset-4";
+const TAB_ACTIVE =
+  "border-cyan-300 text-ink-50 shadow-[0_10px_16px_-12px_oklch(0.83_0.13_210/80%)]";
+const TAB_IDLE = "border-transparent text-ink-400 hover:text-cyan-200";
 
 function subscribeLocation(onChange: () => void): () => void {
   window.addEventListener("hashchange", onChange);
@@ -100,7 +101,7 @@ function SignInForm({ next }: { next: string | null }) {
       <p className="-mt-2">
         <Link
           href="/login/forgot"
-          className="inline-flex min-h-11 items-center text-body-s text-ink-300 underline decoration-ink-600 underline-offset-4 transition-colors duration-(--duration-fast) hover:text-ink-50 hover:decoration-ink-300"
+          className="inline-flex min-h-11 items-center fx-link text-body-s text-ink-300 transition-colors duration-(--duration-fast) hover:text-cyan-200"
         >
           Forgot your password?
         </Link>
@@ -140,7 +141,7 @@ export function LoginForm() {
     <div className="group/auth">
       <nav
         aria-label="Sign in or create an account"
-        className="mb-10 flex gap-8 border-b border-line-subtle"
+        className="mb-8 flex gap-8 border-b border-line-subtle"
       >
         <a
           href={`#${SIGN_IN_ID}`}
@@ -151,7 +152,7 @@ export function LoginForm() {
               ? TAB_IDLE
               : cn(
                   TAB_ACTIVE,
-                  "group-has-[#create-account:target]/auth:border-transparent group-has-[#create-account:target]/auth:text-ink-300",
+                  "group-has-[#create-account:target]/auth:border-transparent group-has-[#create-account:target]/auth:text-ink-400 group-has-[#create-account:target]/auth:shadow-none",
                 ),
           )}
         >
@@ -166,7 +167,7 @@ export function LoginForm() {
               ? TAB_ACTIVE
               : cn(
                   TAB_IDLE,
-                  "group-has-[#create-account:target]/auth:border-gold-500 group-has-[#create-account:target]/auth:text-ink-50",
+                  "group-has-[#create-account:target]/auth:border-cyan-300 group-has-[#create-account:target]/auth:text-ink-50",
                 ),
           )}
         >

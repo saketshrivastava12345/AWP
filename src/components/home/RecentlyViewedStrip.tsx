@@ -36,6 +36,9 @@ export function RecentlyViewedStrip() {
       <Container>
         <SectionHeading
           id="recent-heading"
+          overline="History"
+          code="09"
+          scramble
           title="Recently viewed"
           actionHref="/favorites#recently-viewed-heading"
           actionLabel="Your history"

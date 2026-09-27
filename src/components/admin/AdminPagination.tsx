@@ -30,14 +30,14 @@ export function AdminPagination({
     .sort((a, b) => a - b);
 
   const cell =
-    "inline-flex min-h-11 min-w-11 items-center justify-center rounded-pill px-2 text-body-s tabular-nums transition-colors duration-(--duration-fast)";
+    "inline-flex min-h-11 min-w-11 items-center justify-center rounded-control px-2 font-mono text-xs tabular-nums transition-[color,background-color,box-shadow] duration-(--duration-fast)";
 
   return (
     <nav
       aria-label="Pagination"
       className="mt-6 flex flex-wrap items-center justify-between gap-3"
     >
-      <p className="text-caption">
+      <p className="text-hud">
         Page {page} of {pageCount}
       </p>
       <ul className="flex flex-wrap items-center gap-1">
@@ -45,7 +45,7 @@ export function AdminPagination({
           {page > 1 ? (
             <Link
               href={href(page - 1)}
-              className={cn(cell, "text-ink-300 hover:bg-surface-2")}
+              className={cn(cell, "text-ink-300 hover:bg-surface-2 hover:text-cyan-200")}
               rel="prev"
             >
               <ChevronLeft className="size-4" aria-hidden="true" />
@@ -70,8 +70,8 @@ export function AdminPagination({
               className={cn(
                 cell,
                 value === page
-                  ? "border border-line-strong bg-surface-2 text-ink-50"
-                  : "text-ink-300 hover:bg-surface-2",
+                  ? "border border-cyan-700/70 bg-cyan-400/8 text-cyan-100 shadow-[0_0_14px_-6px_oklch(0.8_0.14_210/60%)]"
+                  : "text-ink-300 hover:bg-surface-2 hover:text-cyan-200",
               )}
             >
               {value}
@@ -82,7 +82,7 @@ export function AdminPagination({
           {page < pageCount ? (
             <Link
               href={href(page + 1)}
-              className={cn(cell, "text-ink-300 hover:bg-surface-2")}
+              className={cn(cell, "text-ink-300 hover:bg-surface-2 hover:text-cyan-200")}
               rel="next"
             >
               <ChevronRight className="size-4" aria-hidden="true" />

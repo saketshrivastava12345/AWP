@@ -79,7 +79,8 @@ export function CompareStart({
                   <CompareLink
                     to={[a.slug, b.slug]}
                     aria-label={`Compare the ${a.manufacturer} ${nameA} with the ${b.manufacturer} ${nameB}`}
-                    className="group block h-full rounded-card bg-surface-1 p-4 transition-colors duration-(--duration-fast) hover:bg-surface-2 sm:p-5"
+                    className="group fx-card block h-full rounded-card p-4 hud-panel sm:p-5"
+                    data-spotlight
                   >
                     <span className="relative grid grid-cols-2 gap-2">
                       {[a, b].map((car) => (
@@ -96,7 +97,7 @@ export function CompareStart({
                       ))}
                       <span
                         aria-hidden="true"
-                        className="absolute top-1/2 left-1/2 grid size-9 -translate-1/2 place-items-center rounded-pill bg-surface-1 text-caption text-ink-200 transition-colors duration-(--duration-fast) group-hover:bg-surface-2"
+                        className="absolute top-1/2 left-1/2 grid size-9 -translate-1/2 place-items-center rounded-pill border border-cyan-400/60 bg-void/85 font-mono text-[10px] tracking-hud text-cyan-200 uppercase glow-cyan"
                       >
                         vs
                       </span>
@@ -136,6 +137,10 @@ export function CompareStart({
         <ul className="grid gap-6 sm:grid-cols-3 sm:gap-10">
           {PRINCIPLES.map((item) => (
             <li key={item.title} className="text-caption">
+              <span
+                aria-hidden="true"
+                className="mb-2 block h-0.5 w-5 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+              />
               <span className="block text-body-s text-ink-200">{item.title}</span>
               <span className="mt-1 block max-w-[40ch]">{item.text}</span>
             </li>

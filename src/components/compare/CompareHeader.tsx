@@ -46,6 +46,16 @@ export function CompareHeader({ cars }: { cars: CompareCarSummary[] }) {
             className="w-[calc((100%-0.75rem)/2)] shrink-0 snap-start md:w-auto md:px-3"
           >
             <div className="relative">
+              <span
+                aria-hidden="true"
+                className="hud-brackets pointer-events-none absolute -inset-1.5 z-10 [--hud-c:var(--color-cyan-300)] [--hud-l:16px]"
+              />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-2 left-2 z-10 bg-void/70 px-1.5 py-0.5 hud-label"
+              >
+                Car {String(index + 1).padStart(2, "0")}
+              </span>
               <CarThumb
                 src={car.photo?.src ?? null}
                 alt={car.photo?.alt ?? car.fullName}
@@ -62,8 +72,8 @@ export function CompareHeader({ cars }: { cars: CompareCarSummary[] }) {
                 to={others(car.slug)}
                 aria-label={`Remove ${car.fullName} from the comparison`}
                 className={
-                  "absolute top-2 right-2 grid size-9 place-items-center rounded-pill bg-void/60 text-ink-50 backdrop-blur-md " +
-                  "transition-colors duration-(--duration-fast) hover:bg-void/85 " +
+                  "absolute top-2 right-2 z-20 grid size-9 place-items-center rounded-pill border border-line bg-void/60 text-ink-50 backdrop-blur-md " +
+                  "transition-[background-color,border-color,box-shadow,rotate] duration-(--duration-fast) hover:rotate-90 hover:border-signal-negative/60 hover:bg-void/85 hover:shadow-[0_0_10px_rgb(244_63_94/0.4)] " +
                   "after:absolute after:-inset-1 after:rounded-pill after:content-['']"
                 }
               >

@@ -25,11 +25,17 @@ export function TechnicalHud({
   return (
     <div
       className={cn(
-        "pointer-events-none absolute bottom-3 left-3 max-w-[70%] bg-void/55 px-3 py-2.5 backdrop-blur-[2px] hud-corners",
+        "pointer-events-none absolute bottom-3 left-3 max-w-[70%] bg-void/55 px-3 py-2.5 backdrop-blur-[2px] hud-corners [--hud-c:var(--color-cyan-300)]",
         className,
       )}
     >
-      <p className="font-mono text-micro tracking-hud text-gold-300 uppercase">{mode}</p>
+      <p className="flex items-center gap-1.5 font-mono text-micro tracking-hud text-cyan-200 uppercase">
+        <span
+          aria-hidden="true"
+          className="size-1 animate-pulse-glow rounded-full bg-cyan-400"
+        />
+        {mode}
+      </p>
       {entries.length > 0 ? (
         <dl className="mt-1.5 grid grid-cols-[auto_auto] gap-x-4 gap-y-0.5">
           {entries.map(({ label, value }) => (
@@ -37,7 +43,7 @@ export function TechnicalHud({
               <dt className="font-mono text-micro tracking-hud text-ink-400 uppercase">
                 {label}
               </dt>
-              <dd className="tabular text-right font-mono text-micro text-ink-100">
+              <dd className="tabular text-right font-mono text-micro text-ink-50 glow-text">
                 {value}
               </dd>
             </div>

@@ -407,11 +407,11 @@ function PalettePanel({
           : `${resultCount} ${resultCount === 1 ? "suggestion" : "suggestions"}.`;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      {/* HUD corner brackets on the panel. */}
+      <span aria-hidden="true" className="hud-brackets z-10 [--hud-l:14px]" />
       {/* ---- query row ---- */}
       <div className="relative flex h-14 shrink-0 items-center gap-3 border-b border-line px-4 transition-colors duration-(--duration-fast) focus-within:border-cyan-400/40 sm:h-16 sm:px-5">
-        {/* HUD corner brackets and a label on the panel edge. */}
-        <span aria-hidden="true" className="hud-brackets [--hud-l:14px]" />
         <Search
           className="size-[18px] shrink-0 text-cyan-300 drop-shadow-[0_0_6px_var(--color-cyan-400)]"
           aria-hidden="true"

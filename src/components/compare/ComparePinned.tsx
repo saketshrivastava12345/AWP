@@ -55,7 +55,7 @@ export function ComparePinned({
       {/* ------------------------------------------------ The pinned car */}
       <article
         aria-label={`Pinned: ${car.fullName}`}
-        className="self-start overflow-hidden rounded-card bg-surface-1"
+        className="relative self-start overflow-hidden rounded-card hud-panel"
       >
         {/* Compact and side-by-side on phones, so the picker stays near the
             top of the screen; a full card beside the picker on desktop. */}
@@ -100,7 +100,7 @@ export function ComparePinned({
                     {label}
                     {value ? null : " · not published"}
                   </dt>
-                  <dd className="text-figure text-ink-50">
+                  <dd className="text-figure text-ink-50 glow-text">
                     {value ?? (
                       <>
                         <span aria-hidden="true" className="text-ink-400">
@@ -166,7 +166,8 @@ export function ComparePinned({
                       <CompareLink
                         to={[car.slug, option.slug]}
                         aria-label={`Compare with ${option.manufacturer} ${shortCarName(option.model, option.variant)}`}
-                        className="group flex min-h-16 items-center gap-4 rounded-card bg-surface-1 p-2 pr-4 transition-colors duration-(--duration-fast) hover:bg-surface-2"
+                        className="group fx-card flex min-h-16 items-center gap-4 rounded-card p-2 pr-4 hud-panel"
+                        data-spotlight
                       >
                         <CarThumb
                           src={option.imageUrl}

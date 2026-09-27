@@ -72,7 +72,7 @@ export function PriceSummary({
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="flex items-center gap-1.5 text-body-s text-ink-300">
+        <p className="flex items-center gap-1.5 font-mono text-[11px] tracking-hud text-cyan-200 uppercase">
           <KeepHyphens text={headline?.label ?? PRICE_TYPE_LABELS[price.price_type]} />
           {headline ? (
             <InfoHint label={`What “${headline.label}” means`}>{headline.note}</InfoHint>
@@ -83,7 +83,10 @@ export function PriceSummary({
 
       <div ref={figureRef}>
         <p
-          className={cn("mt-3 text-figure-xl", isTotal ? "text-ink-50" : "text-ink-100")}
+          className={cn(
+            "mt-3 text-figure-xl",
+            isTotal ? "text-ink-50 glow-text" : "text-ink-100",
+          )}
         >
           {headline ? formatPrice(headline.amount, headline.currency) : "Not available"}
         </p>

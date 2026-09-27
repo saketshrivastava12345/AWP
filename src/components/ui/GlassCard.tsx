@@ -64,6 +64,7 @@ export function GlassCard<T extends ElementType = "div">({
         className,
       )}
       data-spotlight={interactive ? "" : undefined}
+      suppressHydrationWarning={interactive || undefined}
       {...rest}
     >
       {brackets ? (

@@ -24,7 +24,7 @@ export function Parallax({
 }) {
   const Component = (as ?? "div") as AnyComponent;
   return (
-    <Component data-parallax={speed} className={cn(className)}>
+    <Component data-parallax={speed} className={cn(className)} suppressHydrationWarning>
       {children}
     </Component>
   );

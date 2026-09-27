@@ -63,7 +63,7 @@ export function AdminNav() {
       <nav aria-label="Admin" className="hidden lg:block">
         {SECTIONS.map((section) => (
           <div key={section.title} className="mb-6">
-            <p className="mb-1.5 px-3 text-caption">{section.title}</p>
+            <p className="mb-1.5 px-3 text-hud">{section.title}</p>
             <ul className="flex flex-col gap-px">
               {section.links.map((link) => {
                 const active = isActive(pathname, link.href, link.exact);
@@ -74,14 +74,20 @@ export function AdminNav() {
                       href={link.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex min-h-11 items-center gap-3 rounded-control px-3 text-body-s transition-colors duration-(--duration-fast)",
+                        "group/nav flex min-h-11 items-center gap-3 rounded-control px-3 font-mono text-xs tracking-hud uppercase",
+                        "transition-[color,background-color,box-shadow] duration-(--duration-fast)",
                         active
-                          ? "bg-surface-2 text-ink-50 shadow-[inset_2px_0_0_0_var(--color-gold-500)]"
+                          ? "bg-cyan-400/8 text-cyan-100 shadow-[inset_2px_0_0_0_var(--color-cyan-300),0_0_18px_-8px_oklch(0.8_0.14_210/70%)]"
                           : "text-ink-300 hover:bg-surface-2/60 hover:text-ink-50",
                       )}
                     >
                       <Icon
-                        className="size-4 shrink-0"
+                        className={cn(
+                          "size-4 shrink-0 transition-[color,filter] duration-(--duration-fast)",
+                          active
+                            ? "text-cyan-300 drop-shadow-[0_0_6px_var(--color-cyan-300)]"
+                            : "group-hover/nav:text-cyan-200",
+                        )}
                         strokeWidth={1.5}
                         aria-hidden="true"
                       />
@@ -99,7 +105,7 @@ export function AdminNav() {
         aria-label="Admin"
         className="-mx-5 border-b border-line-subtle sm:-mx-8 lg:hidden"
       >
-        <ul className="no-scrollbar flex gap-6 overflow-x-auto px-5 sm:px-8">
+        <ul className="no-scrollbar flex gap-5 overflow-x-auto px-5 sm:px-8">
           {links.map((link) => {
             const active = isActive(pathname, link.href, link.exact);
             return (
@@ -108,10 +114,10 @@ export function AdminNav() {
                   href={link.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "-mb-px flex min-h-12 items-center border-b-2 text-body-s whitespace-nowrap transition-colors duration-(--duration-fast)",
+                    "-mb-px flex min-h-12 items-center border-b-2 font-mono text-xs tracking-hud whitespace-nowrap uppercase transition-[color,border-color,box-shadow] duration-(--duration-fast)",
                     active
-                      ? "border-gold-500 text-ink-50"
-                      : "border-transparent text-ink-300 hover:text-ink-50",
+                      ? "border-cyan-300 text-ink-50 shadow-[0_10px_16px_-12px_oklch(0.83_0.13_210/80%)]"
+                      : "border-transparent text-ink-400 hover:text-cyan-200",
                   )}
                 >
                   {link.label}

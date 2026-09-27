@@ -186,8 +186,9 @@ export type FieldOptionGroup = { label: string; options: FieldOption[] };
 
 const SELECT_CLASSES =
   "h-12 w-full min-w-0 appearance-none rounded-control border border-line-strong bg-surface-1 pr-9 pl-3.5 " +
-  "text-[15px] text-ink-50 transition-colors duration-(--duration-fast) hover:border-ink-500 " +
-  "focus-visible:border-gold-500 disabled:cursor-not-allowed disabled:opacity-50 " +
+  "text-[15px] text-ink-50 transition-[border-color,box-shadow] duration-(--duration-fast) hover:border-cyan-700 " +
+  "focus-visible:border-cyan-300 focus-visible:shadow-[0_0_0_3px_oklch(0.83_0.13_210/18%),0_0_18px_-4px_oklch(0.8_0.14_210/45%)] " +
+  "disabled:cursor-not-allowed disabled:opacity-50 " +
   "aria-[invalid=true]:border-signal-negative";
 
 export function SelectField({
@@ -301,7 +302,7 @@ export function CheckboxField({
           disabled={disabled}
           aria-describedby={describedBy(id, hint, error)}
           aria-invalid={error ? true : undefined}
-          className="size-4 shrink-0 cursor-pointer accent-gold-500"
+          className="size-4 shrink-0 cursor-pointer accent-cyan-400"
         />
         <span>{label}</span>
       </label>
@@ -364,7 +365,7 @@ export function RadioQuestion({
             key={option.value}
             className={cn(
               "flex cursor-pointer items-start gap-3 rounded-control border px-3 py-3 text-sm transition-colors",
-              "border-line-strong hover:border-ink-500 has-[:checked]:border-gold-600 has-[:checked]:bg-gold-500/5",
+              "border-line-strong hover:border-ink-500 has-[:checked]:border-cyan-600 has-[:checked]:bg-cyan-400/6 has-[:checked]:shadow-[0_0_14px_-6px_oklch(0.8_0.14_210/55%)]",
               error && "border-signal-negative/60",
             )}
           >
@@ -374,7 +375,7 @@ export function RadioQuestion({
               value={option.value}
               defaultChecked={defaultValue === option.value}
               required
-              className="mt-0.5 size-4 shrink-0 accent-gold-500"
+              className="mt-0.5 size-4 shrink-0 accent-cyan-400"
             />
             <span className="min-w-0">
               <span className="block text-ink-100">{option.label}</span>

@@ -73,8 +73,10 @@ function Stats({ stats }: { stats: BlueprintStep["stats"] }) {
     <dl className="mt-5 grid grid-cols-2 gap-x-5 gap-y-3.5 border-t border-line-subtle pt-4">
       {stats.map(({ label, value }) => (
         <div key={label} className="min-w-0">
-          <dt className="text-label text-[8px]">{label}</dt>
-          <dd className="tabular mt-1 font-mono text-[13px] break-words text-ink-50">
+          <dt className="font-mono text-[9px] tracking-hud text-ink-400 uppercase">
+            {label}
+          </dt>
+          <dd className="tabular mt-1 font-mono text-[13px] break-words text-ink-50 glow-text">
             {value}
           </dd>
         </div>
@@ -99,9 +101,23 @@ function StepCard({
   return (
     <article
       aria-labelledby={headingId}
-      className="relative w-full max-w-md border border-line bg-void/85 p-5 backdrop-blur-md sm:p-7"
+      className="relative w-full max-w-md rounded-card p-5 hud-panel [--panel-bg:oklch(0.1_0.02_245/88%)] sm:p-7"
     >
-      <p className="text-label text-gold-400">
+      <span
+        aria-hidden="true"
+        className="hud-brackets -m-px [--hud-c:var(--color-gold-400)]"
+      />
+      <span
+        aria-hidden="true"
+        className="absolute -top-[5px] left-5 bg-void px-1.5 hud-label leading-[10px]"
+      >
+        Blueprint // {String(index).padStart(2, "0")}
+      </span>
+      <p className="flex items-center gap-2 font-mono text-[11px] tracking-hud text-gold-300 uppercase">
+        <span
+          aria-hidden="true"
+          className="size-1.5 animate-pulse-glow rounded-full bg-gold-400"
+        />
         {String(index).padStart(2, "0")} / {String(total).padStart(2, "0")} — {step.label}
       </p>
       <h3
@@ -123,7 +139,7 @@ function StepCard({
           {step.features.map((feature) => (
             <li key={feature.name} className="flex gap-2.5 text-xs leading-relaxed">
               <span
-                className="mt-1.5 size-1 shrink-0 rounded-full bg-gold-500"
+                className="mt-1.5 size-1 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_6px_var(--color-cyan-400)]"
                 aria-hidden="true"
               />
               <span>
@@ -143,7 +159,7 @@ function StepCard({
             <li key={component.slug}>
               <Link
                 href={`/parts/${component.slug}`}
-                className="inline-flex min-h-6 items-center font-display text-[10px] tracking-[0.14em] text-gold-300 uppercase transition-colors hover:text-gold-200"
+                className="inline-flex min-h-6 items-center fx-link font-mono text-[10px] tracking-[0.14em] text-cyan-200 uppercase transition-colors hover:text-cyan-100"
               >
                 {component.name} →
               </Link>
@@ -175,7 +191,7 @@ function StepCard({
               key={group}
               className="flex gap-2 font-mono text-micro tracking-hud uppercase"
             >
-              <span className="text-gold-500">
+              <span className="text-cyan-300">
                 {String(position + 1).padStart(2, "0")}
               </span>
               <span className="text-ink-200">{BLUEPRINT_LABELS[group]}</span>
@@ -190,10 +206,13 @@ function StepCard({
         <a
           href="#explore-3d"
           data-inspect={step.group}
-          className="mt-5 flex min-h-11 items-center justify-between gap-3 border-t border-line-subtle pt-4 font-display text-[10px] tracking-[0.16em] text-ink-200 uppercase transition-colors hover:text-gold-300"
+          className="group/inspect mt-5 flex min-h-11 items-center justify-between gap-3 border-t border-line-subtle pt-4 font-mono text-[10px] tracking-[0.16em] text-ink-100 uppercase transition-colors hover:text-cyan-200"
         >
           Inspect in the 3D viewer
-          <ArrowUpRight className="size-3.5 text-gold-500" aria-hidden="true" />
+          <ArrowUpRight
+            className="size-3.5 text-cyan-300 transition-transform duration-(--duration-fast) group-hover/inspect:translate-x-0.5 group-hover/inspect:-translate-y-0.5"
+            aria-hidden="true"
+          />
         </a>
       ) : null}
     </article>
@@ -467,13 +486,13 @@ export function CarShowcase({
 
         {/* Phones: which card this is, and a hairline progress bar. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 md:hidden">
-          <p className="px-5 pb-2 text-hud text-gold-400">
+          <p className="px-5 pb-2 text-hud text-cyan-200">
             {String(active).padStart(2, "0")} / {String(cards - 1).padStart(2, "0")} ·{" "}
             {current}
           </p>
           <div className="h-px bg-line">
             <div
-              className="h-px bg-gold-500 transition-[width] duration-500"
+              className="h-px bg-cyan-400 shadow-[0_0_6px_var(--color-cyan-400)] transition-[width] duration-500"
               style={{ width: `${(active / Math.max(1, cards - 1)) * 100}%` }}
             />
           </div>
@@ -499,9 +518,9 @@ export function CarShowcase({
               >
                 <span
                   className={cn(
-                    "font-display text-[9px] tracking-[0.2em] uppercase transition-colors duration-300",
+                    "font-mono text-[9px] tracking-[0.2em] uppercase transition-colors duration-300",
                     active === index
-                      ? "text-gold-300"
+                      ? "text-cyan-200 glow-text-cyan"
                       : "text-ink-500 group-hover:text-ink-200",
                   )}
                 >
@@ -509,9 +528,9 @@ export function CarShowcase({
                 </span>
                 <span
                   className={cn(
-                    "block h-px transition-all duration-500",
+                    "block h-px transition-[width,background-color,box-shadow] duration-500",
                     active === index
-                      ? "w-10 bg-gold-500"
+                      ? "w-10 bg-cyan-300 shadow-[0_0_8px_var(--color-cyan-400)]"
                       : "w-4 bg-line-strong group-hover:w-6",
                   )}
                 />
@@ -537,9 +556,9 @@ export function CarShowcase({
             <button
               type="button"
               onClick={() => jumpTo(1)}
-              className="mt-10 flex min-h-11 items-center gap-3 text-label transition-colors hover:text-gold-300"
+              className="mt-10 flex min-h-11 items-center gap-3 text-label transition-colors hover:text-cyan-200"
             >
-              <span className="flex size-8 items-center justify-center rounded-full border border-line-strong">
+              <span className="flex size-8 items-center justify-center rounded-full border border-cyan-400/60 glow-cyan">
                 <ChevronDown
                   className="size-3.5 motion-safe:animate-bounce"
                   aria-hidden="true"

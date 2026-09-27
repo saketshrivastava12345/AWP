@@ -6,6 +6,8 @@ import { Badge, fuelTone } from "@/components/ui/Badge";
 import { ButtonLink, buttonClasses } from "@/components/ui/Button";
 import { StatCard, StatRow } from "@/components/ui/StatCard";
 import { InfoHint } from "@/components/ui/Tooltip";
+import { CountUp } from "@/components/fx/CountUp";
+import { ScrambleText } from "@/components/fx/ScrambleText";
 import {
   listedPriceTypeLabel,
   type ListedPriceData,
@@ -24,12 +26,17 @@ import type { DriveType, VariantDetail } from "@/types/domain";
 import { ShareButton } from "./ShareButton";
 
 /**
- * The car page's opening screen.
+ * The car page's opening screen — the cockpit.
  *
  * Desktop: the name, meta line, powertrain badge, lead, price and actions in a
- * 5/12 column beside the 3D stage (7/12), and the key-figure row across the
- * full width below. Phones: the name first, then the stage, the key figures,
- * the price and the actions.
+ * 5/12 column beside the 3D stage (7/12), and the telemetry row of key
+ * figures across the full width below. Phones: the name first, then the
+ * stage, the key figures, the price and the actions.
+ *
+ * The stage sits in a HUD frame: corner brackets, tiny mono read-outs and a
+ * slow scan line, all decorative (aria-hidden) and all outside the viewer's
+ * own element, so its fullscreen mode (a fixed root) is unaffected — nothing
+ * here puts a transform or filter on an ancestor of it.
  *
  * Props:
  *   detail       the variant (getVariantDetail)
@@ -41,11 +48,12 @@ import { ShareButton } from "./ShareButton";
  *   currentYear  override for the status derivation; defaults to the cached
  *                catalogueYear() the car cards use, so both agree
  *
- * Everything shown is recorded data. Key figures are static — the published
- * value from the first frame, never animated through other numbers. A missing
- * figure prints "—" (read as "Not available"). A listed price is shown in full
- * with its type, market and verification; an unverified figure says so and
- * points to the Price section, which explains it.
+ * Everything shown is recorded data. Key figures count up to the published
+ * value on first view, but the server HTML and the resting state are the
+ * exact published figure (see fx/CountUp). A missing figure prints "—" (read
+ * as "Not available"). A listed price is shown in full with its type, market
+ * and verification; an unverified figure says so and points to the Price
+ * section, which explains it.
  */
 export async function VehicleHeader({
   detail,
@@ -73,6 +81,7 @@ export async function VehicleHeader({
   const fullName = carDisplayName(manufacturer.name, model.name, variant.name);
   const figures = keyFigures(detail.performance);
   const meta = metaLine(detail);
+  const published = figures.filter((figure) => figure.value !== null).length;
 
   return (
     <div id="car-hero" className={cn("pt-6 pb-16 lg:pt-8 lg:pb-24", className)}>
@@ -81,46 +90,47 @@ export async function VehicleHeader({
       <div className="mt-8 flex flex-col gap-10 lg:mt-10 lg:grid lg:grid-cols-12 lg:gap-x-12 lg:gap-y-10 xl:gap-x-16">
         {/* ------------------------------------------------------- Name */}
         <header className="@container min-w-0 lg:col-span-5 lg:row-start-1">
-          <h1>
-            <span className="block text-lead text-ink-300">{manufacturer.name}</span>
+          <p aria-hidden="true" className="flex items-center gap-3 hud-label">
+            <span className="inline-block size-1.5 animate-pulse-glow rounded-full bg-cyan-400" />
+            Vehicle // {detail.country.name}
+          </p>
+          <h1 className="mt-4">
+            <span className="block font-mono text-sm tracking-hud text-cyan-200 uppercase">
+              {manufacturer.name}
+            </span>
             <span
-              className="mt-3 block text-display-xl"
+              className="mt-3 block gradient-text text-display-xl"
               style={nameplateSize(model.name)}
             >
-              {model.name}
+              <ScrambleText text={model.name} />
             </span>
             {variantLine ? (
               <span
                 className="mt-2 block text-display-l text-ink-300"
                 style={nameplateSize(variantLine, 4.5)}
               >
-                {variantLine}
+                <ScrambleText text={variantLine} />
               </span>
             ) : null}
           </h1>
 
           {meta.length > 0 || lifecycle ? (
-            <p className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-body-s text-ink-400">
-              {meta.map((part, index) => (
-                // The separator trails its part, so a wrapped line never
-                // starts with a dot.
-                <span key={part} className="inline-flex items-center gap-2">
-                  {part}
-                  {index < meta.length - 1 || lifecycle ? <Dot /> : null}
-                </span>
+            <p className="mt-6 flex flex-wrap items-center gap-2">
+              {meta.map((part) => (
+                <MetaChip key={part}>{part}</MetaChip>
               ))}
               {lifecycle ? (
-                <span className="inline-flex items-center gap-2">
+                <MetaChip>
                   <span>{lifecycle.label}</span>
                   <InfoHint
                     label={`About the status: ${lifecycle.label}`}
-                    className="-ml-1"
+                    className="-my-1 -mr-1"
                   >
                     {lifecycle.derived
                       ? `Derived from the recorded production years: ${lowerFirst(lifecycle.detail)}.`
                       : "Lifecycle status as recorded in the catalogue."}
                   </InfoHint>
-                </span>
+                </MetaChip>
               ) : null}
             </p>
           ) : null}
@@ -132,36 +142,86 @@ export async function VehicleHeader({
           ) : null}
 
           {variant.description ? (
-            <p className="mt-6 max-w-[52ch] text-lead">{variant.description}</p>
+            <p className="mt-6 max-w-[52ch] animate-rise-in text-lead [animation-delay:200ms]">
+              {variant.description}
+            </p>
           ) : null}
         </header>
 
         {/* -------------------------------------------------- 3D stage */}
         <div className="order-2 min-w-0 lg:order-none lg:col-span-7 lg:col-start-6 lg:row-span-2 lg:row-start-1">
-          {stage}
+          <div className="relative">
+            {/* HUD frame: brackets, read-outs and a scan line, all decoration. */}
+            <span
+              aria-hidden="true"
+              className="hud-brackets pointer-events-none absolute -inset-2 z-10 [--hud-c:var(--color-cyan-300)] [--hud-l:22px]"
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-2 left-8 z-10 -translate-y-1/2 bg-void px-1.5 hud-label leading-[10px]"
+            >
+              SYS.3D // Viewer
+            </span>
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -top-2 right-8 z-10 flex -translate-y-1/2 items-center gap-2 bg-void px-1.5 hud-label leading-[10px]"
+            >
+              <span className="inline-block size-1.5 animate-pulse-glow rounded-full bg-cyan-400" />
+              Live
+            </span>
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -bottom-2 left-8 z-10 translate-y-1/2 bg-void px-1.5 hud-label leading-[10px]"
+            >
+              Telemetry {published} / {figures.length}
+            </span>
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute right-8 -bottom-2 z-10 translate-y-1/2 bg-void px-1.5 hud-label leading-[10px] text-ink-600"
+            >
+              {variant.fuel_type ? formatEnumLabel(variant.fuel_type) : "Powertrain —"}
+              {" // "}
+              {formatEnumLabel(model.body_type, "") || "Body —"}
+            </span>
+            {/* The scan line sweeps the stage; the viewer's own overlays sit
+                above it because this layer stays below the stage (z-0). */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+            >
+              <span className="absolute inset-x-0 top-0 h-24 animate-scan-beam bg-gradient-to-b from-cyan-400/0 via-cyan-300/10 to-cyan-400/0" />
+            </span>
+            <div className="relative">{stage}</div>
+          </div>
         </div>
 
         {/* ------------------------------------------ Key figures (full row) */}
-        <StatRow
-          aria-label="Key figures"
-          className="order-3 border-t border-line pt-6 lg:order-none lg:col-span-12 lg:row-start-3 lg:grid-cols-4 lg:pt-10"
-        >
-          {figures.map((figure) => (
-            <StatCard
-              key={figure.id}
-              label={figure.label}
-              value={figure.value}
-              unit={figure.unit}
-            />
-          ))}
-        </StatRow>
+        <div className="order-3 lg:order-none lg:col-span-12 lg:row-start-3">
+          <div className="flex items-center gap-4 border-t border-line pt-5 lg:pt-8">
+            <span aria-hidden="true" className="hud-label">
+              Data // Key figures
+            </span>
+            <span aria-hidden="true" className="hud-rule h-px flex-1" />
+          </div>
+          <StatRow aria-label="Key figures" className="pt-3 lg:grid-cols-4 lg:pt-5">
+            {figures.map((figure) => (
+              <StatCard
+                key={figure.id}
+                label={figure.label}
+                value={figure.value}
+                unit={figure.unit}
+                countUp
+              />
+            ))}
+          </StatRow>
+        </div>
 
         {/* --------------------------------------------- Price + actions */}
         <div className="order-4 min-w-0 lg:order-none lg:col-span-5 lg:row-start-2 lg:self-end">
           {price ? <HeroPrice price={price} /> : null}
 
           <div className={cn("flex flex-wrap items-center gap-3", price && "mt-8")}>
-            <ButtonLink href={compareHref(detail)} className="max-sm:flex-1">
+            <ButtonLink href={compareHref(detail)} magnetic className="max-sm:flex-1">
               Compare
             </ButtonLink>
             {save ? <div className="flex max-sm:flex-1 [&>*]:w-full">{save}</div> : null}
@@ -181,10 +241,11 @@ export async function VehicleHeader({
   );
 }
 
-function Dot() {
+/** One part of the meta line, as a mono HUD chip. */
+function MetaChip({ children }: { children: ReactNode }) {
   return (
-    <span aria-hidden="true" className="text-ink-500">
-      ·
+    <span className="inline-flex min-h-7 items-center gap-1.5 border border-line px-2.5 font-mono text-[11px] tracking-hud text-ink-200 uppercase chamfer-sm">
+      {children}
     </span>
   );
 }
@@ -243,7 +304,8 @@ function hasAmount(price: ListedPriceData): boolean {
 /**
  * "Base price $161,100" with, beneath it, what kind of figure that is:
  * "Unverified · market not recorded · see Price". Always the full figure (the
- * detail page never abbreviates to "$161.1K"), and in white, not gold.
+ * detail page never abbreviates to "$161.1K"). The figure counts up on first
+ * view; the server HTML and the resting state are the exact recorded price.
  */
 function HeroPrice({ price }: { price: ListedPriceData }) {
   if (!hasAmount(price)) return null;
@@ -256,9 +318,11 @@ function HeroPrice({ price }: { price: ListedPriceData }) {
   return (
     <div>
       <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-body-s text-ink-300">{label}</span>
-        <span className="text-figure text-ink-100">
-          {formatPrice(price.listed_price, price.listed_price_currency)}
+        <span className="font-mono text-[11px] tracking-hud text-ink-400 uppercase">
+          {label}
+        </span>
+        <span className="text-figure text-ink-50 glow-text">
+          <CountUp value={formatPrice(price.listed_price, price.listed_price_currency)} />
         </span>
       </p>
       <p className="mt-1.5 text-caption">
@@ -266,10 +330,7 @@ function HeroPrice({ price }: { price: ListedPriceData }) {
         {" · "}
         {market ?? "market not recorded"}
         {" · "}
-        <Link
-          href="#pricing"
-          className="text-ink-200 underline decoration-line-strong underline-offset-4 transition-colors duration-(--duration-fast) hover:text-ink-50 hover:decoration-ink-400"
-        >
+        <Link href="#pricing" className="fx-link text-cyan-200">
           see Price
         </Link>
       </p>

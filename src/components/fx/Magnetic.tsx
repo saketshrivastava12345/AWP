@@ -19,7 +19,11 @@ export function Magnetic({
   children: ReactNode;
 }) {
   return (
-    <span data-magnetic={strength} className={cn("inline-flex", className)}>
+    <span
+      data-magnetic={strength}
+      className={cn("inline-flex", className)}
+      suppressHydrationWarning
+    >
       {children}
     </span>
   );

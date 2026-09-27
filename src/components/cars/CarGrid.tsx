@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Reveal } from "@/components/fx/Reveal";
 import { CarCard, type CarCardVariant } from "./CarCard";
 import { CardCarousel } from "./catalogue/CardCarousel";
 import type { CatalogCardRow } from "@/lib/queries/catalog-columns";
@@ -72,10 +73,12 @@ const CAROUSEL_ITEM: Record<CarCardVariant, { item: string; sizes: string }> = {
  * A grid of car cards — or, with `columns="carousel"`, a snap-scrolling row
  * of them with previous/next buttons on desktop.
  *
- * The staggered reveal is a CSS animation with a per-item delay rather than a
- * GSAP timeline: the grid is server-rendered, and a client component just to
- * animate entry would cost more than it is worth. The stagger stops after six
- * cards so a full page never feels slow to settle.
+ * The staggered reveal is the FX kit's `Reveal stagger` (a clip wipe, card by
+ * card, when the grid scrolls into view) rather than a GSAP timeline: the
+ * grid is server-rendered, and the one FX runtime already on the page drives
+ * it. Cards past the thirteenth share the last delay, so a full page never
+ * feels slow to settle; without JavaScript or under reduced motion every
+ * card is simply there.
  *
  * `aboveFold` makes the first card's photograph a preload and the rest of the
  * first row eager; every other grid loads its photographs lazily.
@@ -88,6 +91,7 @@ export async function CarGrid({
   label,
   aboveFold = false,
   actions,
+  countUp = true,
 }: {
   cars: readonly CatalogCardRow[];
   className?: string;
@@ -102,6 +106,8 @@ export async function CarGrid({
    * toggle; pass `() => null` for none.
    */
   actions?: (car: CatalogCardRow) => ReactNode;
+  /** Off for a grid streamed in a Suspense boundary on first load (see CarCard). */
+  countUp?: boolean;
 }) {
   const withModels = cars
     .filter((car) => car.has_glb && car.variant_id)
@@ -134,16 +140,15 @@ export async function CarGrid({
 
   const layout = LAYOUTS[columns];
   return (
-    <ul
+    <Reveal
+      as="ul"
+      stagger={70}
+      variant="clip"
       aria-label={label}
       className={cn("grid grid-cols-1 gap-4 sm:gap-6", layout.grid, className)}
     >
       {cars.map((car, index) => (
-        <li
-          key={car.variant_id}
-          className="animate-rise-in"
-          style={{ animationDelay: `${Math.min(index, 6) * 60}ms` }}
-        >
+        <li key={car.variant_id}>
           <CarCard
             car={car}
             variant={variant}
@@ -160,9 +165,10 @@ export async function CarGrid({
             }
             actions={(actions ?? favoriteAction)(car)}
             model={car.variant_id ? modelFiles.get(car.variant_id) : undefined}
+            countUp={countUp}
           />
         </li>
       ))}
-    </ul>
+    </Reveal>
   );
 }

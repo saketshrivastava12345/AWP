@@ -6,9 +6,11 @@ import type { HeroCar, HomeCounts } from "@/lib/queries/home";
 import { ButtonLink } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { InfoHint } from "@/components/ui/Tooltip";
+import { CountUp, Reveal, ScrambleText } from "@/components/fx";
 import { HeroStory } from "@/components/3d/HeroStory";
-import type { HeroBeat } from "./hero-beats";
+import { beatNumber, type HeroBeat } from "./hero-beats";
 import { footprintLabel } from "./home-data";
+import { HeroBackdrop, HeroSceneOverlay } from "./HeroBackdrop";
 import { HeroPoster } from "./HeroPoster";
 import { HeroStageStatus } from "./HeroStageStatus";
 
@@ -16,8 +18,9 @@ import { HeroStageStatus } from "./HeroStageStatus";
  * The opening screen and the anatomy story behind it.
  *
  * Everything readable here is server-rendered: the headline is the page's
- * largest paint and appears before any 3D code has loaded, and the story is
- * plain HTML in normal flow over HeroStory's sticky stage.
+ * largest paint and appears before any 3D code has loaded (it then "decodes"
+ * into place over itself — the real text is in the HTML throughout), and the
+ * story is plain HTML in normal flow over HeroStory's sticky stage.
  *
  * The story has two layouts, chosen in CSS from the stage's own
  * `data-hero-stage` attribute (HeroStory owns that decision):
@@ -59,22 +62,23 @@ const SCENE = {
     "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:max-w-md " +
     "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:border-t-0 " +
     "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:rounded-card " +
-    "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:bg-void/75 " +
+    "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:hud-panel " +
     "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:p-5 " +
     "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:backdrop-blur-md " +
-    "md:group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:bg-transparent " +
-    "md:group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:p-0 " +
-    "md:group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:backdrop-blur-none",
+    "md:group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:p-6",
   stats: "group-has-[[data-hero-stage=ready],[data-hero-stage=loading]]/story:mt-6",
 } as const;
 
 function Lead({ counts }: { counts: HomeCounts }) {
   const { variants, manufacturers, countries } = counts;
+  const figure = "font-hud text-[0.95em] text-ink-50";
   if (variants !== null && manufacturers !== null && countries !== null && variants > 0) {
     return (
       <>
-        {formatNumber(variants)} cars from {formatNumber(manufacturers)}{" "}
-        {manufacturers === 1 ? "brand" : "brands"} in {formatNumber(countries)}{" "}
+        <CountUp value={formatNumber(variants)} className={figure} /> cars from{" "}
+        <CountUp value={formatNumber(manufacturers)} className={figure} />{" "}
+        {manufacturers === 1 ? "brand" : "brands"} in{" "}
+        <CountUp value={formatNumber(countries)} className={figure} />{" "}
         {countries === 1 ? "country" : "countries"} — every figure published, every gap
         marked.
       </>
@@ -102,7 +106,7 @@ function StageCaption({ car }: { car: HeroCar | null }) {
       <p className="min-w-0">
         <Link
           href={car.href}
-          className="text-ink-200 underline-offset-4 transition-colors hover:text-ink-50 hover:underline"
+          className="fx-link text-ink-100 transition-colors hover:text-cyan-200"
         >
           {car.name}
         </Link>
@@ -126,16 +130,34 @@ function StageCaption({ car }: { car: HeroCar | null }) {
   );
 }
 
-function Beat({ beat, last, car }: { beat: HeroBeat; last: boolean; car: HeroCar }) {
+function Beat({
+  beat,
+  index,
+  total,
+  car,
+}: {
+  beat: HeroBeat;
+  index: number;
+  total: number;
+  car: HeroCar;
+}) {
+  const last = index === total - 1;
   return (
-    <article
+    <Reveal
+      as="article"
+      variant="rise"
       className={cn(
         "grid gap-8 border-t border-line-subtle pt-10 lg:grid-cols-12 lg:gap-12 lg:pt-12",
         SCENE.article,
       )}
     >
       <div className="min-w-0 lg:col-span-7">
-        <p className="text-eyebrow">{beat.label}</p>
+        <p className="flex items-center gap-3 text-eyebrow">
+          <span aria-hidden="true" className="hud-label text-ink-600">
+            {beatNumber(index + 1, total)}
+          </span>
+          <span className="min-w-0">{beat.label}</span>
+        </p>
         <h3 className="mt-3 text-h3">{beat.title}</h3>
         <p className="mt-4 max-w-[60ch] text-body">{beat.body}</p>
         {last ? (
@@ -156,15 +178,17 @@ function Beat({ beat, last, car }: { beat: HeroBeat; last: boolean; car: HeroCar
             // Value above label (a key figure); the DOM keeps dt before dd.
             <div
               key={stat.label}
-              className="flex min-w-0 flex-col-reverse justify-end border-t border-line-subtle pt-3"
+              className="flex min-w-0 flex-col-reverse justify-end gap-1.5 border-t border-line-subtle pt-3 before:order-last before:block before:h-0.5 before:w-5 before:bg-cyan-400 before:shadow-[0_0_8px_var(--color-cyan-400)] before:content-['']"
             >
-              <dt className="mt-1 text-caption">{stat.label}</dt>
-              <dd className="text-figure text-ink-50">{stat.value}</dd>
+              <dt className="text-hud">{stat.label}</dt>
+              <dd className="text-figure text-ink-50 glow-text">
+                <CountUp value={stat.value} />
+              </dd>
             </div>
           ))}
         </dl>
       ) : null}
-    </article>
+    </Reveal>
   );
 }
 
@@ -185,6 +209,8 @@ export function HomeHero({ car, counts }: { car: HeroCar | null; counts: HomeCou
       beats={beats.map((beat) => beat.id)}
       railLabels={railLabels}
       poster={<HeroPoster build={build} />}
+      backdrop={<HeroBackdrop />}
+      sceneOverlay={<HeroSceneOverlay />}
     >
       {/* ---------------------------------------------------------- Hero */}
       <section
@@ -198,10 +224,20 @@ export function HomeHero({ car, counts }: { car: HeroCar | null; counts: HomeCou
             to the right; headline bottom-left, caption bottom-right. */}
         <Container className="flex flex-1 flex-col pt-8 pb-5 sm:pt-12 lg:flex-row lg:items-end lg:justify-between lg:gap-12 lg:pt-24 lg:pb-12">
           <div className="max-w-xl lg:max-w-[38rem]">
-            {/* Not animated: the headline is the page's largest paint and
-                must not wait on an entrance animation. */}
-            <h1 id="hero-heading" className="text-display-l">
-              The world of automotive engineering.
+            <p
+              aria-hidden="true"
+              className="flex animate-rise-in items-center gap-3 hud-label"
+            >
+              <span className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]" />
+              SYS.01 // Global automotive intelligence
+            </p>
+            {/* The headline is the page's largest paint: the real text is in
+                the HTML from the first byte and only decodes over itself. */}
+            <h1 id="hero-heading" className="mt-5 text-display-l">
+              <ScrambleText
+                text="The world of automotive engineering."
+                className="gradient-text"
+              />
             </h1>
             <p
               className="mt-5 max-w-[46ch] animate-rise-in text-lead sm:mt-6"
@@ -213,26 +249,40 @@ export function HomeHero({ car, counts }: { car: HeroCar | null; counts: HomeCou
               className="mt-8 flex animate-rise-in flex-col gap-3 sm:flex-row sm:flex-wrap"
               style={{ animationDelay: "200ms" }}
             >
-              <ButtonLink href="/cars" size="lg" className="max-sm:h-12">
-                Explore the collection
+              <ButtonLink href="/cars" size="lg" magnetic className="max-sm:h-12">
+                <ScrambleText text="Explore the collection" trigger="hover" />
               </ButtonLink>
               {hasStory ? (
                 <ButtonLink
                   href={`#${STORY_ID}`}
                   variant="secondary"
                   size="lg"
+                  magnetic
                   className="max-sm:h-12"
                 >
-                  Take one apart in 3D
+                  <ScrambleText text="Take one apart in 3D" trigger="hover" />
                 </ButtonLink>
               ) : null}
             </div>
+            {hasStory ? (
+              <p
+                aria-hidden="true"
+                className="mt-10 hidden animate-rise-in items-center gap-3 hud-label lg:flex"
+                style={{ animationDelay: "400ms" }}
+              >
+                <span className="h-8 w-px animate-pulse-glow bg-linear-to-b from-cyan-400 to-transparent" />
+                Scroll to take it apart
+              </p>
+            ) : null}
           </div>
 
           <div
-            className="mt-auto flex animate-rise-in flex-col gap-1 pt-8 lg:mt-0 lg:max-w-md lg:shrink-0 lg:items-end lg:pt-0"
+            className="mt-auto flex animate-rise-in flex-col gap-1.5 pt-8 lg:mt-0 lg:max-w-md lg:shrink-0 lg:items-end lg:pt-0"
             style={{ animationDelay: "280ms" }}
           >
+            <p aria-hidden="true" className="hud-label lg:text-right">
+              Stage // Representation
+            </p>
             <StageCaption car={car} />
             <HeroStageStatus className="lg:justify-end" />
           </div>
@@ -246,15 +296,19 @@ export function HomeHero({ car, counts }: { car: HeroCar | null; counts: HomeCou
           className={cn("bg-void pb-16 lg:pb-24", SCENE.section)}
         >
           <Container id={STORY_ID} className="scroll-mt-16 pt-16 lg:pt-24">
-            <div className={cn("max-w-2xl pb-6", SCENE.intro)}>
-              <h2 id="story-heading" className="text-h2">
-                Anatomy of the {car.name}
+            <Reveal variant="rise" className={cn("max-w-2xl pb-6", SCENE.intro)}>
+              <p aria-hidden="true" className="flex items-center gap-3 hud-label">
+                <span className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]" />
+                SEQ.02 // Anatomy
+              </p>
+              <h2 id="story-heading" className="mt-4 text-h2">
+                <ScrambleText text={`Anatomy of the ${car.name}`} />
               </h2>
               <p className="mt-4 text-lead">
                 {total === 1 ? "One stop" : `${formatNumber(total)} stops`} through the
                 car. Every figure is its published one.
               </p>
-            </div>
+            </Reveal>
           </Container>
           {beats.map((beat, index) => (
             <div
@@ -264,7 +318,7 @@ export function HomeHero({ car, counts }: { car: HeroCar | null; counts: HomeCou
               className={cn("scroll-mt-16 py-6 lg:py-8", SCENE.beat)}
             >
               <Container>
-                <Beat beat={beat} last={index === total - 1} car={car} />
+                <Beat beat={beat} index={index} total={total} car={car} />
               </Container>
             </div>
           ))}

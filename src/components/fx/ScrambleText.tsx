@@ -36,9 +36,10 @@ export function ScrambleText({
       className={cn("fx-scramble", className)}
       data-scramble={trigger}
       data-scramble-duration={duration}
+      suppressHydrationWarning
     >
       <span className="fx-scramble-text">{text}</span>
-      <span className="fx-scramble-layer" aria-hidden="true" />
+      <span className="fx-scramble-layer" aria-hidden="true" suppressHydrationWarning />
     </Component>
   );
 }

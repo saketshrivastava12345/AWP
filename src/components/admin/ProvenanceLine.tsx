@@ -50,7 +50,7 @@ export function ProvenanceLine({
           href={sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs break-all text-ink-50 underline-offset-4 hover:underline"
+          className="inline-flex items-center gap-1.5 fx-link text-xs break-all text-ink-50 transition-colors duration-(--duration-fast) hover:text-cyan-200"
         >
           {hostOf(sourceUrl)}
           <ExternalLink className="size-3 shrink-0" aria-hidden="true" />

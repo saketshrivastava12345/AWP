@@ -57,6 +57,9 @@ export function Reveal({
         ? { "data-reveal-stagger": variant }
         : { "data-reveal": variant })}
       data-reveal-repeat={once ? undefined : ""}
+      // The FX runtime may mark it shown before this part of the page has
+      // hydrated (selective hydration); those attributes are expected.
+      suppressHydrationWarning
       className={cn(className)}
       style={{ ...vars, ...style }}
     >

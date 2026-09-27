@@ -114,22 +114,32 @@ function useHydrated(): boolean {
 }
 
 const SUMMARY =
-  "flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-2 text-left text-ink-50 " +
-  "transition-colors duration-(--duration-fast) hover:text-ink-50 [&::-webkit-details-marker]:hidden";
+  "flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-2 text-left text-ink-100 " +
+  "transition-colors duration-(--duration-fast) hover:text-ink-50 group-open/facet:text-ink-50 [&::-webkit-details-marker]:hidden";
 
+/** A group's header: mono uppercase title, the active count lit cyan, a cyan chevron. */
 function GroupSummary({ title, active }: { title: string; active: number }) {
   return (
     <summary className={SUMMARY}>
-      <span className="font-display text-base font-medium">
+      <span className="flex items-center gap-2 font-mono text-[11px] tracking-hud uppercase">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "size-1 shrink-0 rounded-full transition-colors duration-(--duration-fast)",
+            active > 0
+              ? "bg-cyan-300 shadow-[0_0_6px_var(--color-cyan-400)]"
+              : "bg-ink-600 group-open/facet:bg-cyan-500",
+          )}
+        />
         {title}
         {active > 0 ? (
-          <span className="ml-1.5 text-body-s font-sans font-normal text-ink-400">
+          <span className="text-cyan-200">
             ({active})<span className="sr-only"> selected</span>
           </span>
         ) : null}
       </span>
       <ChevronDown
-        className="size-4 shrink-0 text-ink-400 transition-transform duration-(--duration-base) ease-standard group-open/facet:rotate-180"
+        className="size-4 shrink-0 text-cyan-300 transition-transform duration-(--duration-base) ease-standard group-open/facet:rotate-180"
         aria-hidden="true"
       />
     </summary>
@@ -168,14 +178,15 @@ function Checkbox({
           checked={checked}
           onChange={(event) => onChange(event.target.checked)}
           className={cn(
-            "peer size-5 cursor-pointer appearance-none rounded-xs border bg-surface-1 transition-colors duration-(--duration-fast)",
-            "border-line-strong checked:border-gold-500 checked:bg-gold-500 hover:border-ink-400",
+            "peer size-5 cursor-pointer appearance-none rounded-xs border bg-surface-1 transition-[border-color,background-color,box-shadow] duration-(--duration-fast)",
+            "border-line-strong hover:border-cyan-600",
+            "checked:border-cyan-300 checked:bg-cyan-400 checked:shadow-[0_0_10px_-2px_var(--color-cyan-400)]",
           )}
         />
         <svg
           viewBox="0 0 10 8"
           aria-hidden="true"
-          className="pointer-events-none absolute size-2.5 fill-void opacity-0 peer-checked:opacity-100"
+          className="pointer-events-none absolute size-2.5 fill-void opacity-0 transition-opacity duration-(--duration-fast) peer-checked:opacity-100"
         >
           <path d="M3.7 7.5.2 4l1-1 2.5 2.5L8.8.2l1 1z" />
         </svg>
@@ -189,7 +200,7 @@ function Checkbox({
           </>
         ) : null}
       </span>
-      <span className="tabular shrink-0 text-caption text-ink-400">
+      <span className="tabular shrink-0 font-mono text-[11px] text-ink-400">
         {formatNumber(option.count)}
         <span className="sr-only"> cars</span>
       </span>
@@ -198,15 +209,27 @@ function Checkbox({
 }
 
 /**
- * A collapsible filter group. Native <details>, so it works without
- * JavaScript. Its initial state is fixed at mount: React would otherwise
- * rewrite the `open` attribute whenever the default changed, collapsing a
- * group under the user's pointer as its last option is unticked.
+ * A collapsible filter group as a HUD panel: a hairline plate that lights
+ * its edge and shows corner brackets while open. Native <details>, so it
+ * works without JavaScript. Its initial state is fixed at mount: React
+ * would otherwise rewrite the `open` attribute whenever the default
+ * changed, collapsing a group under the user's pointer as its last option
+ * is unticked.
  */
 function Group({ defaultOpen, children }: { defaultOpen: boolean; children: ReactNode }) {
   const [initiallyOpen] = useState(defaultOpen);
   return (
-    <details className="group/facet border-b border-line-subtle" open={initiallyOpen}>
+    <details
+      className={cn(
+        "group/facet relative mb-1.5 border border-line-subtle bg-surface-1/40 px-3.5",
+        "transition-[border-color,background-color] duration-(--duration-base) ease-standard",
+        "open:border-line-strong open:bg-surface-1/70 hover:border-line-strong",
+      )}
+      open={initiallyOpen}
+    >
+      {/* Children of <details> other than the summary show only while it is
+          open — exactly when the brackets should. */}
+      <span aria-hidden="true" className="hud-brackets -m-px [--hud-l:9px] opacity-70" />
       {children}
     </details>
   );
@@ -275,7 +298,7 @@ function ListGroup({
         <ul>{head.map(row)}</ul>
         {tail.length > 0 ? (
           <details className="group/more">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center text-body-s text-ink-100 underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink-50 hover:decoration-ink-400 [&::-webkit-details-marker]:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center font-mono text-[11px] tracking-hud text-cyan-200 uppercase transition-colors hover:text-cyan-100 [&::-webkit-details-marker]:hidden">
               <span className="group-open/more:hidden">Show {tail.length} more</span>
               <span className="hidden group-open/more:inline">Show fewer</span>
             </summary>

@@ -42,9 +42,10 @@ export function CountUp({
       data-prefix={spec.prefix || undefined}
       data-suffix={spec.suffix || undefined}
       data-duration={duration}
+      suppressHydrationWarning
     >
       <span className="fx-count-final">{spec.final}</span>
-      <span className="fx-count-live" aria-hidden="true" />
+      <span className="fx-count-live" aria-hidden="true" suppressHydrationWarning />
     </span>
   );
 }

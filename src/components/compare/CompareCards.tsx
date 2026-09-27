@@ -57,6 +57,9 @@ export function CompareCards({
                 !group.differs && "group-data-[diff=on]/cmp:hidden",
               )}
             >
+              <span aria-hidden="true" className="mb-3 block hud-label">
+                Data // {group.id.replace(/-/g, " ")}
+              </span>
               <h3 id={headingId} className="text-h3">
                 {group.title}
               </h3>
@@ -67,7 +70,7 @@ export function CompareCards({
                   <li
                     key={row.id}
                     className={cn(
-                      "rounded-card bg-surface-1 px-4 py-4",
+                      "relative rounded-card px-4 py-4 hud-panel",
                       !row.differs && "group-data-[diff=on]/cmp:hidden",
                     )}
                   >

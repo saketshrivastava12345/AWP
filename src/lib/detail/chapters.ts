@@ -71,6 +71,7 @@ export type DetailSectionId =
   | "performance"
   | "engineering"
   | "design"
+  | "features"
   | "technical-data"
   | "pricing"
   | "compare";
@@ -82,6 +83,7 @@ const DETAIL_SECTIONS: readonly DetailSection[] = [
   { id: "performance", label: "Performance" },
   { id: "engineering", label: "Engineering" },
   { id: "design", label: "Design" },
+  { id: "features", label: "Features" },
   { id: "technical-data", label: "Technical data" },
   { id: "pricing", label: "Price" },
   { id: "compare", label: "Compare" },

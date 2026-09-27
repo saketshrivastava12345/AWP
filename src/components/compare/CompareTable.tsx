@@ -71,10 +71,16 @@ export function CompareTable({
                 "border-b border-line px-3 py-4 text-left align-bottom font-normal",
               )}
             >
-              <span className="block text-caption">{car.manufacturer}</span>
+              <span
+                aria-hidden="true"
+                className="mb-2 block h-0.5 w-6 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+              />
+              <span className="block font-mono text-[11px] tracking-hud text-cyan-200 uppercase">
+                {car.manufacturer}
+              </span>
               <Link
                 href={car.href}
-                className="mt-0.5 block text-body-s font-display font-medium text-ink-50 transition-colors hover:text-ink-200 lg:text-h4"
+                className="mt-0.5 inline-block fx-link text-body-s font-display font-medium text-ink-50 transition-colors hover:text-cyan-100 lg:text-h4"
               >
                 {car.shortName}
               </Link>
@@ -110,7 +116,7 @@ export function CompareTable({
               <tr
                 key={row.id}
                 className={cn(
-                  "transition-colors duration-(--duration-fast) hover:bg-surface-1/70",
+                  "transition-colors duration-(--duration-fast) hover:bg-cyan-400/5",
                   !row.differs && "group-data-[diff=on]/cmp:hidden",
                 )}
               >
@@ -168,6 +174,9 @@ export function CompareTable({
 function GroupTitle({ group, id }: { group: CompareGroup; id: string }) {
   return (
     <>
+      <span aria-hidden="true" className="mb-3 block hud-label">
+        Data // {group.id.replace(/-/g, " ")}
+      </span>
       <h3 id={id} className="text-h3">
         {group.title}
       </h3>

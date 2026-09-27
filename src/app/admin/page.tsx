@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowUpRight, CircleCheck, TriangleAlert } from "lucide-react";
 import { ButtonLink } from "@/components/ui/Button";
+import { CountUp, Reveal } from "@/components/fx";
 import { AdminPageHeader, Panel } from "@/components/admin/AdminChrome";
 import { adminPage } from "@/lib/admin/page";
 import { getDashboard, type DashboardData } from "@/lib/queries/admin";
@@ -13,6 +14,11 @@ export const metadata: Metadata = { title: { absolute: "Dashboard · Admin — A
 
 const n = (value: number | null) => (value === null ? "—" : formatNumber(value, "—"));
 
+/**
+ * One telemetry tile: a lit tick, a glowing Michroma figure that counts up
+ * to the real number (the server HTML holds the real number; a figure the
+ * database could not give stays an unlit "—"), a mono label and a detail.
+ */
 function Stat({
   label,
   value,
@@ -24,24 +30,51 @@ function Stat({
   detail?: string;
   href?: string;
 }) {
+  const known = value !== "—";
   const body = (
-    <>
-      <dt className="text-caption">{label}</dt>
-      <dd className="mt-2 text-figure text-ink-50">{value}</dd>
-      {detail ? <dd className="mt-2 text-xs text-ink-500">{detail}</dd> : null}
-    </>
+    <dl className="flex h-full flex-col">
+      <dt className="flex items-center gap-2 text-hud">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "h-0.5 w-5 shrink-0",
+            known ? "bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]" : "bg-ink-600",
+          )}
+        />
+        {label}
+      </dt>
+      <dd
+        className={cn(
+          "mt-3 text-figure",
+          known ? "text-ink-50 glow-text" : "text-ink-400",
+        )}
+      >
+        {known ? <CountUp value={value} /> : value}
+      </dd>
+      {detail ? (
+        <dd className="mt-2 font-mono text-[11px] text-ink-400">{detail}</dd>
+      ) : null}
+    </dl>
   );
+  const tile =
+    "relative block h-full bg-surface-1/85 px-4 py-4 transition-colors duration-(--duration-fast) sm:px-5";
   return href ? (
     <Link
       href={href}
-      className="group block bg-surface-1 px-4 py-4 transition-colors hover:bg-surface-2 sm:px-5"
+      className={cn(
+        tile,
+        "group hover:bg-cyan-400/6 focus-visible:outline-offset-[-2px]",
+        "after:pointer-events-none after:absolute after:inset-x-0 after:top-0 after:h-px after:bg-cyan-300 after:opacity-0 after:transition-opacity after:duration-(--duration-fast) after:content-[''] hover:after:opacity-100",
+      )}
     >
-      <dl>{body}</dl>
+      {body}
+      <ArrowUpRight
+        className="absolute top-4 right-4 size-3.5 text-ink-500 transition-colors group-hover:text-cyan-200"
+        aria-hidden="true"
+      />
     </Link>
   ) : (
-    <div className="bg-surface-1 px-4 py-4 sm:px-5">
-      <dl>{body}</dl>
-    </div>
+    <div className={tile}>{body}</div>
   );
 }
 
@@ -62,38 +95,46 @@ function QualityRow({
     <li>
       <Link
         href={href}
-        className="group flex items-start gap-3 border-b border-line-subtle px-4 py-3.5 transition-colors hover:bg-surface-2/60 sm:px-5"
+        className="group flex items-start gap-3 border-b border-line-subtle px-4 py-3.5 transition-colors duration-(--duration-fast) hover:bg-cyan-400/5 sm:px-5"
       >
         {clear ? (
           <CircleCheck
-            className="mt-0.5 size-4 shrink-0 text-signal-positive"
+            className="mt-0.5 size-4 shrink-0 text-signal-positive drop-shadow-[0_0_6px_var(--color-signal-positive)]"
             aria-hidden="true"
           />
         ) : (
           <TriangleAlert
             className={cn(
               "mt-0.5 size-4 shrink-0",
-              unknown ? "text-ink-500" : "text-signal-hybrid",
+              unknown
+                ? "text-ink-500"
+                : "text-signal-hybrid drop-shadow-[0_0_6px_var(--color-signal-hybrid)]",
             )}
             aria-hidden="true"
           />
         )}
         <span className="min-w-0 flex-1">
-          <span className="block text-sm text-ink-100">{label}</span>
+          <span className="block text-sm text-ink-100 transition-colors duration-(--duration-fast) group-hover:text-ink-50">
+            {label}
+          </span>
           <span className="mt-0.5 block text-xs leading-relaxed text-ink-500">
             {explanation}
           </span>
         </span>
         <span
           className={cn(
-            "text-body-s tabular-nums",
-            clear ? "text-signal-positive" : unknown ? "text-ink-500" : "text-ink-50",
+            "font-mono text-sm tabular-nums",
+            clear
+              ? "text-signal-positive"
+              : unknown
+                ? "text-ink-500"
+                : "text-ink-50 [text-shadow:0_0_12px_oklch(0.83_0.13_210/40%)]",
           )}
         >
           {unknown ? "—" : formatNumber(count)}
         </span>
         <ArrowUpRight
-          className="mt-0.5 size-3.5 shrink-0 text-ink-500 transition-colors group-hover:text-ink-50"
+          className="mt-0.5 size-3.5 shrink-0 text-ink-500 transition-[color,translate] duration-(--duration-fast) group-hover:translate-x-0.5 group-hover:text-cyan-200 motion-reduce:translate-x-0"
           aria-hidden="true"
         />
       </Link>
@@ -107,7 +148,10 @@ function Counts({ counts }: { counts: DashboardData["counts"] }) {
       ? null
       : counts.variantsPublished + counts.variantsDraft;
   return (
-    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line-subtle bg-line-subtle lg:grid-cols-4">
+    <Reveal
+      stagger={60}
+      className="grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line bg-line-subtle lg:grid-cols-4"
+    >
       <Stat
         label="Vehicles"
         value={n(vehicles)}
@@ -140,7 +184,7 @@ function Counts({ counts }: { counts: DashboardData["counts"] }) {
         value={n(counts.users)}
         detail={`${n(counts.admins)} with the admin role`}
       />
-    </dl>
+    </Reveal>
   );
 }
 
@@ -159,6 +203,15 @@ export default async function AdminDashboardPage() {
     <>
       <AdminPageHeader
         title="Dashboard"
+        eyebrow={
+          <p className="flex items-center gap-2 text-hud">
+            <span
+              aria-hidden="true"
+              className="size-1.5 shrink-0 animate-pulse-glow rounded-full bg-signal-positive shadow-[0_0_8px_var(--color-signal-positive)]"
+            />
+            Catalogue telemetry · live
+          </p>
+        }
         description={`Signed in as ${user.displayName ?? user.email ?? "administrator"}. Every change here is checked against your admin role twice: by these tools and by the database's row level security.`}
         actions={
           <>
@@ -175,10 +228,13 @@ export default async function AdminDashboardPage() {
       {failures > 0 ? (
         <p
           role="alert"
-          className="mb-6 rounded-card border-l-2 border-signal-negative bg-surface-1 px-4 py-3 text-sm text-ink-200"
+          className="mb-6 flex items-start gap-3 rounded-card border border-signal-negative/40 bg-surface-1/80 px-4 py-3 text-sm text-ink-200 before:mt-[7px] before:size-1.5 before:shrink-0 before:rounded-full before:bg-signal-negative before:shadow-[0_0_8px_var(--color-signal-negative)] before:content-['']"
         >
-          {failures} figure{failures === 1 ? "" : "s"} could not be read from the database
-          and {failures === 1 ? "is" : "are"} shown as “—”. Nothing is assumed to be zero.
+          <span>
+            {failures} figure{failures === 1 ? "" : "s"} could not be read from the
+            database and {failures === 1 ? "is" : "are"} shown as “—”. Nothing is assumed
+            to be zero.
+          </span>
         </p>
       ) : null}
 
@@ -193,14 +249,18 @@ export default async function AdminDashboardPage() {
         </p>
       </section>
 
-      <div className="mt-10 grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] [&>*]:min-w-0">
+      <Reveal
+        stagger={120}
+        className="mt-10 grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] [&>*]:min-w-0"
+      >
         <Panel
           id="quality"
+          code="QA // 01"
           title="Data quality"
           description="Each line opens the list that needs attention."
           bodyClassName="p-0 sm:p-0"
         >
-          <ul>
+          <Reveal as="ul" stagger={50} variant="fade">
             <QualityRow
               label="Vehicles with unsourced figures"
               count={quality.unsourcedVehicles}
@@ -243,22 +303,27 @@ export default async function AdminDashboardPage() {
               href="/admin/models?filter=no-engine-position"
               explanation="The 3D viewer draws no engine rather than guessing where it sits."
             />
-          </ul>
+          </Reveal>
         </Panel>
 
-        <Panel id="recent" title="Recent edits" bodyClassName="p-0 sm:p-0">
+        <Panel
+          id="recent"
+          code="LOG // 02"
+          title="Recent edits"
+          bodyClassName="p-0 sm:p-0"
+        >
           {data.recent.length === 0 ? (
             <p className="px-5 py-6 text-sm text-ink-500">No edits recorded yet.</p>
           ) : (
-            <ol>
+            <Reveal as="ol" stagger={50} variant="fade">
               {data.recent.map((edit) => (
                 <li key={`${edit.kind}-${edit.id}`}>
                   <Link
                     href={edit.href}
-                    className="flex items-baseline justify-between gap-4 border-b border-line-subtle px-4 py-3 transition-colors hover:bg-surface-2/60 sm:px-5"
+                    className="group flex items-baseline justify-between gap-4 border-b border-line-subtle px-4 py-3 transition-colors duration-(--duration-fast) hover:bg-cyan-400/5 sm:px-5"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-sm text-ink-100">
+                      <span className="block truncate text-sm text-ink-100 transition-colors duration-(--duration-fast) group-hover:text-ink-50">
                         {edit.title}
                       </span>
                       <span className="mt-0.5 block text-xs text-ink-500">
@@ -267,17 +332,17 @@ export default async function AdminDashboardPage() {
                     </span>
                     <time
                       dateTime={edit.at}
-                      className="shrink-0 text-caption tabular-nums"
+                      className="shrink-0 font-mono text-[11px] text-ink-400 tabular-nums"
                     >
                       {formatDate(edit.at)}
                     </time>
                   </Link>
                 </li>
               ))}
-            </ol>
+            </Reveal>
           )}
         </Panel>
-      </div>
+      </Reveal>
     </>
   );
 }

@@ -100,7 +100,7 @@ function SwatchGroup({
               className={cn(
                 "grid size-11 place-items-center rounded-full transition-[box-shadow] duration-(--duration-fast) disabled:cursor-not-allowed disabled:opacity-40 sm:size-10",
                 checked
-                  ? "shadow-[0_0_0_1px_var(--color-gold-400)]"
+                  ? "shadow-[0_0_0_1px_var(--color-cyan-300),0_0_12px_var(--color-cyan-400)]"
                   : "hover:shadow-[0_0_0_1px_var(--color-line-strong)]",
               )}
             >
@@ -130,7 +130,10 @@ function Section({
 }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-hud text-ink-200">{title}</h3>
+      <h3 className="flex items-center gap-2 text-hud text-cyan-200">
+        <span aria-hidden="true" className="h-px w-4 bg-cyan-400" />
+        {title}
+      </h3>
       {children}
       {note ? <p className="text-xs leading-relaxed text-ink-400">{note}</p> : null}
     </section>
@@ -235,7 +238,7 @@ export function ConfiguratorPanel({
                     href={paint.color.source_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-ink-200 underline decoration-line-strong underline-offset-2 hover:text-gold-300"
+                    className="inline-flex items-center gap-1 fx-link text-cyan-200"
                   >
                     {paint.color.source}
                     <ExternalLink className="size-3" aria-hidden="true" />
@@ -367,7 +370,7 @@ export function ConfiguratorPanel({
       <button
         type="button"
         onClick={onReset}
-        className="flex min-h-11 items-center gap-2 text-xs text-ink-400 transition-colors hover:text-gold-300"
+        className="flex min-h-11 items-center gap-2 font-mono text-[11px] tracking-hud text-ink-400 uppercase transition-colors hover:text-cyan-200"
       >
         <RotateCcw className="size-3.5" aria-hidden="true" />
         Restore this car&apos;s defaults

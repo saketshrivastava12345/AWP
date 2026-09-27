@@ -23,13 +23,14 @@ export function pageItems(current: number, total: number): (number | "gap")[] {
 }
 
 const CELL =
-  "tabular flex h-11 min-w-11 items-center justify-center rounded-control border px-3 text-body-s " +
-  "transition-colors duration-(--duration-fast) ease-standard";
+  "tabular flex h-11 min-w-11 items-center justify-center rounded-control border px-3 font-mono text-xs tracking-hud " +
+  "transition-[color,border-color,box-shadow,background-color] duration-(--duration-fast) ease-standard";
 
 /**
- * Server-side pagination. Every control is a real link, so pages are
- * crawlable, shareable and work without JavaScript. On phones the numbers
- * collapse to "page x of y" between the arrows.
+ * Server-side pagination, HUD style: mono cells, the current page a lit
+ * cyan plate. Every control is a real link, so pages are crawlable,
+ * shareable and work without JavaScript. On phones the numbers collapse to
+ * "page x of y" between the arrows.
  */
 export function Pagination({
   page,
@@ -57,7 +58,7 @@ export function Pagination({
         aria-label={label}
         className={cn(
           CELL,
-          "border-line-strong text-ink-200 hover:border-ink-400 hover:text-ink-50",
+          "border-line-strong text-ink-200 hover:border-cyan-400 hover:text-cyan-100 hover:shadow-[0_0_14px_-4px_var(--color-cyan-400)]",
         )}
       >
         <Icon className="size-4" aria-hidden="true" />
@@ -73,7 +74,7 @@ export function Pagination({
     <nav aria-label="Pagination" className={cn("flex items-center gap-1.5", className)}>
       {arrow("prev")}
 
-      <p className="tabular px-3 text-body-s text-ink-300 sm:hidden">
+      <p className="tabular px-3 font-mono text-xs tracking-hud text-ink-300 uppercase sm:hidden">
         Page {page} <span className="text-ink-400">of</span> {pageCount}
       </p>
 
@@ -83,7 +84,7 @@ export function Pagination({
             <li
               key={`gap-${index}`}
               aria-hidden="true"
-              className="px-1 text-body-s text-ink-400"
+              className="px-1 font-mono text-xs text-ink-400"
             >
               …
             </li>
@@ -97,7 +98,7 @@ export function Pagination({
                   CELL,
                   "tabular",
                   item === page
-                    ? "border-gold-500 text-ink-50"
+                    ? "border-cyan-300 bg-cyan-400/12 text-cyan-100 shadow-[0_0_16px_-4px_oklch(0.8_0.14_210/60%)]"
                     : "border-transparent text-ink-300 hover:border-line-strong hover:text-ink-50",
                 )}
               >

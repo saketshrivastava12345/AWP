@@ -12,6 +12,8 @@ export const metadata: Metadata = {
 export default function ForgotPasswordPage() {
   return (
     <AuthShell
+      overline="Recovery"
+      code="SYS.02"
       title="Reset your password"
       description="Enter the email address you signed up with. If it has an account, we’ll send a link to choose a new password."
     >

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Badge, fuelTone } from "@/components/ui/Badge";
+import { CountUp } from "@/components/fx/CountUp";
 import { formatNumber, formatYearSpan, modelVariantName } from "@/lib/format";
 import { BODY_LABELS, FUEL_LABELS } from "@/lib/facets";
 import type { CatalogCardRow } from "@/lib/queries/catalog-columns";
@@ -10,6 +11,7 @@ import { ListedPrice } from "./ListedPrice";
 import { Silhouette } from "./catalogue/Silhouette";
 import { lifecycleOf } from "./catalogue/lifecycle";
 import { ModelPreload } from "./catalogue/ModelPreload";
+import { HudCardShell, HudMediaOverlay } from "./catalogue/HudCardShell";
 
 export function carHref(
   car: Pick<CatalogCardRow, "manufacturer_slug" | "model_slug" | "variant_slug">,
@@ -17,38 +19,52 @@ export function carHref(
   return `/cars/${car.manufacturer_slug}/${car.model_slug}/${car.variant_slug}`;
 }
 
-/** One figure of the card's row: value first, unit small, label below. */
+/**
+ * One telemetry figure of the card's row: a lit tick, the value in glowing
+ * Michroma counting up into place, the unit in cyan mono, the label below.
+ */
 function Figure({
   label,
   value,
   unit,
+  countUp,
 }: {
   label: string;
   value: string | null;
   unit: string;
+  countUp: boolean;
 }) {
   // <dt> first in the DOM so the pair reads "Power, 650 hp"; the value is
   // lifted above the label visually.
   return (
-    <div className="flex min-w-0 flex-col-reverse gap-1">
-      <dt className="truncate text-caption text-ink-400">{label}</dt>
+    <div
+      className={cn(
+        "flex min-w-0 flex-col-reverse gap-1.5",
+        "before:order-last before:mb-0.5 before:block before:h-px before:w-4 before:content-['']",
+        value === null
+          ? "before:bg-ink-600"
+          : "before:bg-cyan-400 before:shadow-[0_0_6px_var(--color-cyan-400)]",
+      )}
+    >
+      <dt className="truncate font-mono text-[10px] leading-snug tracking-hud text-ink-400 uppercase">
+        {label}
+      </dt>
       <dd className="flex min-w-0 items-baseline gap-1 whitespace-nowrap">
         {value === null ? (
           <>
-            <span
-              aria-hidden="true"
-              className="font-display text-xl leading-tight text-ink-400"
-            >
+            <span aria-hidden="true" className="font-hud text-lg leading-tight text-ink-500">
               —
             </span>
             <span className="sr-only">Not available</span>
           </>
         ) : (
           <>
-            <span className="font-display text-xl leading-tight font-normal tracking-[-0.01em] text-ink-50 tabular-nums">
-              {value}
+            <span className="font-hud text-[17px] leading-tight text-ink-50 tabular-nums glow-text">
+              {countUp ? <CountUp value={value} /> : value}
             </span>
-            <span className="text-caption text-ink-400">{unit}</span>
+            <span className="font-mono text-[10px] tracking-hud text-cyan-200 uppercase">
+              {unit}
+            </span>
           </>
         )}
       </dd>
@@ -82,6 +98,13 @@ export type CarCardProps = {
    * the HTTP cache (plain fetches — no WebGL on a listing page).
    */
   model?: { url: string; compression: readonly string[] } | null;
+  /**
+   * Count the figures up into place when the card scrolls into view
+   * (default). Turn it off for cards streamed inside a Suspense boundary on
+   * first load (/cars): the FX runtime would write digits into the server
+   * HTML before React hydrates that boundary, and hydration would fail.
+   */
+  countUp?: boolean;
   className?: string;
 };
 
@@ -89,15 +112,20 @@ const DEFAULT_SIZES = "(min-width: 1280px) 400px, (min-width: 768px) 50vw, 100vw
 const COMPACT_SIZES = "(min-width: 1024px) 320px, (min-width: 640px) 45vw, 80vw";
 
 /**
- * A car in a grid or a carousel.
+ * A car in a grid or a carousel, as a HUD card.
  *
- * Image first, on a borderless tile that lifts to the next surface on hover.
- * No 3D and no client JavaScript of its own beyond the photo fallback:
- * listing pages never mount a canvas. The whole card is one link (the
- * title's stretched ::before), with `actions` stacked above it so they stay
- * separately clickable. A missing figure is a dash read out as "Not
- * available"; a price appears only when one is recorded — its absence is
- * stated on the car's own page, not repeated on every card.
+ * A chamfered plate with a luminous edge and corner brackets (HudCardShell),
+ * tilting toward the pointer with a spotlight; the photograph sits under
+ * faint scan lines and a beam sweeps it on hover; the three figures glow
+ * and count up into place. No 3D and no client JavaScript of its own beyond
+ * the photo fallback: listing pages never mount a canvas. The whole card is
+ * one link (the title's stretched ::before), with `actions` stacked above it
+ * so they stay separately clickable. A missing figure is a dash read out as
+ * "Not available"; a price appears only when one is recorded — its absence
+ * is stated on the car's own page, not repeated on every card.
+ *
+ * Props are unchanged from the previous card: the home page, favourites and
+ * compare render it as before.
  */
 export function CarCard({
   car,
@@ -107,6 +135,7 @@ export function CarCard({
   currentYear,
   actions,
   model,
+  countUp = true,
   className,
 }: CarCardProps) {
   const compact = variant === "compact";
@@ -132,8 +161,8 @@ export function CarCard({
       <div
         className={cn(
           "absolute inset-0",
-          "motion-safe:transition-transform motion-safe:duration-(--duration-normal) motion-safe:ease-standard",
-          "motion-safe:group-focus-within/card:scale-[1.03] motion-safe:group-hover/card:scale-[1.03]",
+          "motion-safe:transition-transform motion-safe:duration-(--duration-slow) motion-safe:ease-standard",
+          "motion-safe:group-focus-within/card:scale-[1.04] motion-safe:group-hover/card:scale-[1.04]",
         )}
       >
         {car.primary_image_url ? (
@@ -158,12 +187,13 @@ export function CarCard({
           />
         )}
       </div>
+      <HudMediaOverlay />
 
       {car.fuel_type ? (
         <div className="pointer-events-none absolute top-3 left-3 z-20">
           <Badge
             tone={fuelTone(car.fuel_type)}
-            className="border-transparent bg-void/70 backdrop-blur-md"
+            className="border-line-strong/60 bg-void/70 backdrop-blur-md"
           >
             {FUEL_LABELS[car.fuel_type]}
           </Badge>
@@ -192,10 +222,7 @@ export function CarCard({
     <Link
       href={carHref(car)}
       data-card-link=""
-      className={cn(
-        "outline-none before:absolute before:inset-0 before:z-10 before:rounded-card",
-        "focus-visible:before:ring-2 focus-visible:before:ring-gold-500 focus-visible:before:ring-inset",
-      )}
+      className="outline-none before:absolute before:inset-0 before:z-10 before:content-['']"
     >
       <span className="sr-only">{car.manufacturer_name} </span>
       {name}
@@ -207,20 +234,16 @@ export function CarCard({
   );
 
   const card = compact ? (
-    <article
-      className={cn(
-        "group/card relative isolate flex h-full flex-col overflow-hidden rounded-card bg-surface-1",
-        "transition-colors duration-(--duration-base) ease-standard focus-within:bg-surface-2 hover:bg-surface-2",
-        className,
-      )}
-    >
+    <HudCardShell className={className}>
       {media}
-      <div className="flex flex-1 flex-col px-4 pt-3.5 pb-4">
-        <p className="truncate text-caption text-ink-400">{car.manufacturer_name}</p>
-        <h3 className="mt-0.5 truncate font-display text-base leading-snug font-medium text-ink-50">
+      <div className="flex flex-1 flex-col px-4 pt-3 pb-4">
+        <p className="truncate font-mono text-[10px] tracking-hud text-cyan-200/80 uppercase">
+          {car.manufacturer_name}
+        </p>
+        <h3 className="mt-1 truncate font-display text-base leading-snug font-medium text-ink-50 transition-colors duration-(--duration-fast) group-hover/card:text-cyan-100">
           {link}
         </h3>
-        <p className="mt-1 truncate text-caption text-ink-400">
+        <p className="mt-1 truncate font-mono text-[11px] text-ink-400">
           {[
             car.power_hp !== null ? `${formatNumber(car.power_hp)} hp` : null,
             car.zero_to_100_s !== null ? `0–100 ${car.zero_to_100_s.toFixed(1)} s` : null,
@@ -230,22 +253,20 @@ export function CarCard({
             .join(" · ")}
         </p>
       </div>
-    </article>
+    </HudCardShell>
   ) : (
-    <article
-      className={cn(
-        "group/card relative isolate flex h-full flex-col overflow-hidden rounded-card bg-surface-1",
-        "transition-colors duration-(--duration-base) ease-standard focus-within:bg-surface-2 hover:bg-surface-2",
-        className,
-      )}
-    >
+    <HudCardShell className={className}>
       {media}
 
       <div className="flex flex-1 flex-col p-5">
-        <p className="truncate text-body-s text-ink-400">{car.manufacturer_name}</p>
-        <h3 className="mt-0.5 text-h4">{link}</h3>
+        <p className="truncate font-mono text-[11px] tracking-hud text-cyan-200/80 uppercase">
+          {car.manufacturer_name}
+        </p>
+        <h3 className="mt-1 text-h4 transition-colors duration-(--duration-fast) group-hover/card:text-cyan-100">
+          {link}
+        </h3>
         {meta || lifecycleNote ? (
-          <p className="mt-1 text-body-s text-ink-400">
+          <p className="mt-1.5 text-body-s text-ink-400">
             {meta}
             {lifecycleNote ? (
               <span className="text-ink-300">
@@ -260,29 +281,32 @@ export function CarCard({
         ) : null}
 
         {/* Pushes the figures down so a row of cards lines them up. */}
-        <div aria-hidden="true" className="min-h-5 flex-1" />
+        <div aria-hidden="true" className="min-h-4 flex-1" />
 
-        <dl className="grid grid-cols-3 gap-3 border-t border-line-subtle pt-4">
+        <dl className="relative mt-4 grid grid-cols-3 gap-3 pt-4 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-[linear-gradient(90deg,oklch(0.83_0.13_210/55%),oklch(0.83_0.13_210/12%)_40%,transparent)] before:content-['']">
           <Figure
             label="Power"
             value={car.power_hp !== null ? formatNumber(car.power_hp) : null}
             unit="hp"
+            countUp={countUp}
           />
           <Figure
             label="0–100 km/h"
             value={car.zero_to_100_s !== null ? car.zero_to_100_s.toFixed(1) : null}
             unit="s"
+            countUp={countUp}
           />
           <Figure
             label="Top speed"
             value={car.top_speed_kmh !== null ? formatNumber(car.top_speed_kmh) : null}
             unit="km/h"
+            countUp={countUp}
           />
         </dl>
 
         <ListedPrice price={car} placeholder={null} className="mt-5" />
       </div>
-    </article>
+    </HudCardShell>
   );
 
   return model ? (

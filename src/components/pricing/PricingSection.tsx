@@ -138,8 +138,28 @@ export function PricingSection({
       ref={rootRef}
       // The pending script may add an attribute before hydration.
       suppressHydrationWarning
-      className={cn("group/pricing space-y-10", className)}
+      className={cn(
+        "group/pricing relative space-y-10 rounded-card p-5 hud-panel sm:p-8",
+        className,
+      )}
     >
+      <span
+        aria-hidden="true"
+        className="hud-brackets -m-px [--hud-c:var(--color-gold-400)]"
+      />
+      <span
+        aria-hidden="true"
+        className="absolute -top-[5px] left-5 bg-void px-1.5 hud-label leading-[10px]"
+      >
+        Console // Market pricing
+      </span>
+      <span
+        aria-hidden="true"
+        className="absolute top-2.5 right-4 flex items-center gap-2 hud-label text-ink-600"
+      >
+        <span className="size-1.5 animate-pulse-glow rounded-full bg-cyan-400" />
+        Sourced only
+      </span>
       {/* Only in the server HTML and the hydration pass: a script rendered
           on the client never runs, and React warns about it. */}
       {ready ? null : (

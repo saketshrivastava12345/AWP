@@ -14,6 +14,8 @@ import { ActiveFilters } from "@/components/cars/catalogue/ActiveFilters";
 import { MobileFilters } from "@/components/cars/catalogue/MobileFilters";
 import { NoResults, type Suggestion } from "@/components/cars/catalogue/NoResults";
 import { CatalogueBodySkeleton } from "@/components/cars/catalogue/CatalogueSkeleton";
+import { ScrambleText } from "@/components/fx/ScrambleText";
+import { GridBackground, Scanlines } from "@/components/fx/Backgrounds";
 import { listCars } from "@/lib/queries/cars";
 import { getFacetRows } from "@/lib/queries/filters";
 import { isConfigured } from "@/lib/supabase/server";
@@ -86,15 +88,45 @@ export async function generateMetadata({
   };
 }
 
+/**
+ * The page's decorative ground: a drifting engineering grid fading out down
+ * the page, faint scan lines, and a radar — concentric rings with a slowly
+ * sweeping beam — riding the top-right corner. Pure CSS, aria-hidden, and
+ * clipped inside its own layer so nothing widens the page.
+ */
+function CatalogueBackdrop() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <GridBackground
+        size={56}
+        className="[mask-image:linear-gradient(to_bottom,black,black_35%,transparent_85%)]"
+      />
+      <Scanlines />
+      <div className="absolute -top-44 -right-44 size-[30rem] rounded-full border border-cyan-400/10 sm:-top-52 sm:-right-36 sm:size-[40rem]">
+        <div className="absolute inset-[18%] rounded-full border border-cyan-400/12" />
+        <div className="absolute inset-[36%] rounded-full border border-cyan-400/15" />
+        <div className="absolute inset-[54%] rounded-full border border-cyan-400/20" />
+        <div className="absolute inset-x-0 top-1/2 h-px bg-cyan-400/10" />
+        <div className="absolute inset-y-0 left-1/2 w-px bg-cyan-400/10" />
+        <div className="absolute inset-0 animate-spin-slow rounded-full bg-[conic-gradient(from_0deg,transparent_0deg,oklch(0.83_0.13_210/24%)_40deg,transparent_62deg)]" />
+        <div className="absolute top-1/2 left-1/2 size-2 -translate-1/2 rounded-full bg-cyan-300 shadow-[0_0_12px_var(--color-cyan-400)] animate-pulse-glow" />
+      </div>
+    </div>
+  );
+}
+
 export default function CarsPage({ searchParams }: PageProps<"/cars">) {
   return (
-    <Container className="pt-10 pb-24 sm:pt-14 lg:pt-16">
-      {/* The heading names the filtered view ("Electric SUVs"), so it
-          streams in with the results behind a skeleton of the same shape. */}
-      <Suspense fallback={<CatalogueBodySkeleton />}>
-        <Catalogue searchParams={searchParams} />
-      </Suspense>
-    </Container>
+    <div className="relative isolate">
+      <CatalogueBackdrop />
+      <Container className="relative pt-10 pb-24 sm:pt-14 lg:pt-16">
+        {/* The heading names the filtered view ("Electric SUVs"), so it
+            streams in with the results behind a skeleton of the same shape. */}
+        <Suspense fallback={<CatalogueBodySkeleton />}>
+          <Catalogue searchParams={searchParams} />
+        </Suspense>
+      </Container>
+    </div>
   );
 }
 
@@ -135,7 +167,19 @@ function plural(count: number, one: string, many: string): string {
 function Header({ title, lead }: { title: string; lead?: string }) {
   return (
     <header className="max-w-3xl">
-      <h1 className="text-h1">{title}</h1>
+      <p className="flex items-center gap-3 text-eyebrow">
+        <span
+          aria-hidden="true"
+          className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+        />
+        <span>Catalogue</span>
+        <span aria-hidden="true" className="hud-label text-ink-600">
+          {"// SYS.CAT"}
+        </span>
+      </p>
+      <h1 className="mt-4 text-h1">
+        <ScrambleText text={title} />
+      </h1>
       {lead ? <p className="mt-4 text-lead">{lead}</p> : null}
     </header>
   );
@@ -290,11 +334,18 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
           className="mb-10 hidden target:block lg:mb-0 lg:block"
         >
           <div className="lg:sticky lg:top-[calc(var(--nav-offset)+1.5rem)] lg:max-h-[calc(100dvh-var(--nav-offset)-3rem)] lg:[scrollbar-width:thin] lg:overflow-y-auto lg:overscroll-contain lg:pr-3">
-            <div className="flex min-h-11 items-center justify-between gap-3 border-b border-line pb-3">
-              <h2 id="catalogue-filters-heading" className="text-h4">
+            <div className="relative flex min-h-11 items-center justify-between gap-3 pb-3 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-[linear-gradient(90deg,var(--color-cyan-400),oklch(0.83_0.13_210/20%)_45%,transparent)] after:content-['']">
+              <h2
+                id="catalogue-filters-heading"
+                className="flex items-center gap-2.5 font-hud text-xs tracking-hud text-ink-50 uppercase"
+              >
+                <span
+                  aria-hidden="true"
+                  className="size-1.5 rounded-full bg-cyan-300 shadow-[0_0_8px_var(--color-cyan-400)] animate-pulse-glow"
+                />
                 Filters
                 {activeCount > 0 ? (
-                  <span className="ml-1.5 text-body-s font-sans font-normal text-ink-400">
+                  <span className="font-mono text-[11px] tracking-normal text-cyan-200">
                     ({activeCount})<span className="sr-only"> active</span>
                   </span>
                 ) : null}
@@ -303,7 +354,7 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
                 <Link
                   href={clearHref}
                   scroll={false}
-                  className="inline-flex min-h-11 items-center text-body-s text-ink-200 underline decoration-line-strong underline-offset-4 transition-colors hover:text-ink-50 hover:decoration-ink-400"
+                  className="fx-link inline-flex min-h-11 items-center font-mono text-[11px] tracking-hud text-ink-200 uppercase transition-colors hover:text-cyan-100"
                 >
                   Clear all
                 </Link>
@@ -322,7 +373,8 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
               the navbar at every width. */}
           <div
             className={cn(
-              "sticky top-(--nav-offset) z-(--z-sticky) -mx-5 flex min-h-16 items-center gap-3 border-b border-line-subtle bg-void/85 px-5 py-2.5 backdrop-blur-md sm:-mx-8 sm:px-8",
+              "sticky top-(--nav-offset) z-(--z-sticky) -mx-5 flex min-h-16 items-center gap-3 bg-void/85 px-5 py-2.5 backdrop-blur-md sm:-mx-8 sm:px-8",
+              "after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-[linear-gradient(90deg,oklch(0.83_0.13_210/55%),oklch(0.9_0.03_230/12%)_40%,oklch(0.9_0.03_230/12%))] after:content-['']",
               "transition-[top] duration-(--duration-base) ease-standard lg:mx-0 lg:px-0",
             )}
           >
@@ -332,20 +384,20 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
               className="shrink-0 lg:hidden"
             />
             <p
-              className="hidden text-body-s text-ink-200 sm:block"
+              className="hidden font-mono text-xs tracking-hud text-ink-300 uppercase sm:block"
               aria-live="polite"
               aria-atomic="true"
             >
               {result.failed ? null : result.total > 0 ? (
                 <>
-                  <span className="tabular text-ink-50">
+                  <span className="tabular text-cyan-100 glow-text-cyan">
                     {plural(result.total, "car", "cars")}
                   </span>
                   {result.pageCount > 1 ? (
                     <span className="text-ink-400">
                       {" "}
-                      · showing{" "}
-                      <span className="tabular">
+                      <span aria-hidden="true">//</span> showing{" "}
+                      <span className="tabular text-ink-200">
                         {first === last
                           ? formatNumber(first)
                           : `${formatNumber(first)}–${formatNumber(last)}`}
@@ -363,6 +415,7 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
               active={state.sort}
               hidden={sortHidden(state)}
               action={CATALOGUE_PATH}
+              segmentedFrom="xl"
             />
           </div>
 
@@ -424,6 +477,9 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
               aboveFold
               label={title}
               className="mt-6"
+              // This grid streams in a Suspense boundary on first load; see
+              // CarCard's `countUp` for why the figures must not count here.
+              countUp={false}
             />
           )}
 
@@ -447,6 +503,7 @@ async function Catalogue({ searchParams }: { searchParams: Promise<RawSearchPara
                   active={String(state.pageSize)}
                   hidden={pageSizeHidden(state)}
                   action={CATALOGUE_PATH}
+                  segmentedFrom="sm"
                 />
                 <Pagination
                   page={result.page}

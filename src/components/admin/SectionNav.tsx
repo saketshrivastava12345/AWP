@@ -23,15 +23,24 @@ export function SectionNav({ links, label }: { links: SectionLink[]; label: stri
                 href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "-mb-px flex min-h-12 items-center gap-1.5 border-b-2 text-body-s whitespace-nowrap transition-colors duration-(--duration-fast)",
+                  "-mb-px flex min-h-12 items-center gap-2 border-b-2 font-mono text-xs tracking-hud whitespace-nowrap uppercase transition-[color,border-color,box-shadow] duration-(--duration-fast)",
                   active
-                    ? "border-gold-500 text-ink-50"
-                    : "border-transparent text-ink-300 hover:text-ink-50",
+                    ? "border-cyan-300 text-ink-50 shadow-[0_10px_16px_-12px_oklch(0.83_0.13_210/80%)]"
+                    : "border-transparent text-ink-400 hover:text-cyan-200",
                 )}
               >
                 {link.label}
                 {link.count ? (
-                  <span className="text-caption tabular-nums">{link.count}</span>
+                  <span
+                    className={cn(
+                      "rounded-xs border px-1.5 py-px text-[10px] tabular-nums",
+                      active
+                        ? "border-cyan-700/60 bg-cyan-400/8 text-cyan-200"
+                        : "border-line-subtle text-ink-400",
+                    )}
+                  >
+                    {link.count}
+                  </span>
                 ) : null}
               </Link>
             </li>

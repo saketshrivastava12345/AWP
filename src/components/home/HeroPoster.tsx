@@ -5,8 +5,9 @@ import { cn } from "@/lib/utils";
 
 /**
  * The hero's still composition: a side elevation of the featured car's body
- * style, drawn at its PUBLISHED size, with a dimension line for each figure
- * the maker publishes and none for the ones it does not.
+ * style, drawn at its PUBLISHED size as a glowing cyan wireframe over a lit
+ * floor, with a dimension line for each figure the maker publishes and none
+ * for the ones it does not.
  *
  * Server-rendered, so it is the first thing every visitor sees behind the
  * headline; the 3D scene fades in over it only where one can run. With
@@ -20,6 +21,7 @@ const MARGIN = 420; // mm of drawing sheet around the car
 const TICK = 90;
 /** Hairlines stay hairlines at any size the sheet is drawn. */
 const HAIR = { vectorEffect: "non-scaling-stroke" as const };
+const LINE = "stroke-cyan-300/60";
 
 function DimensionLine({
   from,
@@ -38,15 +40,7 @@ function DimensionLine({
   const my = (y1 + y2) / 2;
   return (
     <g>
-      <line
-        x1={x1}
-        y1={y1}
-        x2={x2}
-        y2={y2}
-        className="stroke-ink-500"
-        strokeWidth={1}
-        {...HAIR}
-      />
+      <line x1={x1} y1={y1} x2={x2} y2={y2} className={LINE} strokeWidth={1} {...HAIR} />
       {vertical ? (
         <>
           <line
@@ -54,7 +48,7 @@ function DimensionLine({
             y1={y1}
             x2={x1 + TICK / 2}
             y2={y1}
-            className="stroke-ink-500"
+            className={LINE}
             strokeWidth={1}
             {...HAIR}
           />
@@ -63,7 +57,7 @@ function DimensionLine({
             y1={y2}
             x2={x2 + TICK / 2}
             y2={y2}
-            className="stroke-ink-500"
+            className={LINE}
             strokeWidth={1}
             {...HAIR}
           />
@@ -75,7 +69,7 @@ function DimensionLine({
             y1={y1 - TICK / 2}
             x2={x1}
             y2={y1 + TICK / 2}
-            className="stroke-ink-500"
+            className={LINE}
             strokeWidth={1}
             {...HAIR}
           />
@@ -84,7 +78,7 @@ function DimensionLine({
             y1={y2 - TICK / 2}
             x2={x2}
             y2={y2 + TICK / 2}
-            className="stroke-ink-500"
+            className={LINE}
             strokeWidth={1}
             {...HAIR}
           />
@@ -95,7 +89,7 @@ function DimensionLine({
         y={vertical ? my : my + 135}
         textAnchor={vertical ? "start" : "middle"}
         dominantBaseline={vertical ? "middle" : "auto"}
-        className="fill-ink-300 font-mono transition-opacity duration-500 group-data-[story=true]/stage:opacity-0 max-lg:hidden"
+        className="fill-cyan-200 font-mono transition-opacity duration-500 group-data-[story=true]/stage:opacity-0 max-lg:hidden"
         fontSize={96}
         letterSpacing={2}
       >
@@ -142,8 +136,8 @@ export function HeroPoster({
 
   return (
     <div className={cn("absolute inset-0 overflow-hidden", className)}>
-      {/* The key light's pool on the studio floor: neutral, not a glow. */}
-      <div className="absolute top-[66%] left-1/2 h-[36%] w-[90%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] bg-surface-4/50 blur-[90px] lg:top-[52%] lg:left-[72%] lg:h-[50%] lg:w-[52%]" />
+      {/* The key light's pool on the studio floor, cold. */}
+      <div className="absolute top-[66%] left-1/2 h-[36%] w-[90%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] bg-cyan-400/10 blur-[90px] lg:top-[52%] lg:left-[72%] lg:h-[50%] lg:w-[52%]" />
 
       <svg
         viewBox={`0 0 ${width} ${height}`}
@@ -163,50 +157,58 @@ export function HeroPoster({
           y1={ground}
           x2={width}
           y2={ground}
-          className="stroke-line-strong"
+          className="stroke-cyan-400/40"
           strokeWidth={1}
           {...HAIR}
         />
 
-        <path
-          d={body}
-          fill="url(#hero-poster-body)"
-          className="stroke-ink-500"
-          strokeWidth={1.25}
-          {...HAIR}
-        />
-        {glass ? (
+        {/* The body glows: a wireframe lit from within. */}
+        <g style={{ filter: "drop-shadow(0 0 8px oklch(0.83 0.13 210 / 40%))" }}>
           <path
-            d={glass}
-            className="fill-void/70 stroke-ink-600"
-            strokeWidth={1}
+            d={body}
+            fill="url(#hero-poster-body)"
+            className="stroke-cyan-300/80"
+            strokeWidth={1.25}
             {...HAIR}
           />
-        ) : null}
-        {side.wheels.map((wheel, index) => {
-          const [cx, cy] = toSheet([wheel.cx, wheel.cy]);
-          return (
-            <g key={index}>
-              <circle
-                cx={cx}
-                cy={cy}
-                r={wheel.r}
-                className="fill-void stroke-ink-500"
-                strokeWidth={1.25}
-                {...HAIR}
-              />
-              <circle
-                cx={cx}
-                cy={cy}
-                r={wheel.rim}
-                className="fill-surface-2 stroke-ink-600"
-                strokeWidth={1}
-                {...HAIR}
-              />
-              <circle cx={cx} cy={cy} r={wheel.rim * 0.2} className="fill-surface-4" />
-            </g>
-          );
-        })}
+          {glass ? (
+            <path
+              d={glass}
+              className="fill-cyan-400/10 stroke-cyan-300/50"
+              strokeWidth={1}
+              {...HAIR}
+            />
+          ) : null}
+          {side.wheels.map((wheel, index) => {
+            const [cx, cy] = toSheet([wheel.cx, wheel.cy]);
+            return (
+              <g key={index}>
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={wheel.r}
+                  className="fill-void stroke-cyan-300/70"
+                  strokeWidth={1.25}
+                  {...HAIR}
+                />
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={wheel.rim}
+                  className="fill-surface-2 stroke-cyan-300/35"
+                  strokeWidth={1}
+                  {...HAIR}
+                />
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={wheel.rim * 0.2}
+                  className="fill-cyan-300/60"
+                />
+              </g>
+            );
+          })}
+        </g>
 
         {/* Only published figures get a dimension line. */}
         {published.height ? (

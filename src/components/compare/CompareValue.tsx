@@ -10,7 +10,7 @@ import type { CompareCell, CompareRow } from "@/lib/compare-rows";
  * (ValueNote) and its bar (CompareBar). `CompareValue` stacks all three.
  *
  * Both layouts say exactly the same thing. "Best" is marked in words as well
- * as colour (gold is the one accent the page spends on it), and the kinds of
+ * as colour (gold, glowing — the brand mark for a winner), and the kinds of
  * absence read differently: a dash is "not published" (for a feature, "not
  * catalogued"), and "Not applicable" is a figure that cannot exist for that
  * powertrain.
@@ -65,13 +65,15 @@ export function ValueText({
       <span
         className={cn(
           isText ? "text-body-s text-ink-50" : "text-data text-ink-50",
-          cell.isBest && "text-gold-300",
+          cell.isBest && "text-gold-200 glow-text-gold",
         )}
       >
         {cell.display}
       </span>
       {cell.isBest ? (
-        <span className="font-sans text-xs font-medium text-ink-300">Best</span>
+        <span className="inline-flex items-center gap-1 border border-gold-500/50 px-1.5 py-px font-mono text-[9px] tracking-hud text-gold-300 uppercase chamfer-sm">
+          Best
+        </span>
       ) : null}
     </span>
   );
@@ -120,15 +122,20 @@ export function CompareBar({
   return (
     <span
       aria-hidden="true"
-      className={cn("block h-0.5 w-full overflow-hidden rounded-pill bg-line", className)}
+      className={cn(
+        "block h-1.5 w-full overflow-hidden bg-surface-3 hud-segments",
+        className,
+      )}
     >
       <span
         style={style}
         className={cn(
-          "block h-full origin-left scale-x-(--bar) rounded-pill",
+          "block h-full origin-left scale-x-(--bar)",
           "transition-[scale] delay-(--bar-delay) duration-(--duration-cinematic) ease-standard motion-reduce:delay-0",
           "group-data-[bars=armed]/bars:scale-x-0",
-          cell.isBest ? "bg-gold-500" : "bg-ink-400",
+          cell.isBest
+            ? "bg-gradient-to-r from-gold-600 to-gold-300 shadow-[0_0_10px_var(--color-gold-400)]"
+            : "bg-gradient-to-r from-cyan-600 to-cyan-300 shadow-[0_0_8px_var(--color-cyan-400)]",
         )}
       />
     </span>

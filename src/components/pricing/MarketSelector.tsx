@@ -129,7 +129,7 @@ export function MarketSelector({
         {/* Visual key only: the same fact reaches assistive technology
             through the option groups. */}
         <span aria-hidden="true" className="flex items-center gap-2 text-caption">
-          <span className="size-1.5 rounded-full bg-gold-500" />
+          <span className="size-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_var(--color-cyan-400)]" />
           Prices recorded
         </span>
       </legend>

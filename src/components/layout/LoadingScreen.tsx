@@ -241,7 +241,7 @@ export function LoadingScreen() {
             <BrandMark className="size-6 drop-shadow-[0_0_8px_oklch(0.8_0.11_85/70%)]" />
             <span className="mt-2 font-hud text-2xl text-ink-50 tabular-nums [text-shadow:0_0_16px_oklch(0.83_0.13_210/55%)]">
               {rounded}
-              <span className="text-sm text-cyan-300">%</span>
+              <span className="ml-0.5 font-mono text-sm text-cyan-300">%</span>
             </span>
           </div>
         </div>

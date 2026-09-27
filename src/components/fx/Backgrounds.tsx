@@ -47,7 +47,7 @@ export function GridBackground({
           )}
         />
         {/* Horizon glow where the floor meets the sky. */}
-        <div className="absolute inset-x-0 top-[40%] h-40 -translate-y-1/2 bg-[radial-gradient(60%_50%_at_50%_50%,oklch(0.8_0.14_210/22%),transparent_70%)]" />
+        <div className="absolute inset-x-0 top-[45%] h-40 -translate-y-1/2 bg-[radial-gradient(60%_50%_at_50%_50%,oklch(0.8_0.14_210/22%),transparent_70%)]" />
       </div>
     );
   }

@@ -17,6 +17,8 @@ async function PasswordScreen() {
 
   return (
     <AuthShell
+      overline="Security"
+      code="SYS.03"
       title={context.viaEmailLink ? "Choose a new password" : "Change your password"}
       description={
         context.viaEmailLink

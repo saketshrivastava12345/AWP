@@ -26,6 +26,9 @@ import { PartsShowcase } from "@/components/cars/detail/PartsShowcase";
 import { DataConfidence } from "@/components/cars/detail/DataConfidence";
 import { RelatedVehicles } from "@/components/cars/detail/RelatedVehicles";
 import { CompareWith } from "@/components/cars/detail/CompareWith";
+import { CarFeatureShowcase } from "@/components/cars/detail/CarFeatureShowcase";
+import { buildShowcaseCards } from "@/components/cars/detail/feature-cards";
+import { carSilhouette } from "@/components/cars/car-silhouette";
 import {
   getAllVariantPaths,
   getDnaPopulation,
@@ -220,8 +223,11 @@ export default async function VariantPage({
   // The sticky sub-nav lists the sections this car's page renders; one with
   // nothing in it is left out of both.
   const hasTour = tour.length > 0;
-  const subNav = detailSubNav();
+  const showcaseCards = buildShowcaseCards(detail);
+  const hasShowcase = showcaseCards.length > 0 || detail.colors.length > 0;
+  const subNav = detailSubNav({ features: hasShowcase });
   const technologyFeatures = features.technology.length + features.other.length > 0;
+  const carbonCeramic = hasCarbonCeramicBrakes(detail);
 
   // ------------------------------------------------------ Structured data
   const jsonLd = serializeJsonLd([
@@ -255,6 +261,7 @@ export default async function VariantPage({
   const engineeringHeader = (
     <ChapterHeader
       id="engineering"
+      code="03"
       title={`How the ${carName} is built`}
       description="Scroll and it turns into a blueprint, then comes apart one system at a time, each with the figures published for it."
     />
@@ -304,7 +311,7 @@ export default async function VariantPage({
               hud={hudFor(detail)}
               dimensions={viewerDimensionsFor(detail)}
               colors={detail.colors}
-              carbonCeramic={hasCarbonCeramicBrakes(detail)}
+              carbonCeramic={carbonCeramic}
             />
           }
         />
@@ -334,6 +341,7 @@ export default async function VariantPage({
             <div className="lg:col-span-5">
               <ChapterHeader
                 id="overview"
+                code="01"
                 title={`The ${model.name}`}
                 description={model.description}
               />
@@ -349,6 +357,7 @@ export default async function VariantPage({
       <Container>
         <DetailChapter
           id="performance"
+          code="02"
           title="Performance"
           description="Published figures only, each placed among every car in the AURIX catalogue that publishes the same figure."
           className={cn(SECTION, RULE)}
@@ -366,6 +375,7 @@ export default async function VariantPage({
           and no ancestor here may clip or transform it. */}
       <DetailChapter
         id="engineering"
+        code="03"
         title={`How the ${carName} is built`}
         description="The powertrain, the chassis and the components behind them."
         header={!hasTour}
@@ -402,6 +412,7 @@ export default async function VariantPage({
       <Container>
         <DetailChapter
           id="design"
+          code="04"
           title="Design and dimensions"
           description="Drawn from the published dimensions where they exist, and to typical proportions for the body style where they do not."
           className={cn(SECTION, RULE)}
@@ -414,10 +425,38 @@ export default async function VariantPage({
         </DetailChapter>
       </Container>
 
+      {/* =================================================== Features */}
+      {hasShowcase ? (
+        <Container>
+          <DetailChapter
+            id="features"
+            code="05"
+            title="Features"
+            description="What is catalogued for this car, one card at a time, and the paint colours its maker publishes. Every figure and colour here comes from the catalogue; nothing is illustrative."
+            className={cn(SECTION, RULE)}
+          >
+            <CarFeatureShowcase
+              carName={carName}
+              cards={showcaseCards}
+              colors={detail.colors}
+              build={build}
+              carbonCeramic={carbonCeramic}
+              silhouette={carSilhouette(
+                model.body_type,
+                kind,
+                model.engine_position ?? null,
+              )}
+              headingId="features-heading"
+            />
+          </DetailChapter>
+        </Container>
+      ) : null}
+
       {/* ============================================= Technical data */}
       <Container>
         <DetailChapter
           id="technical-data"
+          code="06"
           title="Technical data"
           description="Every figure recorded for this car. A figure the manufacturer does not publish says so."
           className={cn(SECTION, RULE)}
@@ -457,6 +496,7 @@ export default async function VariantPage({
       <Container>
         <DetailChapter
           id="pricing"
+          code="07"
           title="Price"
           description="Recorded prices by market, each with its type, source and verification date. Prices are never converted between currencies."
           className={cn(SECTION, RULE)}
@@ -474,6 +514,7 @@ export default async function VariantPage({
       <Container>
         <DetailChapter
           id="compare"
+          code="08"
           title="Compare and related"
           className={cn(RULE, "pt-16 pb-16 lg:pt-24")}
         >

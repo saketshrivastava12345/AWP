@@ -141,6 +141,7 @@ export function Button({
       aria-busy={loading || undefined}
       onClick={loading ? (event) => event.preventDefault() : onClick}
       data-magnetic={magnetic ? "0.25" : undefined}
+      suppressHydrationWarning={magnetic || undefined}
       {...props}
     >
       {loading ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
@@ -172,6 +173,7 @@ export function ButtonLink({
     <Link
       className={buttonClasses(variant, size, className)}
       data-magnetic={magnetic ? "0.25" : undefined}
+      suppressHydrationWarning={magnetic || undefined}
       {...props}
     >
       {variant === "link" ? <LinkLabel>{children}</LinkLabel> : children}

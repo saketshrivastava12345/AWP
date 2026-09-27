@@ -30,8 +30,12 @@ export function ViewerLoader({
         visible ? "opacity-100" : "opacity-0",
       )}
     >
-      <div className="w-[min(18rem,80%)] px-5 py-4 hud-corners">
-        <p className="font-display text-micro tracking-hud text-gold-300 uppercase">
+      <div className="w-[min(18rem,80%)] px-5 py-4 hud-corners [--hud-c:var(--color-cyan-300)]">
+        <p className="flex items-center gap-2 font-mono text-micro tracking-hud text-cyan-200 uppercase">
+          <span
+            aria-hidden="true"
+            className="size-1.5 animate-pulse-glow rounded-full bg-cyan-400"
+          />
           Loading vehicle
         </p>
         <div className="mt-3 space-y-2">

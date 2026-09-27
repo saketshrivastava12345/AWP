@@ -14,8 +14,8 @@ export function CarMarker({ index, className }: { index: number; className?: str
     <span
       aria-hidden="true"
       className={cn(
-        "grid size-5 shrink-0 place-items-center rounded-pill bg-surface-3",
-        "font-mono text-xs leading-none text-ink-200 tabular-nums",
+        "grid size-5 shrink-0 place-items-center border border-cyan-400/50 bg-void/60 chamfer-sm",
+        "font-mono text-[10px] leading-none text-cyan-200 tabular-nums",
         className,
       )}
     >
@@ -128,7 +128,7 @@ export function CompareLegend({
         <dd>Does not apply to that powertrain</dd>
       </div>
       <div className="flex gap-3">
-        <dt className="w-24 shrink-0 text-gold-300">Best</dt>
+        <dt className="w-24 shrink-0 text-gold-300 glow-text-gold">Best</dt>
         <dd>Marked only when two or more cars publish the figure</dd>
       </div>
       <div className="flex gap-3">
