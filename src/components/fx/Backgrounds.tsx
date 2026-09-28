@@ -162,8 +162,10 @@ export function GlowOrbs({
 /**
  * A soft light that follows the pointer across its section. Put
  * `data-spotlight` on the section (a `relative` element) and this layer
- * inside it; the FX runtime writes --mx/--my on the section. Without a
- * pointer (touch, reduced motion) it rests at `rest` (default top centre).
+ * directly inside it; the FX runtime writes --mx/--my on this layer (not on
+ * the section, where they would restyle everything inside it on every
+ * pointer frame). Without a pointer (touch, reduced motion, lite mode) it
+ * rests at `rest` (default top centre).
  */
 export function Spotlight({
   size = 520,
@@ -180,10 +182,13 @@ export function Spotlight({
   return (
     <div
       aria-hidden="true"
+      data-spotlight-layer=""
       className={cn(LAYER, className)}
       style={{
         background: `radial-gradient(${size}px circle at var(--mx, ${rx}) var(--my, ${ry}), ${color}, transparent 70%)`,
       }}
+      // The runtime may write --mx/--my before this part of the page hydrates.
+      suppressHydrationWarning
     />
   );
 }

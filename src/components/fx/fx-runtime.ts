@@ -444,6 +444,16 @@ export function startFxRuntime(): () => void {
     let tilt: HTMLElement | null = null;
     let magnet: HTMLElement | null = null;
     const magnetOffset = new WeakMap<HTMLElement, [number, number]>();
+    const layers = new WeakMap<HTMLElement, HTMLElement>();
+    const spotlightLayer = (host: HTMLElement): HTMLElement => {
+      let layer = layers.get(host);
+      if (!layer) {
+        layer =
+          host.querySelector<HTMLElement>(":scope > [data-spotlight-layer]") ?? host;
+        layers.set(host, layer);
+      }
+      return layer;
+    };
 
     const resetTilt = (el: HTMLElement) => {
       el.removeAttribute("data-tilting");
@@ -466,16 +476,25 @@ export function startFxRuntime(): () => void {
       // Lite mode keeps the direct feedback (tilt, magnet) and drops the
       // ambient light: the cursor glow is hidden in CSS and spotlights rest.
       const lite = html.classList.contains(FX_LITE_CLASS);
+      const nextTilt = target?.closest<HTMLElement>("[data-tilt]") ?? null;
+      const spot = lite
+        ? null
+        : (target?.closest<HTMLElement>("[data-spotlight]") ?? null);
+      const nextMagnet = target?.closest<HTMLElement>("[data-magnetic]") ?? null;
+
+      // Every layout read before any style write: a read after a write forces
+      // the browser to recalculate style on the spot, once per effect.
+      const tiltRect = nextTilt?.getBoundingClientRect() ?? null;
+      const spotRect = spot && spot !== nextTilt ? spot.getBoundingClientRect() : null;
+      const magnetRect = nextMagnet?.getBoundingClientRect() ?? null;
 
       if (glow && !lite) glow.style.transform = `translate3d(${x}px, ${y}px, 0)`;
 
-      const nextTilt = target?.closest<HTMLElement>("[data-tilt]") ?? null;
       if (tilt && tilt !== nextTilt) resetTilt(tilt);
       tilt = nextTilt;
-      if (tilt) {
-        const r = tilt.getBoundingClientRect();
-        const px = (x - r.left) / r.width;
-        const py = (y - r.top) / r.height;
+      if (tilt && tiltRect) {
+        const px = (x - tiltRect.left) / tiltRect.width;
+        const py = (y - tiltRect.top) / tiltRect.height;
         const max = Number(tilt.dataset.tilt) || 6;
         tilt.style.setProperty("--mx", `${(px * 100).toFixed(1)}%`);
         tilt.style.setProperty("--my", `${(py * 100).toFixed(1)}%`);
@@ -484,23 +503,21 @@ export function startFxRuntime(): () => void {
         tilt.setAttribute("data-tilting", "");
       }
 
-      const spot = lite
-        ? null
-        : (target?.closest<HTMLElement>("[data-spotlight]") ?? null);
-      if (spot && spot !== tilt) {
-        const r = spot.getBoundingClientRect();
-        spot.style.setProperty("--mx", `${(x - r.left).toFixed(0)}px`);
-        spot.style.setProperty("--my", `${(y - r.top).toFixed(0)}px`);
+      if (spot && spotRect) {
+        // A section's <Spotlight> layer takes the position itself: a custom
+        // property set on the section would restyle everything inside it on
+        // every pointer frame. Cards (fx-card::after) read it from the card.
+        const into = spotlightLayer(spot);
+        into.style.setProperty("--mx", `${(x - spotRect.left).toFixed(0)}px`);
+        into.style.setProperty("--my", `${(y - spotRect.top).toFixed(0)}px`);
       }
 
-      const nextMagnet = target?.closest<HTMLElement>("[data-magnetic]") ?? null;
       if (magnet && magnet !== nextMagnet) resetMagnet(magnet);
       magnet = nextMagnet;
-      if (magnet) {
+      if (magnet && magnetRect) {
         const [ox, oy] = magnetOffset.get(magnet) ?? [0, 0];
-        const r = magnet.getBoundingClientRect();
-        const cx = r.left - ox + r.width / 2;
-        const cy = r.top - oy + r.height / 2;
+        const cx = magnetRect.left - ox + magnetRect.width / 2;
+        const cy = magnetRect.top - oy + magnetRect.height / 2;
         const strength = Number(magnet.dataset.magnetic) || 0.3;
         const dx = Math.max(-10, Math.min(10, (x - cx) * strength));
         const dy = Math.max(-8, Math.min(8, (y - cy) * strength));
