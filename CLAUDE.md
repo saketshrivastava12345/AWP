@@ -875,6 +875,33 @@ which re-rasterised every grid on the page every frame.
   screen and hero wait for — open for two round trips to a hosted project.
 - Judge speed on `npm run build && npm start`, never `npm run dev`.
 
+**Owner-supplied AI illustrations, and the blueprint sheet**
+
+- **AI-generated images are never passed off as photographs.** The owner
+  supplied AI-generated infographics of three cars; views cropped from them
+  live in `public/images/cars/ai/` and are seeded as `car_media` rows whose
+  licence is "AI-generated illustration". `lib/media-kind.ts` decides what
+  is an illustration (that licence, or the `ai/` folder — the catalogue view
+  gives cards only a URL), and every surface labels it: an "AI illustration"
+  badge on cards, heroes, gallery tiles and compare thumbnails, alt text,
+  and a credit that says "not a photograph". None is primary, so a real
+  photograph always wins. The spec tables printed on those infographics were
+  **not** imported: they contradicted each other and the published figures.
+- **The blueprint sheet** (`lib/blueprint-sheet.ts`, `BlueprintSheet`) is the
+  Design chapter's drawing: side, front, top and rear views at one scale,
+  from the same lofted body-style profiles the 3D car uses, sized to the
+  published dimensions, with dimension lines only for published figures.
+  It is labelled a representation, not a manufacturer drawing; model-exact
+  outlines would need exact source geometry, which the project does not
+  have.
+- `NEXT_PUBLIC_SUPABASE_URL` is normalised (`lib/supabase-url.ts`): a
+  pasted `/rest/v1` suffix made every request 404 with "Invalid path
+  specified in request URL". The dev notice and `npm run doctor` now name
+  that case instead of blaming missing migrations.
+- A commit message that merely mentions GitHub's skip marker (square
+  brackets around "skip ci") skips CI for that push; keep the marker out of
+  messages that are meant to run CI.
+
 **Open items**
 
 - Apply migrations 0006–0008 to the hosted database: `npm run db:push`, then
