@@ -27,7 +27,9 @@ export function ViewerLoader({
       aria-hidden={!visible}
       className={cn(
         "pointer-events-none absolute inset-0 grid place-items-center bg-surface-1/90 transition-opacity duration-(--duration-normal)",
-        visible ? "opacity-100" : "opacity-0",
+        // Faded out, it stays mounted for the next load: its pulsing dot and
+        // waiting bars must not keep animating unseen for the whole visit.
+        visible ? "opacity-100" : "opacity-0 [&_*]:animate-none",
       )}
     >
       <div className="w-[min(18rem,80%)] px-5 py-4 hud-corners [--hud-c:var(--color-cyan-300)]">
