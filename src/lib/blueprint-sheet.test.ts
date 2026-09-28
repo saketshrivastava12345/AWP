@@ -106,6 +106,29 @@ describe("blueprintSheet — proportions follow the published dimensions", () =>
       }
     }
   });
+
+  it("draws the body outline in every view, spanning the car", () => {
+    const sheet = blueprintSheet(carreraS);
+    const extent: Record<string, [number, number]> = {
+      side: [4519, 1300],
+      top: [4519, 1852],
+      front: [1852, 1300],
+      rear: [1852, 1300],
+    };
+    for (const v of sheet.views) {
+      const outline = v.shapes.find((shape) => shape.role === "body");
+      expect(outline, v.id).toBeDefined();
+      // A closed outline that starts and ends at one point (the plan's tail
+      // tip) must not collapse when simplified.
+      const coords = [...(outline?.d ?? "").matchAll(/[ML](-?\d+) (-?\d+)/g)].map(
+        (m) => [Number(m[1]), Number(m[2])] as const,
+      );
+      expect(coords.length, v.id).toBeGreaterThan(40);
+      const [w, h] = extent[v.id] ?? [0, 0];
+      expect(span(xs(coords)), v.id).toBeCloseTo(w, -1);
+      expect(span(ys(coords)), v.id).toBeGreaterThan(h * 0.9);
+    }
+  });
 });
 
 describe("blueprintSheet — dimension lines", () => {

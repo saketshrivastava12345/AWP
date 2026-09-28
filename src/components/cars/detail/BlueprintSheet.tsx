@@ -187,7 +187,10 @@ export function BlueprintSheet({
           <span>
             Lamps, grille and mirrors are the body style&apos;s generic shapes, placed as
             on the 3D model.
-            {dims?.source?.trim() ? ` Dimensions: ${dims.source.trim()}.` : null}
+            {/* Credit the source only for figures it actually supplied. */}
+            {dims?.source?.trim() && table.some((row) => row.value !== null)
+              ? ` Dimensions: ${dims.source.trim()}.`
+              : null}
           </span>
           {dims?.notes?.trim() ? <span>{dims.notes}</span> : null}
         </figcaption>
