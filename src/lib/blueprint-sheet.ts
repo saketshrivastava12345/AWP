@@ -465,11 +465,16 @@ function simplify<T extends Point>(points: T[], tolerance: number): T[] {
     let index = -1;
     const ex = pb[0] - pa[0];
     const ey = pb[1] - pa[1];
-    const len = Math.hypot(ex, ey) || 1;
+    const len = Math.hypot(ex, ey);
     for (let i = a + 1; i < b; i += 1) {
       const p = points[i];
       if (!p) continue;
-      const d = Math.abs((p[0] - pa[0]) * ey - (p[1] - pa[1]) * ex) / len;
+      // A closed outline starts and ends at one point (a plan's tail tip):
+      // with no chord to measure from, measure from that point.
+      const d =
+        len < 1e-6
+          ? Math.hypot(p[0] - pa[0], p[1] - pa[1])
+          : Math.abs((p[0] - pa[0]) * ey - (p[1] - pa[1]) * ex) / len;
       if (d > worst) {
         worst = d;
         index = i;
