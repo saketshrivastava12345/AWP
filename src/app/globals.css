@@ -1196,7 +1196,9 @@ html.js [data-reveal-stagger] > :nth-child(n + 13) {
 }
 .fx-marquee:hover .fx-marquee-track,
 .fx-marquee:focus-within .fx-marquee-track,
-.fx-marquee-root:has(.fx-marquee-toggle:checked) .fx-marquee-track {
+.fx-marquee-root:has(.fx-marquee-toggle:checked) .fx-marquee-track,
+/* Off screen or in a hidden tab (set by the FX runtime). */
+.fx-marquee[data-fx-offscreen] .fx-marquee-track {
   animation-play-state: paused;
 }
 @keyframes fx-marquee {
@@ -1241,6 +1243,37 @@ html.js [data-reveal-stagger] > :nth-child(n + 13) {
 }
 html[data-cursor] .fx-cursor-glow {
   opacity: 1;
+}
+
+/* --- Lite effects mode (html.fx-lite; src/components/fx/fx-lite.ts) ------
+   For devices that cannot afford continuous ambient motion: the boot script
+   sets it for few cores, little memory or Data Saver, and the FX runtime
+   when frames are slow at rest. The look stays — grids, glows, scan lines,
+   rings, panels — standing still. Each loop is removed rather than paused,
+   so it rests on its first frame wherever it was, and the sweeping beams,
+   the glitch and the cursor glow are hidden. Entrances, reveals, count-ups,
+   hover feedback, loaders and the marquee are unchanged. Unlayered, so it
+   wins over the animate-* utilities without !important. */
+html.fx-lite
+  :is(
+    .animate-grid-drift,
+    .animate-orb-drift,
+    .animate-pulse-glow,
+    .animate-hud-dash,
+    .animate-flow,
+    .animate-spin-slow,
+    .animate-float
+  ) {
+  animation: none;
+}
+html.fx-lite .animate-scan-beam {
+  animation: none;
+  visibility: hidden;
+}
+html.fx-lite .fx-glitch::before,
+html.fx-lite .fx-glitch::after,
+html.fx-lite .fx-cursor-glow {
+  display: none;
 }
 
 /* --- Page transition scan line (template.tsx). A fixed, childless overlay:
@@ -1409,12 +1442,13 @@ html[data-cursor] .fx-cursor-glow {
   }
 }
 
-/* Grid drifting toward the viewer (background-position only). */
+/* Grid drifting toward the viewer: GridBackground's sheet (one cell taller
+   than its frame) slides down one cell and repeats. A transform, so the
+   compositor moves the already-painted lines; animating background-position
+   instead repainted and re-rasterised every grid on the page every frame. */
 @keyframes grid-drift {
   to {
-    background-position:
-      0 var(--grid-size, 48px),
-      0 var(--grid-size, 48px);
+    transform: translateY(var(--grid-size, 48px));
   }
 }
 @utility animate-grid-drift {

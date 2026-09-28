@@ -6,11 +6,22 @@ import { cn } from "@/lib/utils";
  * pointer-events: none and absolutely positioned to fill their nearest
  * `relative` ancestor — put them first inside a `relative isolate` section
  * (with `overflow-hidden` if they must not spill), and give the content
- * `relative` so it paints above them. They animate only background-position,
- * transform or opacity, and stop under reduced motion.
+ * `relative` so it paints above them. They animate only transform or
+ * opacity (never a painted property, so a moving layer is composited rather
+ * than repainted every frame), pause while off screen (the FX runtime), stand
+ * still in lite mode and stop under reduced motion.
  */
 
 const LAYER = "pointer-events-none absolute inset-0 -z-10";
+
+/**
+ * The drifting grid is a sheet one cell taller than its frame, starting one
+ * cell above it, that slides down by exactly one cell and repeats — the same
+ * picture as scrolling the background, but as a transform. The fade (mask)
+ * sits on the frame, so it stays put while the lines move under it.
+ */
+const GRID_SHEET =
+  "absolute inset-x-0 bottom-0 top-[calc(var(--grid-size)*-1)] [background-size:var(--grid-size)_var(--grid-size)]";
 
 /**
  * An engineering grid. `flat` (default): a 48px grid fading toward the
@@ -34,18 +45,24 @@ export function GridBackground({
     return (
       <div
         aria-hidden="true"
+        style={style}
         className={cn(LAYER, "overflow-hidden [perspective:420px]", className)}
       >
         <div
-          style={{ ...style, "--grid-speed": "2.4s" } as CSSProperties}
           className={cn(
-            "absolute inset-x-[-50%] top-[45%] bottom-[-60%] origin-top [transform:rotateX(62deg)]",
-            "[background-image:linear-gradient(oklch(0.83_0.13_210/32%)_1px,transparent_1px),linear-gradient(90deg,oklch(0.83_0.13_210/26%)_1px,transparent_1px)]",
-            "[background-size:var(--grid-size)_var(--grid-size)]",
+            "absolute inset-x-[-50%] top-[45%] bottom-[-60%] origin-top [transform:rotateX(62deg)] overflow-hidden",
             "[mask-image:linear-gradient(to_bottom,transparent,black_30%,black_60%,transparent)]",
-            animated && "animate-grid-drift",
           )}
-        />
+        >
+          <div
+            style={{ "--grid-speed": "2.4s" } as CSSProperties}
+            className={cn(
+              GRID_SHEET,
+              "[background-image:linear-gradient(oklch(0.83_0.13_210/32%)_1px,transparent_1px),linear-gradient(90deg,oklch(0.83_0.13_210/26%)_1px,transparent_1px)]",
+              animated && "animate-grid-drift",
+            )}
+          />
+        </div>
         {/* Horizon glow where the floor meets the sky. */}
         <div className="absolute inset-x-0 top-[45%] h-40 -translate-y-1/2 bg-[radial-gradient(60%_50%_at_50%_50%,oklch(0.8_0.14_210/22%),transparent_70%)]" />
       </div>
@@ -54,16 +71,22 @@ export function GridBackground({
   return (
     <div
       aria-hidden="true"
-      style={{ ...style, "--grid-speed": "6s" } as CSSProperties}
+      style={style}
       className={cn(
         LAYER,
-        "[background-image:linear-gradient(oklch(0.85_0.1_210/6%)_1px,transparent_1px),linear-gradient(90deg,oklch(0.85_0.1_210/6%)_1px,transparent_1px)]",
-        "[background-size:var(--grid-size)_var(--grid-size)]",
-        "[mask-image:radial-gradient(ellipse_at_center,black_25%,transparent_75%)]",
-        animated && "animate-grid-drift",
+        "overflow-hidden [mask-image:radial-gradient(ellipse_at_center,black_25%,transparent_75%)]",
         className,
       )}
-    />
+    >
+      <div
+        style={{ "--grid-speed": "6s" } as CSSProperties}
+        className={cn(
+          GRID_SHEET,
+          "[background-image:linear-gradient(oklch(0.85_0.1_210/6%)_1px,transparent_1px),linear-gradient(90deg,oklch(0.85_0.1_210/6%)_1px,transparent_1px)]",
+          animated && "animate-grid-drift",
+        )}
+      />
+    </div>
   );
 }
 

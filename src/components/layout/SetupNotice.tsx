@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { getPublicEnv } from "@/lib/env";
 import { isSchemaMismatch } from "@/lib/queries/report";
 import { explainFetchFailure, isPlaceholderHost } from "@/lib/supabase/diagnose";
@@ -81,9 +82,8 @@ const SCHEMA_PROBES = [
 ] as const;
 
 /**
- * Checks, on every request, that the environment and the database match
- * this version of the code. Uncached on purpose: the whole point is to
- * notice the moment the developer fixes it.
+ * Checks that the environment and the database match this version of the
+ * code: five requests in two round trips to the project.
  */
 async function checkSetup(): Promise<SetupState> {
   const env = getPublicEnv();
@@ -157,6 +157,30 @@ async function checkSetup(): Promise<SetupState> {
   return { kind: "ok" };
 }
 
+/**
+ * How long a healthy verdict is reused. A problem is re-checked on every
+ * request, so the notice disappears the moment the developer fixes it; a
+ * healthy setup does not need proving on every page load. Probing on each
+ * one kept the HTML stream — and with it the load event, which the loading
+ * screen and the home hero wait for — open for two round trips to a hosted
+ * project on every dev navigation.
+ */
+const HEALTHY_FOR_MS = 60_000;
+
+let healthyUntil = 0;
+/** One probe at a time: parallel requests share the answer. */
+let pending: Promise<SetupState> | null = null;
+
+async function checkSetupBriefly(): Promise<SetupState> {
+  if (Date.now() < healthyUntil) return { kind: "ok" };
+  pending ??= checkSetup().finally(() => {
+    pending = null;
+  });
+  const state = await pending;
+  healthyUntil = state.kind === "ok" ? Date.now() + HEALTHY_FOR_MS : 0;
+  return state;
+}
+
 function messageFor(state: Exclude<SetupState, { kind: "ok" }>): {
   title: string;
   fix: string;
@@ -228,7 +252,10 @@ function messageFor(state: Exclude<SetupState, { kind: "ok" }>): {
 export async function SetupNotice() {
   if (process.env.NODE_ENV !== "development") return null;
 
-  const state = await checkSetup();
+  // A per-request check, never part of a prerendered shell (and the time
+  // read below is only allowed after this).
+  await connection();
+  const state = await checkSetupBriefly();
   if (state.kind === "ok") return null;
   const message = messageFor(state);
 

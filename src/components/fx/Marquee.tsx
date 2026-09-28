@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
  * - Pauses on hover and while anything inside has focus, and `controls`
  *   (default on) adds a small keyboard-reachable Pause toggle (WCAG 2.2.2).
  * - Reduced motion: no movement; the row becomes a normal scroller.
+ * - Stands still while off screen or in a hidden tab (the FX runtime sets
+ *   `data-fx-offscreen`, possibly before this part of the page hydrates).
  * - `speed` is seconds per loop (default 40). `reverse` runs right-to-left.
  *
  * Pass items as children (each child is one item). Never hardcode car data
@@ -38,7 +40,12 @@ export function Marquee({
   } as CSSProperties;
   return (
     <div className={cn("fx-marquee-root group/marquee relative", className)}>
-      <div className="fx-marquee" data-reverse={reverse ? "" : undefined} style={style}>
+      <div
+        className="fx-marquee"
+        data-reverse={reverse ? "" : undefined}
+        style={style}
+        suppressHydrationWarning
+      >
         <div className="fx-marquee-track">
           <div className="fx-marquee-group">{children}</div>
           <div className="fx-marquee-group" aria-hidden="true" inert>

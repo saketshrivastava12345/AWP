@@ -15,6 +15,14 @@
  * - `[data-parallax]`: scroll-linked `translate`, only while near the view.
  * - `[data-tilt]`, `[data-spotlight]`, `[data-magnetic]`, `[data-cursor-glow]`:
  *   one delegated pointermove, coalesced to one rAF per frame.
+ * - Ambient loops (drifting grids and orbs, beams, breathing dots, dashed
+ *   flows, the marquee): paused while off screen and while the tab is
+ *   hidden. A page carries dozens of these infinite CSS animations and most
+ *   are out of view at any moment, yet each running one keeps the browser
+ *   restyling, repainting and compositing every frame.
+ * - Lite mode (fx-lite.ts): if the page cannot hold its frame rate at rest
+ *   shortly after load, `html.fx-lite` stops the ambient loops for the rest
+ *   of the session. (The boot script already set it for low-power devices.)
  * - A MutationObserver picks up elements that arrive later (streamed
  *   Suspense content, client navigations).
  *
@@ -23,12 +31,47 @@
  */
 
 import { formatCount, type Grouping } from "./count-format";
+import {
+  FX_LITE_CLASS,
+  FX_LITE_SESSION_KEY,
+  FX_MODE_STORAGE_KEY,
+  framesTooSlow,
+} from "./fx-lite";
 
 const REVEAL = "[data-reveal],[data-reveal-stagger]";
 const COUNT = "[data-countup]";
 const SCRAMBLE = '[data-scramble="view"],[data-scramble="both"]';
 const PARALLAX = "[data-parallax]";
-const WATCHED = `${REVEAL},${COUNT},${SCRAMBLE},${PARALLAX}`;
+/**
+ * Elements carrying an infinite ambient animation (globals.css). Paused and
+ * resumed through the Web Animations API, so the runtime never writes an
+ * attribute onto markup React may not have hydrated yet. Nothing in CSS
+ * toggles these animations' play state, so taking it over is safe.
+ */
+const AMBIENT = [
+  ".animate-grid-drift",
+  ".animate-orb-drift",
+  ".animate-scan-beam",
+  ".animate-pulse-glow",
+  ".animate-hud-dash",
+  ".animate-flow",
+  ".animate-spin-slow",
+  ".animate-float",
+  ".fx-glitch",
+].join(",");
+/**
+ * The marquee's play state IS driven by CSS (hover, focus and its pause
+ * toggle), which a Web Animations play() would override for good; it is
+ * paused through a `data-fx-offscreen` attribute instead (Marquee renders
+ * that element with suppressHydrationWarning).
+ */
+const MARQUEE = ".fx-marquee";
+const WATCHED = `${REVEAL},${COUNT},${SCRAMBLE},${PARALLAX},${AMBIENT},${MARQUEE}`;
+
+/** Measure frame times at rest this long after the load event... */
+const SAMPLE_DELAY_MS = 1500;
+/** ...for this long. */
+const SAMPLE_MS = 2000;
 
 const GLYPHS = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&*+=<>/\\";
 
@@ -157,12 +200,17 @@ export function startFxRuntime(): () => void {
   const updateParallax = () => {
     parallaxFrame = 0;
     const vh = window.innerHeight;
+    // Every read before any write: interleaving them would force a style
+    // recalculation per element.
+    const next: Array<[HTMLElement, number]> = [];
     for (const el of parallaxVisible) {
       const speed = Number(el.dataset.parallax) || 0;
       const current = parallaxOffset.get(el) ?? 0;
       const rect = el.getBoundingClientRect();
       const center = rect.top - current + rect.height / 2 - vh / 2;
-      const offset = Math.max(-240, Math.min(240, -center * speed));
+      next.push([el, Math.max(-240, Math.min(240, -center * speed))]);
+    }
+    for (const [el, offset] of next) {
       parallaxOffset.set(el, offset);
       el.style.translate = `0 ${offset.toFixed(1)}px`;
     }
@@ -170,6 +218,35 @@ export function startFxRuntime(): () => void {
   const requestParallax = () => {
     if (parallaxFrame === 0 && parallaxVisible.size > 0)
       parallaxFrame = window.requestAnimationFrame(updateParallax);
+  };
+
+  // --- Ambient loops: run only while on screen and the tab is visible ------
+  const ambientOnScreen = new Set<Element>();
+  // Only animations this runtime paused are ever resumed by it.
+  const pausedHere = new WeakSet<Animation>();
+  const syncAmbient = (el: Element) => {
+    const run = ambientOnScreen.has(el) && !document.hidden;
+    if (el.matches(MARQUEE)) {
+      if (run) el.removeAttribute("data-fx-offscreen");
+      else el.setAttribute("data-fx-offscreen", "");
+      return;
+    }
+    // The glitch draws on its ::before/::after, which only `subtree` reaches.
+    const animations = el.getAnimations({ subtree: el.matches(".fx-glitch") });
+    for (const animation of animations) {
+      if (run) {
+        if (pausedHere.has(animation)) {
+          pausedHere.delete(animation);
+          animation.play();
+        }
+      } else if (
+        animation.playState === "running" &&
+        animation.effect?.getComputedTiming().iterations === Infinity
+      ) {
+        animation.pause();
+        pausedHere.add(animation);
+      }
+    }
   };
 
   // --- Observers ----------------------------------------------------------
@@ -220,6 +297,18 @@ export function startFxRuntime(): () => void {
     { rootMargin: "25% 0px 25% 0px" },
   );
 
+  // A little margin, so a loop is already moving as it scrolls into view.
+  const ambientObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) ambientOnScreen.add(entry.target);
+        else ambientOnScreen.delete(entry.target);
+        syncAmbient(entry.target);
+      }
+    },
+    { rootMargin: "10% 0px 10% 0px" },
+  );
+
   const register = (el: HTMLElement) => {
     if (el.matches(REVEAL)) {
       if (reduce) {
@@ -229,12 +318,17 @@ export function startFxRuntime(): () => void {
     }
     if (!reduce && (el.matches(COUNT) || el.matches(SCRAMBLE))) onceObserver.observe(el);
     if (!reduce && el.matches(PARALLAX)) parallaxObserver.observe(el);
+    // Under reduced motion the CSS backstop has already stopped them.
+    if (!reduce && (el.matches(AMBIENT) || el.matches(MARQUEE)))
+      ambientObserver.observe(el);
   };
   const unregister = (el: HTMLElement) => {
     revealObserver.unobserve(el);
     onceObserver.unobserve(el);
     parallaxObserver.unobserve(el);
     parallaxVisible.delete(el);
+    ambientObserver.unobserve(el);
+    ambientOnScreen.delete(el);
   };
 
   const scan = (root: ParentNode, fn: (el: HTMLElement) => void) => {
@@ -258,7 +352,57 @@ export function startFxRuntime(): () => void {
     revealObserver.disconnect();
     onceObserver.disconnect();
     parallaxObserver.disconnect();
+    ambientObserver.disconnect();
   });
+
+  // A hidden tab: hold every on-screen loop until the visitor comes back.
+  const onVisibility = () => {
+    for (const el of ambientOnScreen) syncAmbient(el);
+  };
+  document.addEventListener("visibilitychange", onVisibility);
+  cleanups.push(() => document.removeEventListener("visibilitychange", onVisibility));
+
+  // --- Lite mode from measured frame times ----------------------------------
+  // After load, with the page at rest, can this device hold its frame rate
+  // with the ambient loops running? If not, stop them for the session.
+  let fxOverride: string | null = null;
+  try {
+    fxOverride = localStorage.getItem(FX_MODE_STORAGE_KEY);
+  } catch {
+    // Storage blocked: detect as usual.
+  }
+  if (!reduce && fxOverride !== "full" && !html.classList.contains(FX_LITE_CLASS)) {
+    const sample = () => {
+      if (document.hidden) return;
+      const intervals: number[] = [];
+      let first = -1;
+      let last = -1;
+      const tick = (now: number) => {
+        // A hidden tab stops frames; that says nothing about the device.
+        if (document.hidden) return;
+        if (last >= 0) intervals.push(now - last);
+        else first = now;
+        last = now;
+        if (now - first < SAMPLE_MS) {
+          frames.add(window.requestAnimationFrame(tick));
+        } else if (framesTooSlow(intervals)) {
+          html.classList.add(FX_LITE_CLASS);
+          try {
+            sessionStorage.setItem(FX_LITE_SESSION_KEY, "1");
+          } catch {
+            // Not remembered; the next load measures again.
+          }
+        }
+      };
+      frames.add(window.requestAnimationFrame(tick));
+    };
+    const begin = () => later(sample, SAMPLE_DELAY_MS);
+    if (document.readyState === "complete") begin();
+    else {
+      window.addEventListener("load", begin, { once: true });
+      cleanups.push(() => window.removeEventListener("load", begin));
+    }
+  }
 
   if (!reduce) {
     window.addEventListener("scroll", requestParallax, { passive: true });
@@ -319,8 +463,11 @@ export function startFxRuntime(): () => void {
       if (!event) return;
       const { clientX: x, clientY: y } = event;
       const target = event.target instanceof Element ? event.target : null;
+      // Lite mode keeps the direct feedback (tilt, magnet) and drops the
+      // ambient light: the cursor glow is hidden in CSS and spotlights rest.
+      const lite = html.classList.contains(FX_LITE_CLASS);
 
-      if (glow) glow.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      if (glow && !lite) glow.style.transform = `translate3d(${x}px, ${y}px, 0)`;
 
       const nextTilt = target?.closest<HTMLElement>("[data-tilt]") ?? null;
       if (tilt && tilt !== nextTilt) resetTilt(tilt);
@@ -337,7 +484,9 @@ export function startFxRuntime(): () => void {
         tilt.setAttribute("data-tilting", "");
       }
 
-      const spot = target?.closest<HTMLElement>("[data-spotlight]") ?? null;
+      const spot = lite
+        ? null
+        : (target?.closest<HTMLElement>("[data-spotlight]") ?? null);
       if (spot && spot !== tilt) {
         const r = spot.getBoundingClientRect();
         spot.style.setProperty("--mx", `${(x - r.left).toFixed(0)}px`);

@@ -1,3 +1,11 @@
+import {
+  FX_LITE_CLASS,
+  FX_LITE_SESSION_KEY,
+  FX_MODE_STORAGE_KEY,
+  LITE_MAX_CORES,
+  LITE_MAX_MEMORY_GB,
+} from "@/components/fx/fx-lite";
+
 /**
  * Session key marking that the cinematic loading screen has already played.
  * Shared between the pre-paint inline script and the React component.
@@ -22,7 +30,19 @@ export const BOOT_SESSION_KEY = "aurix-booted";
  * in the FX motion kit (Reveal, stagger) is gated on `html.js`, so a visitor
  * without JavaScript — or whose scripts are blocked — sees all content; the
  * class is set before first paint, so nothing flashes for everyone else.
+ *
+ * And it decides the FX "lite" mode (src/components/fx/fx-lite.ts) before
+ * the first frame, so a low-power device never starts the ambient loops only
+ * to have them stopped a moment later: an explicit localStorage choice wins;
+ * otherwise few cores, little memory, Data Saver, or a slow-frame verdict
+ * earlier in this session turn it on.
  */
-export const BOOT_FLAG_SCRIPT = `document.documentElement.classList.add("js");try{if(sessionStorage.getItem(${JSON.stringify(
+export const BOOT_FLAG_SCRIPT = `(function(){var d=document.documentElement;d.classList.add("js");try{if(sessionStorage.getItem(${JSON.stringify(
   BOOT_SESSION_KEY,
-)}))document.documentElement.setAttribute("data-booted","1")}catch(e){}`;
+)}))d.setAttribute("data-booted","1")}catch(e){}try{var o=null;try{o=localStorage.getItem(${JSON.stringify(
+  FX_MODE_STORAGE_KEY,
+)})}catch(e){}var n=navigator,c=n.connection,s=null;try{s=sessionStorage.getItem(${JSON.stringify(
+  FX_LITE_SESSION_KEY,
+)})}catch(e){}if(o==="lite"||(o!=="full"&&((n.hardwareConcurrency>0&&n.hardwareConcurrency<=${LITE_MAX_CORES})||(n.deviceMemory>0&&n.deviceMemory<=${LITE_MAX_MEMORY_GB})||(c&&c.saveData===true)||s==="1")))d.classList.add(${JSON.stringify(
+  FX_LITE_CLASS,
+)})}catch(e){}})();`;

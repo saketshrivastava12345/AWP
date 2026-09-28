@@ -15,6 +15,7 @@ import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useGpuTier } from "@/hooks/useGpuTier";
 import type { ViewerGroup } from "@/types/domain";
 import type { CarBuild } from "@/lib/car-build";
 import {
@@ -30,6 +31,7 @@ import { stableKey } from "@/lib/viewer-lru";
 import type { TourProgress } from "./StageDirector";
 import { ModelErrorBoundary } from "./ModelErrorBoundary";
 import { useSceneLifecycle, useWebGLSupport } from "./useSceneLifecycle";
+import { useStoredQuality } from "./useViewerStorage";
 
 /**
  * The blueprint: the anatomy tour as a scroll-driven exploded drawing.
@@ -239,7 +241,15 @@ export function CarShowcase({
   const isMobile = useIsMobile();
   const reducedMotion = useReducedMotion();
   const webgl = useWebGLSupport();
+  const tier = useGpuTier();
+  const [qualitySetting] = useStoredQuality();
   const id = useId();
+  // The lighter recipe (1x pixel ratio, no shadow maps, a coarser car) on
+  // phones, and wherever the device's quality tier — or the visitor's own
+  // viewer setting — is LOW: a software renderer, Data Saver, very little
+  // memory or very few cores. Every pixel costs such a device CPU time.
+  const qualityLevel = qualitySetting === "auto" ? (tier?.level ?? null) : qualitySetting;
+  const lowDetail = isMobile || qualityLevel === "low";
 
   const groups = useMemo(() => stepGroups(steps), [steps]);
   const measurements = useMemo(() => publishedMeasurements(build), [build]);
@@ -399,7 +409,7 @@ export function CarShowcase({
                 focus={focus}
                 overlay={overlay}
                 reducedMotion={reducedMotion}
-                lowDetail={isMobile}
+                lowDetail={lowDetail}
                 running={canRender}
                 onReady={handleReady}
               />

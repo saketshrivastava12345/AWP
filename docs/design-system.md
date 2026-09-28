@@ -18,6 +18,18 @@ This file lists what is NEW or CHANGED. Source of truth: `src/app/globals.css`,
   never mounts.
 - Reduced motion: runtime shows everything, no count-up, scramble, tilt, magnet,
   parallax, cursor glow; CSS backstop kills animations.
+- Ambient loops (the infinite `animate-*` below, the marquee, `fx-glitch`) run only while
+  on screen and while the tab is visible: the runtime pauses them otherwise. Every running
+  loop keeps the browser producing frames, and a page carries dozens, mostly out of view.
+- **Lite mode** (`html.fx-lite`, `src/components/fx/fx-lite.ts`): set before first paint for
+  ≤4 cores, ≤4 GiB memory or Data Saver, and by the runtime when frames are slow at rest
+  after load (remembered for the session). The look stays, standing still: ambient loops
+  are removed, beams / glitch / cursor glow hidden, spotlights rest. Entrances, reveals,
+  count-ups, tilt, magnet, marquee and loaders are unchanged. `localStorage["aurix-fx"]`
+  = `"full"` or `"lite"` overrides detection (handy for testing either look).
+- New ambient animations must animate only `transform`/`opacity` (a painted property —
+  `background-position`, `stroke-dashoffset`, `box-shadow`, `filter` — repaints every
+  frame) and belong in the runtime's `AMBIENT` list and the `html.fx-lite` rule.
 
 ## 1. Tokens (globals.css `@theme`)
 
@@ -76,9 +88,11 @@ Surfaces / HUD
 - `fx-card` — interactive card: lift 3px, cyan border + glow, spotlight `::after` following the pointer
   (add `data-spotlight` on the same element so the runtime writes `--mx/--my`). Uses `::after` + `translate`.
 
-Animations (all GPU-cheap, all stop under reduced motion)
+Animations (all stop under reduced motion; the infinite ones pause off screen and stand
+still in lite mode)
 
-- `animate-grid-drift` (bg-position; vars `--grid-size`, `--grid-speed`), `animate-scan-beam`
+- `animate-grid-drift` (a `translateY` of one cell on GridBackground's oversized sheet — use it
+  through `<GridBackground>`, not on a bare element; vars `--grid-size`, `--grid-speed`), `animate-scan-beam`
   (translateY sweep; parent `overflow-hidden`), `animate-pulse-glow` (2.4s breathing, status dots),
   `animate-blink` (1Hz caret), `animate-spin-slow` (18s, rings), `animate-float`, `animate-orb-drift`,
   `animate-hud-dash` (SVG stroke-dashoffset; set `stroke-dasharray`), `animate-flow` (existing),
