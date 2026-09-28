@@ -57,6 +57,8 @@ const AMBIENT = [
   ".animate-flow",
   ".animate-spin-slow",
   ".animate-float",
+  // Tailwind's own bounce, used behind a variant (motion-safe:animate-bounce).
+  '[class*="animate-bounce"]',
   ".fx-glitch",
 ].join(",");
 /**

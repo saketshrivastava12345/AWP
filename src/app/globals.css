@@ -1262,7 +1262,8 @@ html.fx-lite
     .animate-hud-dash,
     .animate-flow,
     .animate-spin-slow,
-    .animate-float
+    .animate-float,
+    [class*="animate-bounce"]
   ) {
   animation: none;
 }

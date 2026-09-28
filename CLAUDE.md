@@ -837,6 +837,44 @@ Built as a design system + motion kit first, then five parallel workstreams
   digits out of view — and submits through a hidden input, with a
   `<noscript>` field for the no-JavaScript path.
 
+**Performance pass — "the website is lagging"**
+
+Measured on a production build with 4× CPU throttling (Chrome traces, 390
+and 1440). At rest, with no input, the renderer main thread was busy 690–930
+ms of every second and raster workers up to ~2 s/s. The cause was ambient
+animation alone — pausing every animation took idle cost to zero:
+up to 39 infinite loops per page, ~85% of them off screen, and
+`grid-drift` animating `background-position` on masked section-sized layers,
+which re-rasterised every grid on the page every frame.
+
+- **Ambient loops run only on screen and in a visible tab.** The runtime
+  observes every element with an infinite ambient animation (its `AMBIENT`
+  list) and pauses it through the Web Animations API — no attribute on
+  markup React may not have hydrated. The marquee is the exception (CSS owns
+  its play state for hover/focus/the pause toggle, which a WAAPI `play()`
+  would override for good), so it gets `data-fx-offscreen` instead.
+- **Grids drift by transform.** GridBackground's sheet is one cell taller
+  than its frame and slides one cell (`translateY(var(--grid-size))`), with
+  the mask on the static frame: same picture, composited instead of painted.
+  New ambient animations must animate only transform/opacity.
+- **Lite mode** (`html.fx-lite`, `fx-lite.ts`): set by the boot script before
+  first paint for ≤ 4 cores, ≤ 4 GiB, Data Saver or an earlier slow verdict,
+  and by the runtime when frames are slow at rest after load (session). The
+  look stays, standing still. `localStorage["aurix-fx"] = "full" | "lite"`
+  overrides it.
+- Pointer effects read layout before writing styles, and a section's
+  Spotlight takes `--mx/--my` on its own layer: on the section, a custom
+  property restyled the whole section subtree on every pointer frame.
+- **backdrop-filter stays.** Removing it made GPU-path scrolling slower
+  (/cars 60 → 36 fps), as those surfaces stopped being layers of their own.
+  The fixed body background was not a measurable cost either.
+- WebGL was already on demand; the blueprint tour now also honours the
+  device quality tier (LOW → the lighter recipe), not just phone width.
+- `SetupNotice` (dev only) reuses a healthy verdict for 60 s: probing on
+  every request held the HTML stream — and the `load` event the loading
+  screen and hero wait for — open for two round trips to a hosted project.
+- Judge speed on `npm run build && npm start`, never `npm run dev`.
+
 **Open items**
 
 - Apply migrations 0006–0008 to the hosted database: `npm run db:push`, then
