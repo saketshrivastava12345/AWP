@@ -2,10 +2,12 @@
  * "Lite" effects mode, for devices that cannot afford continuous ambient
  * motion: `html.fx-lite`. It keeps the whole HUD look — grids, glows, scan
  * lines, brackets, panels — but stops the ambient loops (drifting grids and
- * orbs, sweeping beams, breathing dots, dashed flows), the cursor glow, the
- * pointer spotlight and backdrop blur. Entrances, reveals, count-ups, tilts,
- * the marquee and the 3D scenes are unchanged (the scenes have their own
- * quality tiers, see src/lib/viewer-quality.ts).
+ * orbs, sweeping beams, breathing dots, dashed flows), the cursor glow and
+ * the pointer spotlight. Entrances, reveals, count-ups, tilts, the marquee,
+ * glass blur and the 3D scenes are unchanged (the scenes have their own
+ * quality tiers, see src/lib/viewer-quality.ts). Backdrop blur stays on
+ * purpose: measured, removing it made scrolling slower on the GPU path, as
+ * those surfaces stopped being layers of their own.
  *
  * Decided in two places:
  *   - before first paint, by the boot script (src/lib/boot-script.ts), from
