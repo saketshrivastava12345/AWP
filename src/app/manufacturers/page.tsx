@@ -2,67 +2,61 @@ import type { Metadata } from "next";
 import { Factory } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { ManufacturerCard } from "@/components/manufacturers/ManufacturerCard";
+import { IndexHero } from "@/components/manufacturers/IndexHero";
+import { ManufacturerDirectory } from "@/components/manufacturers/ManufacturerDirectory";
 import { listManufacturers } from "@/lib/queries/manufacturers";
+import { formatNumber } from "@/lib/format";
+import { siteConfig } from "@/lib/site-config";
+
+const DESCRIPTION =
+  "The brands behind the machines: where each was founded, where it is based, what it specialises in and the models it builds.";
 
 export const metadata: Metadata = {
-  title: "Manufacturers",
-  description:
-    "The marques behind the machines: founding, headquarters, specialisation and the models they build.",
+  title: "Brands",
+  description: DESCRIPTION,
+  alternates: { canonical: `${siteConfig.url}/manufacturers` },
+  openGraph: {
+    title: "Brands",
+    description: DESCRIPTION,
+    type: "website",
+    url: `${siteConfig.url}/manufacturers`,
+  },
 };
 
 export default async function ManufacturersPage() {
-  const manufacturers = await listManufacturers();
+  const makers = await listManufacturers();
 
-  // Grouped by country so the list reads as an atlas rather than a flat A–Z.
-  const byCountry = new Map<string, typeof manufacturers>();
-  for (const maker of manufacturers) {
-    const key = maker.country?.name ?? "Other";
-    const existing = byCountry.get(key);
-    if (existing) existing.push(maker);
-    else byCountry.set(key, [maker]);
-  }
-  const groups = [...byCountry.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const countries = new Set(makers.map((maker) => maker.country?.slug).filter(Boolean));
+  const hasData = makers.length > 0;
 
   return (
-    <Container className="py-16">
-      <header>
-        <p className="text-label">Marques</p>
-        <h1 className="mt-5 font-display text-2xl tracking-[0.06em] text-ink-50 sm:text-3xl">
-          THE MAKERS
-        </h1>
-        <p className="mt-5 max-w-2xl text-sm leading-relaxed text-ink-300">
-          {manufacturers.length} manufacturers across {groups.length} countries, each with
-          the history that explains what it builds and why.
-        </p>
-      </header>
+    <>
+      <IndexHero
+        title="Brands"
+        lead={
+          hasData ? (
+            <p>
+              {formatNumber(makers.length)} brands from {formatNumber(countries.size)}{" "}
+              countries, each with the history that explains what it builds and why.
+              Filter by segment or country, or open a brand for its full line-up.
+            </p>
+          ) : (
+            <p>The brands behind the machines, and the models each one builds.</p>
+          )
+        }
+      />
 
-      {manufacturers.length === 0 ? (
-        <EmptyState
-          className="mt-14"
-          icon={<Factory className="size-7" strokeWidth={1.25} aria-hidden="true" />}
-          title="No manufacturers found"
-          description="The catalogue could not be reached. Reloading often resolves it."
-        />
-      ) : (
-        <div className="mt-14 space-y-16">
-          {groups.map(([countryName, makers]) => (
-            <section key={countryName} aria-labelledby={`country-${countryName}`}>
-              <h2
-                id={`country-${countryName}`}
-                className="border-b border-line pb-3 font-display text-xs tracking-[0.18em] text-ink-200 uppercase"
-              >
-                {makers[0]?.country?.flag_emoji} {countryName}
-              </h2>
-              <div className="mt-6 grid gap-px sm:grid-cols-2 lg:grid-cols-3">
-                {makers.map((maker) => (
-                  <ManufacturerCard key={maker.id} manufacturer={maker} />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
-    </Container>
+      <Container className="pb-24 lg:pb-32">
+        {hasData ? (
+          <ManufacturerDirectory makers={makers} />
+        ) : (
+          <EmptyState
+            icon={<Factory className="size-7" strokeWidth={1.25} aria-hidden="true" />}
+            title="The brand directory is unavailable"
+            description="The catalogue could not be reached just now, so there is nothing to list. Reloading the page usually resolves it."
+          />
+        )}
+      </Container>
+    </>
   );
 }

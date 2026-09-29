@@ -1,18 +1,24 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Loading placeholder. The shimmer is a background animation rather than an
- * opacity pulse, so the reduced-motion rule in globals.css stops it cleanly
- * without leaving the element invisible.
+ * Loading placeholder. The shimmer is a highlight sweeping across rather than
+ * an opacity pulse, so the reduced-motion rule in globals.css stops it cleanly
+ * (the highlight comes to rest off-screen) without leaving the element
+ * invisible.
+ *
+ * The highlight starts one full width to the left — the shared `shimmer`
+ * keyframe only defines its end — so each sweep enters from outside instead
+ * of appearing already on top of the block.
  */
 export function Skeleton({ className }: { className?: string }) {
   return (
     <div
       aria-hidden="true"
       className={cn(
-        "relative overflow-hidden rounded-xs bg-surface-2",
-        "after:absolute after:inset-0 after:animate-[shimmer_1.8s_infinite]",
-        "after:bg-gradient-to-r after:from-transparent after:via-white/[0.04] after:to-transparent",
+        "relative overflow-hidden rounded-control bg-surface-2",
+        "after:absolute after:inset-0 after:[transform:translateX(-100%)]",
+        "after:animate-[shimmer_1.8s_var(--ease-metal)_infinite]",
+        "after:bg-linear-to-r after:from-transparent after:via-white/[0.045] after:to-transparent",
         className,
       )}
     />

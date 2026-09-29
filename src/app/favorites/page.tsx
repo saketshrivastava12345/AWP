@@ -1,67 +1,52 @@
 import type { Metadata } from "next";
-import { Heart } from "lucide-react";
 import { Container } from "@/components/ui/Container";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { ButtonLink } from "@/components/ui/Button";
-import { CarGrid } from "@/components/cars/CarGrid";
-import { listFavorites } from "@/lib/queries/favorites";
-import { getSessionUser } from "@/lib/queries/auth";
+import { GlowOrbs, GridBackground, ScrambleText } from "@/components/fx";
+import { FavoritesView } from "@/components/account/FavoritesView";
+import { RecentlyViewed } from "@/components/account/RecentlyViewed";
 
 export const metadata: Metadata = {
-  title: "Saved Cars",
-  description: "The cars you have saved.",
+  title: "Saved cars",
+  description: "The cars you have saved, and the ones you looked at recently.",
   robots: { index: false, follow: false },
 };
 
-export default async function FavoritesPage() {
-  const user = await getSessionUser();
-
-  if (!user) {
-    return (
-      <Container className="py-16">
-        <p className="text-label">Account</p>
-        <h1 className="mt-5 font-display text-2xl tracking-[0.06em] text-ink-50 sm:text-3xl">
-          SAVED CARS
-        </h1>
-        <EmptyState
-          className="mt-14"
-          icon={<Heart className="size-7" strokeWidth={1.25} aria-hidden="true" />}
-          title="Sign in to see your saved cars"
-          description="Your favourites are private to your account and are enforced by row level security in the database."
-          action={<ButtonLink href="/login">Sign in</ButtonLink>}
-        />
-      </Container>
-    );
-  }
-
-  const cars = await listFavorites();
-
+/**
+ * Saved cars and recently viewed — the garage.
+ *
+ * A static shell: the lists come from the client favourites store (the
+ * account's list when signed in, this browser's otherwise), so this route
+ * never reads a cookie on the server and stays prerendered.
+ */
+export default function FavoritesPage() {
   return (
-    <Container className="py-16">
-      <p className="text-label">Account</p>
-      <h1 className="mt-5 font-display text-2xl tracking-[0.06em] text-ink-50 sm:text-3xl">
-        SAVED CARS
-      </h1>
-      <p className="mt-5 text-sm text-ink-400">
-        Signed in as {user.displayName ?? user.email}
-        {cars.length > 0 ? ` · ${cars.length} saved` : ""}
-      </p>
+    <div className="relative isolate overflow-x-clip">
+      <GlowOrbs tone="cyan" className="max-h-[48rem]" />
+      <GridBackground size={56} className="max-h-[42rem]" />
+      <Container className="relative pt-12 pb-24 sm:pt-16 lg:pt-20 lg:pb-32">
+        <p className="flex items-center gap-3 text-eyebrow">
+          <span
+            aria-hidden="true"
+            className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+          />
+          Garage
+          <span aria-hidden="true" className="hud-label text-ink-600">
+            {"// "}SAVED
+          </span>
+        </p>
+        <h1 className="mt-4 text-h1">
+          <ScrambleText text="Saved cars" />
+        </h1>
 
-      {cars.length === 0 ? (
-        <EmptyState
-          className="mt-14"
-          icon={<Heart className="size-7" strokeWidth={1.25} aria-hidden="true" />}
-          title="Nothing saved yet"
-          description="Open any car and press “Save car” to keep it here."
-          action={
-            <ButtonLink href="/cars" variant="secondary" size="sm">
-              Browse the collection
-            </ButtonLink>
-          }
-        />
-      ) : (
-        <CarGrid cars={cars} className="mt-12" />
-      )}
-    </Container>
+        <noscript>
+          <p className="mt-6 max-w-xl text-body">
+            Saved cars are kept by your browser and loaded with JavaScript, which is
+            turned off. Everything else on AURIX works without it.
+          </p>
+        </noscript>
+
+        <FavoritesView />
+        <RecentlyViewed className="mt-24 lg:mt-32" />
+      </Container>
+    </div>
   );
 }

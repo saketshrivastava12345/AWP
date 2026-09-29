@@ -2,51 +2,58 @@ import type { Metadata } from "next";
 import { Globe } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { CountryCard } from "@/components/countries/CountryCard";
-import { WorldMap } from "@/components/countries/WorldMap";
+import { IndexHero } from "@/components/manufacturers/IndexHero";
+import { CountryAtlas } from "@/components/countries/CountryAtlas";
 import { listCountries } from "@/lib/queries/countries";
+import { formatNumber } from "@/lib/format";
+import { siteConfig } from "@/lib/site-config";
+
+const DESCRIPTION =
+  "Automotive nations: the engineering traditions behind the catalogue, the brands each country is home to and the cars they build.";
 
 export const metadata: Metadata = {
   title: "Countries",
-  description:
-    "Automotive nations: the engineering traditions that shaped how each country's cars are built.",
+  description: DESCRIPTION,
+  alternates: { canonical: `${siteConfig.url}/countries` },
+  openGraph: {
+    title: "Countries",
+    description: DESCRIPTION,
+    type: "website",
+    url: `${siteConfig.url}/countries`,
+  },
 };
 
 export default async function CountriesPage() {
   const countries = await listCountries();
+  const makers = countries.reduce((sum, country) => sum + country.manufacturer_count, 0);
+  const cars = countries.reduce((sum, country) => sum + country.variant_count, 0);
+  const hasData = countries.length > 0;
 
   return (
-    <Container className="py-16">
-      <header>
-        <p className="text-label">Origins</p>
-        <h1 className="mt-5 font-display text-2xl tracking-[0.06em] text-ink-50 sm:text-3xl">
-          AUTOMOTIVE NATIONS
-        </h1>
-        <p className="mt-5 max-w-2xl text-sm leading-relaxed text-ink-300">
-          Where a car is engineered shapes what it is engineered for. These are the
-          traditions behind the catalogue.
-        </p>
-      </header>
+    <>
+      <IndexHero
+        title="Countries"
+        lead={
+          <p>
+            Where a car is engineered shapes what it is engineered for.
+            {hasData
+              ? ` ${formatNumber(countries.length)} countries, ${formatNumber(makers)} brands and ${formatNumber(cars)} cars: explore the map, or open a country for its history, its brands and every car it builds.`
+              : " Open a country for its history, its brands and every car it builds."}
+          </p>
+        }
+      />
 
-      {countries.length === 0 ? (
-        <EmptyState
-          className="mt-14"
-          icon={<Globe className="size-7" strokeWidth={1.25} aria-hidden="true" />}
-          title="No countries found"
-          description="The catalogue could not be reached. Reloading often resolves it."
-        />
-      ) : (
-        <>
-          {/* Hidden below md, where the card grid is the better interaction. */}
-          <WorldMap countries={countries} />
-
-          <div className="mt-14 grid gap-px sm:grid-cols-2 lg:grid-cols-3">
-            {countries.map((country) => (
-              <CountryCard key={country.id} country={country} />
-            ))}
-          </div>
-        </>
-      )}
-    </Container>
+      <Container className="pb-24 lg:pb-32">
+        {hasData ? (
+          <CountryAtlas countries={countries} />
+        ) : (
+          <EmptyState
+            icon={<Globe className="size-7" strokeWidth={1.25} aria-hidden="true" />}
+            title="The atlas is unavailable"
+            description="The catalogue could not be reached just now, so there are no countries to show. Reloading the page usually resolves it."
+          />
+        )}
+      </Container>
+    </>
   );
 }

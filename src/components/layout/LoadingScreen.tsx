@@ -1,8 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { siteConfig } from "@/lib/site-config";
 import { BOOT_SESSION_KEY } from "@/lib/boot-script";
+import { cn } from "@/lib/utils";
+import { BrandMark } from "./BrandMark";
+import { LOADING_SCREEN_ID } from "./loading-screen-shared";
+import styles from "./chrome.module.css";
 
 /** Progress milestone reached once webfonts have loaded. */
 const FONTS_READY_PROGRESS = 55;
@@ -18,34 +22,65 @@ const EXIT_MS = 700;
 const MAX_VISIBLE_MS = 2600;
 
 /**
- * Whether the loading screen has already played this session.
- *
- * Read from the `data-booted` attribute that the pre-paint inline script sets,
- * rather than from state populated in an effect: this way there is no extra
- * render pass, and the value is correct on the very first client render. It
- * never changes after load, so `subscribe` is a no-op.
+ * When the CSS failsafe in chrome.module.css starts hiding the screen on its
+ * own (its animation-delay). If the app only hydrates after that, the visitor
+ * has already been shown the page and the screen must not come back.
  */
-function useAlreadyBooted(): boolean {
-  const subscribe = useCallback(() => () => {}, []);
-  const getSnapshot = useCallback(
-    () => document.documentElement.hasAttribute("data-booted"),
-    [],
-  );
-  // The server cannot know, so it assumes a first visit and renders the
-  // screen. The CSS rule hides it before paint when that turns out to be wrong.
-  const getServerSnapshot = useCallback(() => false, []);
+const FAILSAFE_MS = 6000;
 
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+let hydratedLate: boolean | null = null;
+/** Decided once, at first read, so the snapshot below stays stable. */
+function isLateHydration(): boolean {
+  if (hydratedLate === null) hydratedLate = performance.now() >= FAILSAFE_MS;
+  return hydratedLate;
+}
+
+const noSubscription = () => () => {};
+
+/**
+ * Whether the loading screen should be skipped: it already played this
+ * session (the pre-paint inline script set `data-booted`), or hydration came
+ * so late that the CSS failsafe has already revealed the page.
+ *
+ * Read through useSyncExternalStore rather than state populated in an effect,
+ * so the value is right on the first client render with no extra pass. The
+ * server cannot know, so it assumes a first visit and renders the screen; the
+ * CSS rule for `data-booted` hides it before paint when that is wrong.
+ */
+function useSkipScreen(): boolean {
+  return useSyncExternalStore(
+    noSubscription,
+    () => document.documentElement.hasAttribute("data-booted") || isLateHydration(),
+    () => false,
+  );
+}
+
+function rememberBooted() {
+  try {
+    sessionStorage.setItem(BOOT_SESSION_KEY, "1");
+  } catch {
+    // Private mode: the screen simply plays again on the next full load.
+  }
 }
 
 export function LoadingScreen() {
-  const alreadyBooted = useAlreadyBooted();
+  const skip = useSkipScreen();
   const [finished, setFinished] = useState(false);
   const [progress, setProgress] = useState(0);
   const targetRef = useRef(0);
+  const shownRef = useRef(0);
+  const screenRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (alreadyBooted) return;
+    if (skip) {
+      // A late hydration still counts as the intro having played.
+      if (!document.documentElement.hasAttribute("data-booted")) rememberBooted();
+      return;
+    }
+
+    // React owns the exit from here: stand the CSS failsafe down. Written to
+    // the DOM directly — it is not render output, and must not re-render.
+    screenRef.current?.setAttribute("data-hydrated", "");
 
     let frame = 0;
 
@@ -62,45 +97,44 @@ export function LoadingScreen() {
     if (document.readyState === "complete") onLoad();
     else window.addEventListener("load", onLoad, { once: true });
 
-    // Ease the displayed number toward whatever the real signals have reached,
-    // so the counter moves smoothly rather than jumping between two values.
-    //
-    // The easing is deliberately time-based, not per-frame. A fixed
-    // "move 8% of the remaining gap each frame" converges in a fixed number of
-    // FRAMES, which means it takes four times as long at 15fps as at 60 — on a
-    // throttled or slow device the visitor sits watching the counter crawl.
-    // Using elapsed milliseconds makes convergence take the same ~0.6s
-    // everywhere.
+    // Ease the displayed number toward whatever the real signals have reached.
+    // Time-based, not per-frame: a fixed fraction per FRAME converges four
+    // times slower at 15fps than at 60, so a slow device would watch the
+    // counter crawl. Using elapsed milliseconds takes the same ~0.6s anywhere.
     const SPEED_PER_SECOND = 6;
     let lastTime = performance.now();
 
     const tick = (now: number) => {
       const deltaSeconds = Math.min((now - lastTime) / 1000, 0.25);
       lastTime = now;
-      const factor = 1 - Math.exp(-SPEED_PER_SECOND * deltaSeconds);
-
-      setProgress((current) => {
-        const target = targetRef.current;
-        const next = current + (target - current) * factor;
-        // Snap once we are within half a percent, so the counter always lands
-        // on a whole number instead of asymptotically approaching it.
-        return target - next < 0.5 ? target : next;
-      });
-      frame = window.requestAnimationFrame(tick);
+      const target = targetRef.current;
+      const eased =
+        shownRef.current +
+        (target - shownRef.current) * (1 - Math.exp(-SPEED_PER_SECOND * deltaSeconds));
+      // Snap once within half a percent, so the counter lands on a whole
+      // number instead of approaching it forever.
+      const next = target - eased < 0.5 ? target : eased;
+      shownRef.current = next;
+      setProgress(next);
+      // The loop ends with the counter: nothing keeps ticking once it is full.
+      frame = next < 100 ? window.requestAnimationFrame(tick) : 0;
     };
     frame = window.requestAnimationFrame(tick);
 
     // --- guarantee the screen always finishes ------------------------------
     // requestAnimationFrame is PAUSED, not merely throttled, while a tab is
-    // hidden or occluded. Relying on it alone means a visitor who switches tabs
-    // mid-load comes back to a loading screen frozen at 99% — permanently stuck
-    // behind an opaque overlay, with no way out but a reload.
-    //
-    // So completion is also driven by timers, which keep firing when hidden:
-    //   - if the document is hidden, finish immediately (nobody is watching an
-    //     animation they cannot see)
-    //   - otherwise finish after a hard ceiling regardless of frame delivery
-    const finish = () => setProgress(100);
+    // hidden. Relying on it alone once left a visitor who switched tabs
+    // mid-load facing a counter frozen at 99% behind an opaque overlay.
+    // Timers keep firing when hidden, so completion is driven by them too.
+    const finish = () => {
+      targetRef.current = 100;
+      shownRef.current = 100;
+      setProgress(100);
+      if (frame !== 0) {
+        window.cancelAnimationFrame(frame);
+        frame = 0;
+      }
+    };
 
     const onVisibilityChange = () => {
       if (document.hidden) finish();
@@ -108,15 +142,15 @@ export function LoadingScreen() {
     document.addEventListener("visibilitychange", onVisibilityChange);
     if (document.hidden) finish();
 
-    const ceiling = setTimeout(finish, MAX_VISIBLE_MS);
+    const ceiling = window.setTimeout(finish, MAX_VISIBLE_MS);
 
     return () => {
-      window.cancelAnimationFrame(frame);
+      if (frame !== 0) window.cancelAnimationFrame(frame);
       window.removeEventListener("load", onLoad);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      clearTimeout(ceiling);
+      window.clearTimeout(ceiling);
     };
-  }, [alreadyBooted]);
+  }, [skip]);
 
   const rounded = Math.min(100, Math.round(progress));
 
@@ -126,52 +160,116 @@ export function LoadingScreen() {
 
   useEffect(() => {
     if (!leaving) return;
-
-    try {
-      sessionStorage.setItem(BOOT_SESSION_KEY, "1");
-    } catch {
-      // Private mode: the screen simply plays again on the next navigation.
-    }
-
-    const timer = setTimeout(() => setFinished(true), EXIT_MS);
-    return () => clearTimeout(timer);
+    rememberBooted();
+    const timer = window.setTimeout(() => setFinished(true), EXIT_MS);
+    return () => window.clearTimeout(timer);
   }, [leaving]);
 
-  if (alreadyBooted || finished) return null;
+  if (skip || finished) return null;
+
+  // The boot log reports the real readiness signals above, nothing more:
+  // typefaces are "ready" once the counter passes the fonts milestone, the
+  // page once it is full.
+  const log = [
+    { label: "Display link", done: true },
+    { label: "Typefaces", done: rounded >= FONTS_READY_PROGRESS },
+    { label: "Page assets", done: rounded >= 100 },
+  ];
+  const ring = 2 * Math.PI * 54;
 
   return (
     <div
-      id="aurix-loading-screen"
-      role="status"
-      aria-live="polite"
-      aria-label={`Loading, ${rounded} percent`}
+      ref={screenRef}
+      id={LOADING_SCREEN_ID}
       data-leaving={leaving ? "1" : undefined}
-      className="grain fixed inset-0 z-[200] flex flex-col items-center justify-center bg-void"
+      className={cn(
+        "grain fixed inset-0 z-(--z-loading) flex flex-col items-center justify-center overflow-hidden bg-void",
+        styles.loadingFailsafe,
+      )}
     >
-      <div className="relative z-10 w-full max-w-sm px-8 text-center">
-        <p className="font-display text-2xl tracking-[0.42em] text-ink-50 sm:text-3xl">
+      {/* Screen readers hear the start and the finish, not every percent. */}
+      <p role="status" className="sr-only">
+        {leaving ? `${siteConfig.name} is ready.` : `Loading ${siteConfig.name}…`}
+      </p>
+
+      {/* Decoration: grid, glow, a slow scan beam. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 tech-grid opacity-80" />
+        <div className="absolute inset-0 bg-[radial-gradient(50%_40%_at_50%_45%,oklch(0.6_0.13_215/18%),transparent_70%)]" />
+        <div className="absolute inset-0 animate-scan-beam [--scan-speed:2.6s] [background:linear-gradient(to_bottom,transparent_calc(100%-120px),oklch(0.83_0.13_210/8%)_calc(100%-2px),oklch(0.9_0.12_205/45%)_calc(100%-1px),transparent)]" />
+      </div>
+
+      <div aria-hidden="true" className="relative z-10 w-full max-w-sm px-8">
+        <div className="relative mx-auto size-40">
+          <svg viewBox="0 0 120 120" className="absolute inset-0 size-full -rotate-90">
+            <circle
+              cx="60"
+              cy="60"
+              r="54"
+              fill="none"
+              stroke="var(--color-surface-4)"
+              strokeWidth="1"
+            />
+            <circle
+              cx="60"
+              cy="60"
+              r="54"
+              fill="none"
+              stroke="var(--color-cyan-300)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray={ring}
+              strokeDashoffset={ring * (1 - rounded / 100)}
+              className="drop-shadow-[0_0_6px_var(--color-cyan-400)]"
+            />
+          </svg>
+          <svg
+            viewBox="0 0 120 120"
+            className="absolute inset-0 size-full animate-spin-slow"
+          >
+            <circle
+              cx="60"
+              cy="60"
+              r="46"
+              fill="none"
+              stroke="oklch(0.83 0.13 210 / 35%)"
+              strokeWidth="1"
+              strokeDasharray="2 6"
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <BrandMark className="size-6 drop-shadow-[0_0_8px_oklch(0.8_0.11_85/70%)]" />
+            <span className="mt-2 font-hud text-2xl text-ink-50 tabular-nums [text-shadow:0_0_16px_oklch(0.83_0.13_210/55%)]">
+              {rounded}
+              <span className="ml-0.5 font-mono text-sm text-cyan-300">%</span>
+            </span>
+          </div>
+        </div>
+
+        <p className="mt-8 -mr-[0.36em] text-center font-brand text-2xl tracking-[0.36em] text-ink-50 sm:text-3xl">
           AURIX
         </p>
-        <p className="mt-5 text-label">{siteConfig.tagline}</p>
+        <p className="mt-3 text-center text-body-s text-ink-400">{siteConfig.tagline}</p>
 
-        <div
-          className="relative mt-12 h-px w-full overflow-hidden bg-surface-3"
-          aria-hidden="true"
-        >
+        <div className="relative mt-8 h-1 w-full overflow-hidden bg-surface-3">
           <div
-            className="absolute inset-y-0 left-0 origin-left bg-gold-500"
+            className="absolute inset-y-0 left-0 bg-cyan-400 hud-segments shadow-[0_0_10px_var(--color-cyan-400)]"
             style={{ width: `${rounded}%` }}
           />
         </div>
 
-        <div className="mt-5 flex items-baseline justify-between font-mono text-[10px]">
-          <span className="tracking-[0.12em] text-ink-500 uppercase">
-            Loading vehicle systems
-          </span>
-          <span className="tabular text-gold-300">
-            {String(rounded).padStart(3, "0")}%
-          </span>
-        </div>
+        <ul className="mt-5 space-y-1.5 font-mono text-xs tracking-[0.12em] uppercase">
+          {log.map((line) => (
+            <li key={line.label} className="flex items-center justify-between gap-4">
+              <span className={line.done ? "text-ink-200" : "text-ink-400"}>
+                {line.label}
+              </span>
+              <span className={line.done ? "text-cyan-300" : "text-ink-400"}>
+                {line.done ? "[ OK ]" : "[ .. ]"}
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

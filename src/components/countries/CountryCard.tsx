@@ -1,44 +1,90 @@
 import Link from "next/link";
-import { GlassCard } from "@/components/ui/GlassCard";
-import type { CountryWithCounts } from "@/types/domain";
+import { cn } from "@/lib/utils";
+import type { CountryListItem } from "@/lib/queries/countries";
 
-export function CountryCard({ country }: { country: CountryWithCounts }) {
+/**
+ * A country in the atlas grid, as a HUD card: flag and name, a two-line
+ * blurb, its brands, and what the catalogue holds for it as two lit
+ * figures. Hover and focus report back to the atlas, so the matching
+ * marker on the map lights up; `active` is the reverse direction (the
+ * marker is hovered, this card is highlighted). The card lifts with a cyan
+ * edge and a pointer-following spotlight (`fx-card` + `data-spotlight`).
+ */
+export function CountryCard({
+  country,
+  active = false,
+  onActiveChange,
+}: {
+  country: CountryListItem;
+  active?: boolean;
+  onActiveChange?: (slug: string | null) => void;
+}) {
+  const brands = country.manufacturer_count;
+  const cars = country.variant_count;
+
   return (
-    <GlassCard
-      as={Link}
+    <Link
       href={`/countries/${country.slug}`}
-      interactive
-      className="group flex flex-col rounded-none p-7"
+      data-spotlight=""
+      suppressHydrationWarning
+      onMouseEnter={() => onActiveChange?.(country.slug)}
+      onMouseLeave={() => onActiveChange?.(null)}
+      onFocus={() => onActiveChange?.(country.slug)}
+      onBlur={() => onActiveChange?.(null)}
+      className={cn(
+        "group/card fx-card relative flex h-full flex-col rounded-card border p-6 sm:p-7",
+        active
+          ? "border-cyan-400/45 bg-surface-2 shadow-[0_0_32px_-12px_oklch(0.8_0.14_210/40%)]"
+          : "border-line bg-surface-1/85",
+      )}
     >
-      <div className="flex items-baseline gap-3">
-        <span className="text-2xl leading-none" aria-hidden="true">
-          {country.flag_emoji}
-        </span>
-        <h3 className="font-display text-sm tracking-[0.1em] text-ink-50">
-          {country.name}
-        </h3>
-      </div>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "hud-brackets -m-px transition-opacity duration-(--duration-base) [--hud-l:12px] group-hover/card:opacity-100",
+          active ? "opacity-100" : "opacity-45",
+        )}
+      />
+      <h3 className="flex items-center gap-3 text-h3 transition-colors duration-(--duration-fast) group-hover/card:text-cyan-100">
+        {country.flag_emoji ? (
+          <span className="text-2xl leading-none" aria-hidden="true">
+            {country.flag_emoji}
+          </span>
+        ) : null}
+        {country.name}
+      </h3>
 
       {country.description ? (
-        <p className="mt-5 line-clamp-3 flex-1 text-sm leading-relaxed text-ink-400">
+        <p className="mt-4 line-clamp-2 text-body-s text-ink-300">
           {country.description}
         </p>
       ) : null}
 
-      <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-line-subtle pt-4">
-        <div>
-          <dt className="text-label text-[8px]">Manufacturers</dt>
-          <dd className="tabular mt-1.5 font-mono text-xs text-ink-100">
-            {country.manufacturer_count}
+      {country.makers.length > 0 ? (
+        <p className="mt-4 text-body-s text-ink-200">
+          <span className="sr-only">Brands: </span>
+          {country.makers.map((maker) => maker.name).join(" · ")}
+        </p>
+      ) : null}
+
+      <dl className="mt-auto flex gap-6 pt-6">
+        <div className="flex flex-col-reverse gap-1">
+          <dt className="font-mono text-[10px] tracking-hud text-ink-400 uppercase">
+            {brands === 1 ? "Brand" : "Brands"}
+          </dt>
+          <dd className="font-hud text-base text-ink-50 tabular-nums glow-text">
+            {brands}
           </dd>
         </div>
-        <div>
-          <dt className="text-label text-[8px]">Cars</dt>
-          <dd className="tabular mt-1.5 font-mono text-xs text-ink-100">
-            {country.variant_count}
+        <div className="flex flex-col-reverse gap-1">
+          <dt className="font-mono text-[10px] tracking-hud text-ink-400 uppercase">
+            {cars === 1 ? "Car" : "Cars"}
+          </dt>
+          <dd className="font-hud text-base text-ink-50 tabular-nums glow-text">
+            {cars}
           </dd>
         </div>
       </dl>
-    </GlassCard>
+    </Link>
   );
 }

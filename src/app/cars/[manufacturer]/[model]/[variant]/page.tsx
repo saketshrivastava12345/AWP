@@ -1,94 +1,209 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/Container";
-import { Badge, fuelTone } from "@/components/ui/Badge";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
-import { StatCard, StatRow } from "@/components/ui/StatCard";
+import { ButtonLink } from "@/components/ui/Button";
+import { SubNav } from "@/components/ui/SubNav";
 import { SpecSection } from "@/components/cars/SpecSection";
 import { SectionNav } from "@/components/cars/SectionNav";
-import { CarGrid } from "@/components/cars/CarGrid";
-import { CarViewer } from "@/components/3d/CarViewer";
-import { FavoriteButton } from "@/components/cars/FavoriteButton";
 import { CarDNA } from "@/components/cars/CarDNA";
 import { PowertrainVisualizer } from "@/components/cars/PowertrainVisualizer";
-import { buildDna, buildDistribution } from "@/lib/dna";
-import { getSessionUser } from "@/lib/queries/auth";
-import { isFavorited } from "@/lib/queries/favorites";
+import { FavoriteToggle } from "@/components/cars/FavoriteButton";
+import { RecordView } from "@/components/account/RecordView";
+import { CarShowcase } from "@/components/3d/CarShowcase";
+import { drawnGroups } from "@/components/3d/viewer-config";
+import { PricingSection } from "@/components/pricing/PricingSection";
+import { ChapterHeader, DetailChapter } from "@/components/cars/detail/DetailChapter";
+import { VehicleHeader } from "@/components/cars/detail/VehicleHeader";
+import { DetailViewer } from "@/components/cars/detail/DetailViewer";
+import { BlueprintDiagram } from "@/components/cars/detail/BlueprintDiagram";
+import { Gallery } from "@/components/cars/detail/Gallery";
+import { PerformancePanel } from "@/components/cars/detail/PerformancePanel";
+import { EvPanel } from "@/components/cars/detail/EvPanel";
+import { BlueprintSheet } from "@/components/cars/detail/BlueprintSheet";
+import { FeatureGroup, groupFeatures } from "@/components/cars/detail/FeatureSections";
+import { PartsShowcase } from "@/components/cars/detail/PartsShowcase";
+import { DataConfidence } from "@/components/cars/detail/DataConfidence";
+import { RelatedVehicles } from "@/components/cars/detail/RelatedVehicles";
+import { CompareWith } from "@/components/cars/detail/CompareWith";
+import { CarFeatureShowcase } from "@/components/cars/detail/CarFeatureShowcase";
+import { buildShowcaseCards } from "@/components/cars/detail/feature-cards";
+import { carSilhouette } from "@/components/cars/car-silhouette";
 import {
-  getVariantDetail,
-  getSiblingVariants,
   getAllVariantPaths,
   getDnaPopulation,
+  getVariantDetail,
+  getVariantListedPrice,
 } from "@/lib/queries/cars";
+import { getCatalogueFigures, getRelatedCars } from "@/lib/queries/related";
+import { listPartCategories } from "@/lib/queries/parts";
+import { getMarketGeography, getVariantPricing } from "@/lib/queries/pricing";
 import { buildSpecSections, visibleSections } from "@/lib/spec-sections";
-import { powertrainKind, type Part, type ViewerGroup } from "@/types/domain";
-import { formatEnumLabel, formatNumber, formatYearRange } from "@/lib/format";
+import { buildDna, buildDistribution } from "@/lib/dna";
+import { carBuildFromDetail } from "@/lib/car-build";
+import { buildAnatomyTour } from "@/lib/anatomy-tour";
+import { blueprintGroups, buildBlueprint } from "@/lib/blueprint";
+import { buildPerformancePopulation } from "@/lib/detail/performance";
+import { buildRangeSamples } from "@/lib/detail/ev";
+import {
+  buildBreadcrumbJsonLd,
+  buildCarJsonLd,
+  serializeJsonLd,
+} from "@/lib/detail/json-ld";
+import {
+  absoluteUrl,
+  detailDescription,
+  detailPath,
+  detailTitle,
+  sourcedOffer,
+} from "@/lib/detail/metadata";
+import {
+  groupNotesFor,
+  hasCarbonCeramicBrakes,
+  hudFor,
+  partDetailsFor,
+  partsByGroupFor,
+  primaryPhoto,
+  tourParts,
+  viewerDimensionsFor,
+  viewerModelFor,
+} from "@/lib/detail/viewer";
+import { carDisplayName, distinctVariantName } from "@/lib/format";
+import { detailSubNav } from "@/lib/detail/chapters";
+import { compareHref } from "@/lib/detail/vehicle";
+import { cn } from "@/lib/utils";
 import { siteConfig } from "@/lib/site-config";
+import { PLACEHOLDER_PARAM, withPlaceholder } from "@/lib/static-params";
+import { powertrainKind } from "@/types/domain";
 
 type Params = { manufacturer: string; model: string; variant: string };
 
 /**
  * Prerender every variant at build time. The catalogue is small and changes
- * rarely, so this trades a slightly longer build for instant detail pages.
+ * rarely, so this trades a slightly longer build for instant detail pages. A
+ * fresh checkout without a database still builds: the placeholder param
+ * resolves to notFound().
  */
 export async function generateStaticParams(): Promise<Params[]> {
-  return getAllVariantPaths();
+  return withPlaceholder(await getAllVariantPaths(), {
+    manufacturer: PLACEHOLDER_PARAM,
+    model: PLACEHOLDER_PARAM,
+    variant: PLACEHOLDER_PARAM,
+  });
+}
+
+function isPlaceholder({ manufacturer, model, variant }: Params): boolean {
+  return [manufacturer, model, variant].includes(PLACEHOLDER_PARAM);
 }
 
 export async function generateMetadata({
   params,
 }: PageProps<"/cars/[manufacturer]/[model]/[variant]">): Promise<Metadata> {
-  const { manufacturer, model, variant } = await params;
-  const detail = await getVariantDetail(manufacturer, model, variant);
+  const slugs = await params;
+  const detail = isPlaceholder(slugs)
+    ? null
+    : await getVariantDetail(slugs.manufacturer, slugs.model, slugs.variant);
 
   if (!detail) {
-    return { title: "Car not found" };
+    return { title: "Car not found", robots: { index: false, follow: true } };
   }
 
-  const name = `${detail.manufacturer.name} ${detail.model.name} ${detail.variant.name}`;
-  const figures = [
-    detail.performance?.power_hp ? `${detail.performance.power_hp} hp` : null,
-    detail.performance?.top_speed_kmh ? `${detail.performance.top_speed_kmh} km/h` : null,
-    detail.performance?.zero_to_100_s
-      ? `0–100 km/h in ${detail.performance.zero_to_100_s}s`
-      : null,
-  ].filter(Boolean);
-
-  const description = figures.length
-    ? `${name}: ${figures.join(", ")}. Full specifications, dimensions and components.`
-    : `${name}. Full specifications, dimensions and components.`;
-
-  const url = `${siteConfig.url}/cars/${manufacturer}/${model}/${variant}`;
+  const title = detailTitle(detail);
+  const description = detailDescription(detail);
+  const url = absoluteUrl(detailPath(detail), siteConfig.url);
+  const photo = primaryPhoto(detail);
+  // With a catalogued photograph, that is the social image; without one the
+  // route's generated card (opengraph-image.tsx) supplies it.
+  const images = photo
+    ? [
+        {
+          url: absoluteUrl(photo.url, siteConfig.url),
+          alt:
+            photo.alt?.trim() ||
+            carDisplayName(
+              detail.manufacturer.name,
+              detail.model.name,
+              detail.variant.name,
+            ),
+          ...(photo.width && photo.height
+            ? { width: photo.width, height: photo.height }
+            : {}),
+        },
+      ]
+    : undefined;
 
   return {
-    title: name,
+    title,
     description,
     alternates: { canonical: url },
-    openGraph: { title: name, description, url, type: "website" },
-    twitter: { card: "summary_large_image", title: name, description },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "website",
+      siteName: siteConfig.name,
+      ...(images ? { images } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(images ? { images: images.map((image) => image.url) } : {}),
+    },
   };
 }
 
 export default async function VariantPage({
   params,
 }: PageProps<"/cars/[manufacturer]/[model]/[variant]">) {
-  const { manufacturer, model, variant } = await params;
-  const detail = await getVariantDetail(manufacturer, model, variant);
-
+  const slugs = await params;
+  if (isPlaceholder(slugs)) notFound();
+  const detail = await getVariantDetail(slugs.manufacturer, slugs.model, slugs.variant);
   if (!detail) notFound();
 
-  const [siblings, sessionUser, dnaPopulation] = await Promise.all([
-    getSiblingVariants(detail.model.id, detail.variant.id),
-    getSessionUser(),
+  const [
+    listedPrice,
+    related,
+    catalogueFigures,
+    dnaPopulation,
+    partCategories,
+    geography,
+    pricing,
+  ] = await Promise.all([
+    getVariantListedPrice(detail.variant.id),
+    getRelatedCars(detail, 6),
+    getCatalogueFigures(),
     getDnaPopulation(),
+    listPartCategories(),
+    getMarketGeography(),
+    getVariantPricing(detail.variant.id),
   ]);
-  // Only ask about favourite state when there is someone to ask about.
-  const favorited = sessionUser ? await isFavorited(detail.variant.id) : false;
+
+  const { manufacturer, model, variant } = detail;
+  const carName = carDisplayName(manufacturer.name, model.name, variant.name);
+  const variantLabel = distinctVariantName(model.name, variant.name) ?? variant.name;
+  const path = detailPath(detail);
+  const url = absoluteUrl(path, siteConfig.url);
+  const compareSlug = `${manufacturer.slug}/${model.slug}/${variant.slug}`;
+  const kind = powertrainKind(variant.fuel_type);
+
+  // ------------------------------------------------------------- 3D + tour
+  // Both are built from this variant's own rows: dimensions, engine layout and
+  // position, drivetrain, seats, and the parts and features catalogued for it.
+  const build = carBuildFromDetail(detail);
+  const allParts = partCategories.flatMap((category) => category.parts);
+  const tour = buildAnatomyTour(detail, allParts);
+  // The tour, told as an exploded drawing: one card per subsystem the 3D car
+  // actually draws (an EV has no engine or exhaust), in the order it comes apart.
+  const blueprintOrder = blueprintGroups(drawnGroups(build));
+  const blueprint = buildBlueprint(detail, tour, allParts, blueprintOrder);
+  const photo = primaryPhoto(detail);
+
+  // ------------------------------------------------------------ Figures
   const sections = buildSpecSections(detail);
   const navSections = visibleSections(sections);
-  const kind = powertrainKind(detail.variant.fuel_type);
-
+  const performancePopulation = buildPerformancePopulation(catalogueFigures);
+  const rangeSamples = buildRangeSamples(catalogueFigures);
   // DNA is a rank within the catalogue, so it needs the whole population.
   const dnaMetrics = buildDna(
     {
@@ -102,373 +217,330 @@ export default async function VariantPage({
     },
     buildDistribution(dnaPopulation),
   );
-  const performance = detail.performance;
+  const features = groupFeatures(detail.features);
 
-  // Group this variant's catalogued components by the 3D subsystem they belong
-  // to, so clicking a group in the viewer opens the real parts, not filler.
-  const partsByGroup: Partial<Record<ViewerGroup, Part[]>> = {};
-  for (const { part } of detail.parts) {
-    if (!part.viewer_group) continue;
-    (partsByGroup[part.viewer_group] ??= []).push(part);
-  }
+  // ------------------------------------------------------------ Sections
+  // The sticky sub-nav lists the sections this car's page renders; one with
+  // nothing in it is left out of both.
+  const hasTour = tour.length > 0;
+  const showcaseCards = buildShowcaseCards(detail);
+  const hasShowcase = showcaseCards.length > 0 || detail.colors.length > 0;
+  const subNav = detailSubNav({ features: hasShowcase });
+  const technologyFeatures = features.technology.length + features.other.length > 0;
+  const carbonCeramic = hasCarbonCeramicBrakes(detail);
 
-  // Short factual notes drawn from the variant's own specifications.
-  const groupNotes: Partial<Record<ViewerGroup, string>> = {};
-  if (detail.engine) {
-    groupNotes.engine = [
-      detail.engine.name,
-      detail.engine.configuration,
-      detail.engine.displacement_cc ? `${detail.engine.displacement_cc} cc` : null,
-      formatEnumLabel(detail.engine.aspiration, ""),
-    ]
-      .filter(Boolean)
-      .join(" · ");
-  }
-  if (detail.ev) {
-    groupNotes.battery = [
-      detail.ev.battery_kwh ? `${detail.ev.battery_kwh} kWh battery` : null,
-      detail.ev.motor_count
-        ? `${detail.ev.motor_count} motor${detail.ev.motor_count === 1 ? "" : "s"}`
-        : null,
-      detail.ev.range_km && detail.ev.range_standard
-        ? `${detail.ev.range_km} km (${detail.ev.range_standard.toUpperCase()})`
-        : null,
-    ]
-      .filter(Boolean)
-      .join(" · ");
-  }
-  if (detail.transmission) {
-    groupNotes.transmission = [
-      detail.transmission.name,
-      detail.transmission.gears ? `${detail.transmission.gears} gears` : null,
-      formatEnumLabel(detail.variant.drive_type, ""),
-    ]
-      .filter(Boolean)
-      .join(" · ");
-  }
-  if (detail.dimensions) {
-    groupNotes.body = [
-      detail.dimensions.length_mm ? `${detail.dimensions.length_mm} mm long` : null,
-      detail.dimensions.width_mm ? `${detail.dimensions.width_mm} mm wide` : null,
-      detail.dimensions.height_mm ? `${detail.dimensions.height_mm} mm tall` : null,
-    ]
-      .filter(Boolean)
-      .join(" · ");
-  }
+  // ------------------------------------------------------ Structured data
+  const jsonLd = serializeJsonLd([
+    buildCarJsonLd(detail, {
+      url,
+      imageUrl: photo ? absoluteUrl(photo.url, siteConfig.url) : null,
+      price: sourcedOffer(listedPrice),
+    }),
+    buildBreadcrumbJsonLd([
+      { name: "Cars", url: absoluteUrl("/cars", siteConfig.url) },
+      {
+        name: manufacturer.name,
+        url: absoluteUrl(`/cars/${manufacturer.slug}`, siteConfig.url),
+      },
+      {
+        name: model.name,
+        url: absoluteUrl(`/cars/${manufacturer.slug}/${model.slug}`, siteConfig.url),
+      },
+      { name: variantLabel, url },
+    ]),
+  ]);
 
-  // Only a GLB registered against this variant is loaded; there are none yet,
-  // so every car currently falls back to the procedural representation.
-  const glbMedia = detail.media.find((item) => item.type === "glb") ?? null;
-  const glbUrl = glbMedia?.url ?? null;
+  const variantName = distinctVariantName(model.name, variant.name)
+    ? `${model.name} ${variant.name}`
+    : model.name;
+  // A base price recorded on the variant, without a market or source: the
+  // Price section says so rather than claiming there is no price at all.
+  const recordedBasePrice =
+    listedPrice?.listed_price_type === "base_price" ? listedPrice : null;
 
-  const fullName = `${detail.manufacturer.name} ${detail.model.name}`;
-
-  // JSON-LD for the car. Only asserts figures that actually exist.
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Car",
-    name: `${fullName} ${detail.variant.name}`,
-    brand: { "@type": "Brand", name: detail.manufacturer.name },
-    model: detail.model.name,
-    vehicleConfiguration: detail.variant.name,
-    bodyType: detail.model.body_type,
-    fuelType: detail.variant.fuel_type,
-    driveWheelConfiguration: detail.variant.drive_type,
-    ...(detail.variant.year_start
-      ? { productionDate: String(detail.variant.year_start) }
-      : {}),
-    ...(performance?.power_hp
-      ? {
-          vehicleEngine: {
-            "@type": "EngineSpecification",
-            enginePower: {
-              "@type": "QuantitativeValue",
-              value: performance.power_hp,
-              unitText: "hp",
-            },
-            ...(detail.engine?.displacement_cc
-              ? {
-                  engineDisplacement: {
-                    "@type": "QuantitativeValue",
-                    value: detail.engine.displacement_cc,
-                    unitCode: "CMQ",
-                  },
-                }
-              : {}),
-          },
-        }
-      : {}),
-    ...(performance?.top_speed_kmh
-      ? {
-          speed: {
-            "@type": "QuantitativeValue",
-            value: performance.top_speed_kmh,
-            unitCode: "KMH",
-          },
-        }
-      : {}),
-  };
+  const engineeringHeader = (
+    <ChapterHeader
+      id="engineering"
+      code="03"
+      title={`How the ${carName} is built`}
+      description="Scroll and it turns into a blueprint, then comes apart one system at a time, each with the figures published for it."
+    />
+  );
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
+      <RecordView variantId={variant.id} />
+
+      {/* ======================================================= Hero */}
+      <Container>
+        <VehicleHeader
+          detail={detail}
+          shareUrl={url}
+          price={listedPrice}
+          breadcrumbs={
+            <Breadcrumbs
+              items={[
+                { label: "Cars", href: "/cars" },
+                { label: manufacturer.name, href: `/cars/${manufacturer.slug}` },
+                { label: model.name, href: `/cars/${manufacturer.slug}/${model.slug}` },
+                { label: variantLabel },
+              ]}
+            />
+          }
+          save={
+            <FavoriteToggle
+              variantId={variant.id}
+              carName={carName}
+              className={SAVE_BUTTON}
+            />
+          }
+          stage={
+            <DetailViewer
+              // Beside the name the stage is at least 560px tall, so the car
+              // is the largest thing on the first screen. (Not in
+              // fullscreen, where the root is fixed.)
+              className="lg:[&>div:not(.fixed)>[data-viewer-ready]]:aspect-auto lg:[&>div:not(.fixed)>[data-viewer-ready]]:min-h-[560px]"
+              title={carName}
+              build={build}
+              model={viewerModelFor(detail)}
+              posterUrl={photo?.url ?? null}
+              partsByGroup={partsByGroupFor(detail, tour, allParts)}
+              partDetails={partDetailsFor(detail)}
+              groupNotes={groupNotesFor(detail)}
+              hud={hudFor(detail)}
+              dimensions={viewerDimensionsFor(detail)}
+              colors={detail.colors}
+              carbonCeramic={carbonCeramic}
+            />
+          }
+        />
+      </Container>
+
+      {/* A direct child of the page, so it stays pinned for the whole
+          length of it. */}
+      <SubNav
+        items={subNav.map(({ label, href }) => ({ label, href }))}
+        progress
+        action={
+          <ButtonLink href={compareHref(detail)} size="sm">
+            Compare
+          </ButtonLink>
+        }
       />
 
-      <Container className="py-10">
-        <Breadcrumbs
-          items={[
-            { label: "Cars", href: "/cars" },
-            {
-              label: detail.manufacturer.name,
-              href: `/manufacturers/${detail.manufacturer.slug}`,
-            },
-            { label: detail.model.name },
-            { label: detail.variant.name },
-          ]}
-        />
-
-        {/* ------------------------------------------------------- Identity */}
-        <header className="mt-8">
-          <div className="flex flex-wrap items-center gap-2">
-            {detail.variant.fuel_type ? (
-              <Badge tone={fuelTone(detail.variant.fuel_type)}>
-                {formatEnumLabel(detail.variant.fuel_type)}
-              </Badge>
-            ) : null}
-            <Badge>{formatEnumLabel(detail.variant.drive_type)}</Badge>
-            <Badge>{detail.category.name}</Badge>
-            {detail.model.generation ? <Badge>{detail.model.generation}</Badge> : null}
-          </div>
-
-          <p className="mt-6 text-label">
-            <Link
-              href={`/countries/${detail.country.slug}`}
-              className="transition-colors hover:text-gold-300"
-            >
-              {detail.country.flag_emoji} {detail.country.name}
-            </Link>
-            {" · "}
-            <Link
-              href={`/manufacturers/${detail.manufacturer.slug}`}
-              className="transition-colors hover:text-gold-300"
-            >
-              {detail.manufacturer.name}
-            </Link>
-          </p>
-
-          <h1 className="mt-4 font-display text-3xl leading-tight tracking-[0.04em] text-ink-50 sm:text-4xl lg:text-5xl">
-            {detail.model.name}
-            <span className="block gold-gradient-text text-2xl sm:text-3xl lg:text-4xl">
-              {detail.variant.name}
-            </span>
-          </h1>
-
-          <p className="mt-4 font-mono text-xs text-ink-500">
-            {formatYearRange(detail.variant.year_start, detail.variant.year_end)}
-            {detail.model.body_type
-              ? ` · ${formatEnumLabel(detail.model.body_type)}`
-              : ""}
-          </p>
-
-          <FavoriteButton
-            className="mt-8"
-            variantId={detail.variant.id}
-            initialFavorited={favorited}
-            signedIn={sessionUser !== null}
-          />
-
-          {detail.variant.description ? (
-            <p className="mt-7 max-w-2xl leading-relaxed text-ink-300">
-              {detail.variant.description}
-            </p>
-          ) : null}
-        </header>
-
-        {/* ------------------------------------------------------- 3D viewer */}
-        <CarViewer
-          className="mt-12"
-          bodyType={detail.model.body_type}
-          dimensions={detail.dimensions}
-          powertrain={kind}
-          glbUrl={glbUrl}
-          modelCredit={glbMedia?.credit ?? null}
-          partsByGroup={partsByGroup}
-          groupNotes={groupNotes}
-          dimensionLabels={{
-            ...(detail.dimensions?.length_mm
-              ? { length: `${formatNumber(detail.dimensions.length_mm)} mm` }
-              : {}),
-            ...(detail.dimensions?.width_mm
-              ? { width: `${formatNumber(detail.dimensions.width_mm)} mm` }
-              : {}),
-            ...(detail.dimensions?.wheelbase_mm
-              ? { wheelbase: `${formatNumber(detail.dimensions.wheelbase_mm)} mm` }
-              : {}),
-          }}
-        />
-
-        {/* ---------------------------------------------------- Key figures */}
-        <StatRow className="mt-12">
-          <StatCard
-            label="0–100 km/h"
-            value={
-              performance?.zero_to_100_s === null ||
-              performance?.zero_to_100_s === undefined
-                ? null
-                : performance.zero_to_100_s.toFixed(1)
-            }
-            unit="SEC"
-          />
-          <StatCard
-            label="Top Speed"
-            value={
-              performance?.top_speed_kmh === null ||
-              performance?.top_speed_kmh === undefined
-                ? null
-                : formatNumber(performance.top_speed_kmh)
-            }
-            unit="KM/H"
-          />
-          <StatCard
-            label="Power"
-            value={
-              performance?.power_hp === null || performance?.power_hp === undefined
-                ? null
-                : formatNumber(performance.power_hp)
-            }
-            unit="HP"
-            hint={detail.performance?.source ?? undefined}
-          />
-          <StatCard
-            label={kind === "electric" ? "Battery" : "Torque"}
-            value={
-              kind === "electric"
-                ? detail.ev?.battery_kwh
-                  ? String(detail.ev.battery_kwh)
-                  : null
-                : performance?.torque_nm
-                  ? formatNumber(performance.torque_nm)
-                  : null
-            }
-            unit={kind === "electric" ? "KWH" : "NM"}
-          />
-        </StatRow>
-
-        {/* ------------------------------------------- Specifications + nav */}
-        <div className="mt-8 gap-12 lg:grid lg:grid-cols-[minmax(0,13rem)_1fr]">
-          <aside className="hidden lg:block">
-            <SectionNav
-              sections={navSections.map((s) => ({ id: s.id, title: s.title }))}
-            />
-          </aside>
-
-          <div>
-            {sections.map((section) => (
-              <SpecSection
-                key={section.id}
-                id={section.id}
-                title={section.title}
-                rows={section.rows}
-                note={section.note}
+      {/* =================================================== Overview */}
+      <Container>
+        <DetailChapter
+          id="overview"
+          title={`The ${model.name}`}
+          header={false}
+          className={SECTION}
+        >
+          <div className="grid gap-10 lg:grid-cols-12 lg:items-center lg:gap-16">
+            <div className="lg:col-span-5">
+              <ChapterHeader
+                id="overview"
+                code="01"
+                title={`The ${model.name}`}
+                description={model.description}
               />
-            ))}
-
-            <PowertrainVisualizer
-              fuelType={detail.variant.fuel_type}
-              driveType={detail.variant.drive_type}
-            />
-
-            <CarDNA metrics={dnaMetrics} populationSize={dnaPopulation.length} />
-
-            {/* ------------------------------------------------- Features */}
-            {detail.features.length > 0 ? (
-              <section
-                id="features"
-                aria-labelledby="features-heading"
-                className="scroll-mt-32 pt-14"
-              >
-                <h2
-                  id="features-heading"
-                  className="border-b border-line pb-4 font-display text-sm tracking-[0.18em] text-ink-50 uppercase"
-                >
-                  Features
-                </h2>
-                <ul className="mt-1">
-                  {detail.features.map(({ feature, detail: note }) => (
-                    <li key={feature.id} className="border-b border-line-subtle py-3.5">
-                      <p className="text-sm text-ink-100">{feature.name}</p>
-                      {note ? (
-                        <p className="mt-1 text-xs leading-relaxed text-ink-500">
-                          {note}
-                        </p>
-                      ) : feature.description ? (
-                        <p className="mt-1 text-xs leading-relaxed text-ink-500">
-                          {feature.description}
-                        </p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-
-            {/* --------------------------------------------- Related parts */}
-            {detail.parts.length > 0 ? (
-              <section
-                id="parts"
-                aria-labelledby="parts-heading"
-                className="scroll-mt-32 pt-14"
-              >
-                <h2
-                  id="parts-heading"
-                  className="border-b border-line pb-4 font-display text-sm tracking-[0.18em] text-ink-50 uppercase"
-                >
-                  Notable Components
-                </h2>
-                <ul className="mt-1">
-                  {detail.parts.map(({ part, detail: note }) => (
-                    <li key={part.id} className="border-b border-line-subtle py-4">
-                      <Link
-                        href={`/parts/${part.slug}`}
-                        className="text-sm text-gold-300 transition-colors hover:text-gold-200"
-                      >
-                        {part.name} →
-                      </Link>
-                      {note ? (
-                        <p className="mt-1.5 text-xs leading-relaxed text-ink-400">
-                          {note}
-                        </p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
+            </div>
+            <div className="lg:col-span-7">
+              <Gallery detail={detail} id="gallery" />
+            </div>
           </div>
-        </div>
+        </DetailChapter>
+      </Container>
 
-        {/* --------------------------------------------- Other variants */}
-        {siblings.length > 0 ? (
-          <section className="mt-24" aria-labelledby="siblings-heading">
-            <h2
-              id="siblings-heading"
-              className="border-b border-line pb-4 font-display text-sm tracking-[0.18em] text-ink-50 uppercase"
-            >
-              Other {detail.model.name} variants
-            </h2>
-            <CarGrid cars={siblings} className="mt-8" />
-          </section>
+      {/* ================================================ Performance */}
+      <Container>
+        <DetailChapter
+          id="performance"
+          code="02"
+          title="Performance"
+          description="Published figures only, each placed among every car in the AURIX catalogue that publishes the same figure."
+          className={cn(SECTION, RULE)}
+        >
+          <div className="space-y-20 lg:space-y-24">
+            <PerformancePanel detail={detail} population={performancePopulation} />
+            <EvPanel detail={detail} rangeSamples={rangeSamples} />
+            <CarDNA metrics={dnaMetrics} populationSize={dnaPopulation.length} />
+          </div>
+        </DetailChapter>
+      </Container>
+
+      {/* ================================================ Engineering */}
+      {/* Full width: the blueprint's sticky stage needs the whole viewport,
+          and no ancestor here may clip or transform it. */}
+      <DetailChapter
+        id="engineering"
+        code="03"
+        title={`How the ${carName} is built`}
+        description="The powertrain, the chassis and the components behind them."
+        header={!hasTour}
+        headerClassName="mx-auto max-w-[1360px] px-5 pt-16 sm:px-8 lg:px-12 lg:pt-24 min-[1440px]:px-16"
+        className={cn(RULE, "pb-16 lg:pb-24")}
+      >
+        {hasTour ? (
+          <CarShowcase
+            build={build}
+            steps={blueprint}
+            label={carName}
+            intro={engineeringHeader}
+            fallback={
+              <BlueprintDiagram build={build} groups={blueprintOrder} label={carName} />
+            }
+          />
         ) : null}
 
-        <p className="mt-20 border-t border-line pt-8 text-xs leading-relaxed text-ink-600">
-          {siteConfig.disclaimer}
-          {detail.variant.source
-            ? ` Figures sourced from: ${detail.variant.source}.`
-            : ""}
-        </p>
+        <Container className="space-y-20 pt-16 lg:space-y-24 lg:pt-24">
+          <PowertrainVisualizer
+            fuelType={variant.fuel_type}
+            driveType={variant.drive_type}
+          />
+          <FeatureGroup features={detail.features} group="chassis" />
+          <PartsShowcase
+            parts={detail.parts}
+            generalParts={tourParts(tour, allParts)}
+            inspectable={drawnGroups(build)}
+          />
+        </Container>
+      </DetailChapter>
+
+      {/* ===================================================== Design */}
+      <Container>
+        <DetailChapter
+          id="design"
+          code="04"
+          title="Design and dimensions"
+          description="Drawn from the published dimensions where they exist, and to typical proportions for the body style where they do not."
+          className={cn(SECTION, RULE)}
+        >
+          <div className="space-y-20 lg:space-y-24">
+            <BlueprintSheet detail={detail} />
+            <FeatureGroup features={detail.features} group="aerodynamics" />
+            <FeatureGroup features={detail.features} group="interior" />
+          </div>
+        </DetailChapter>
+      </Container>
+
+      {/* =================================================== Features */}
+      {hasShowcase ? (
+        <Container>
+          <DetailChapter
+            id="features"
+            code="05"
+            title="Features"
+            description="What is catalogued for this car, one card at a time, and the paint colours its maker publishes. Every figure and colour here comes from the catalogue; nothing is illustrative."
+            className={cn(SECTION, RULE)}
+          >
+            <CarFeatureShowcase
+              carName={carName}
+              cards={showcaseCards}
+              colors={detail.colors}
+              build={build}
+              carbonCeramic={carbonCeramic}
+              silhouette={carSilhouette(
+                model.body_type,
+                kind,
+                model.engine_position ?? null,
+              )}
+              headingId="features-heading"
+            />
+          </DetailChapter>
+        </Container>
+      ) : null}
+
+      {/* ============================================= Technical data */}
+      <Container>
+        <DetailChapter
+          id="technical-data"
+          code="06"
+          title="Technical data"
+          description="Every figure recorded for this car. A figure the manufacturer does not publish says so."
+          className={cn(SECTION, RULE)}
+        >
+          <div className="lg:grid lg:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] lg:gap-16">
+            <aside className="hidden lg:block">
+              <SectionNav
+                sections={navSections.map((section) => ({
+                  id: section.id,
+                  title: section.title,
+                }))}
+              />
+            </aside>
+            <div className="min-w-0">
+              {sections.map((section) => (
+                <SpecSection
+                  key={section.id}
+                  id={section.id}
+                  title={section.title}
+                  rows={section.rows}
+                  note={section.note}
+                />
+              ))}
+            </div>
+          </div>
+
+          {technologyFeatures ? (
+            <div className="mt-20 space-y-16 lg:mt-24">
+              <FeatureGroup features={detail.features} group="technology" />
+              <FeatureGroup features={detail.features} group="other" />
+            </div>
+          ) : null}
+        </DetailChapter>
+      </Container>
+
+      {/* ====================================================== Price */}
+      <Container>
+        <DetailChapter
+          id="pricing"
+          code="07"
+          title="Price"
+          description="Recorded prices by market, each with its type, source and verification date. Prices are never converted between currencies."
+          className={cn(SECTION, RULE)}
+        >
+          <PricingSection
+            geography={geography}
+            pricing={pricing}
+            variantName={variantName}
+            recordedBasePrice={recordedBasePrice}
+          />
+        </DetailChapter>
+      </Container>
+
+      {/* =================================================== Compare */}
+      <Container>
+        <DetailChapter
+          id="compare"
+          code="08"
+          title="Compare and related"
+          className={cn(RULE, "pt-16 pb-16 lg:pt-24")}
+        >
+          <div className="space-y-20 lg:space-y-24">
+            <CompareWith self={{ slug: compareSlug, name: carName }} rivals={related} />
+            <RelatedVehicles
+              cars={related}
+              modelName={model.name}
+              categoryName={detail.category.name}
+            />
+            <DataConfidence detail={detail} />
+          </div>
+
+          <p className="mt-20 max-w-[80ch] border-t border-line-subtle pt-8 text-caption">
+            {siteConfig.disclaimer}
+          </p>
+        </DetailChapter>
       </Container>
     </>
   );
 }
+
+/** Vertical rhythm between chapters, and the hairline that separates them. */
+const SECTION = "py-16 lg:py-24";
+const RULE = "border-t border-line-subtle";
+
+/** The favourite toggle at the hero's button size (its colours are its own). */
+const SAVE_BUTTON =
+  "h-12 gap-2 rounded-control px-6 font-display text-[15px] font-medium tracking-normal normal-case [&_svg]:size-[18px]";

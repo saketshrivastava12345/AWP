@@ -26,8 +26,7 @@
  * Nothing is written to disk or the database without --download.
  */
 
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -194,26 +193,54 @@ if (!first) process.exit(0);
 
 console.log("\n--- Register a model in car_media -------------------------------\n");
 
-const target = attach ?? "porsche/911/turbo-s";
-const [mfSlug, modelSlug, variantSlug] = target.split("/");
+if (!attach) {
+  console.log(
+    "Pass --attach manufacturer/model/variant to print the SQL that registers\n" +
+      "this model for a specific car. (Or upload it through /admin → Media.)\n",
+  );
+  process.exit(0);
+}
 
-const sql = `insert into public.car_media (variant_id, type, url, alt, credit)
-select v.id, 'glb',
-       '/models/${first.filename}',
+const parts = attach.split("/");
+if (
+  parts.length !== 3 ||
+  parts.some((part) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(part))
+) {
+  console.error(`--attach must look like manufacturer/model/variant, got "${attach}".`);
+  process.exit(1);
+}
+const [mfSlug, modelSlug, variantSlug] = parts;
+
+/** SQL string literal: single quotes doubled, so a title like "Driver's car" is safe. */
+const lit = (value) => `'${String(value).replace(/'/g, "''")}'`;
+
+// Poly Pizza models are likenesses, never the exact variant: is_exact_model is
+// false, and migration 0008 refuses a GLB row that does not say either way.
+// ON CONFLICT: a variant has at most one GLB (car_media_one_glb_per_variant).
+const sql = `insert into public.car_media
+  (variant_id, type, url, alt, credit, is_exact_model, model_format, compression,
+   source, source_url, license, author)
+select v.id, 'glb', ${lit(`/models/${first.filename}`)},
        'Stylised 3D representation of a car, shown for illustration',
-       '${first.title} by ${first.creator} (${first.licence}), via Poly Pizza'
+       ${lit(`${first.title} by ${first.creator} (${first.licence}), via Poly Pizza`)},
+       false, 'glb', '{}', 'Poly Pizza', ${lit(`https://poly.pizza/m/${first.publicID}`)},
+       ${lit(first.licence)}, ${lit(first.creator)}
 from public.car_variants v
 join public.car_models m      on m.id  = v.model_id
 join public.manufacturers mf  on mf.id = m.manufacturer_id
-where mf.slug = '${mfSlug}' and m.slug = '${modelSlug}' and v.slug = '${variantSlug}';`;
+where mf.slug = ${lit(mfSlug)} and m.slug = ${lit(modelSlug)} and v.slug = ${lit(variantSlug)}
+on conflict do nothing;`;
 
+const sqlFile = path.join(MODELS_DIR, `register-${first.publicID}.sql`);
+writeFileSync(sqlFile, `${sql}\n`, "utf8");
 console.log(sql);
 console.log(
-  "\nRun it with:\n" +
-    `  node scripts/run-sql.mjs --query "${sql.replace(/\n\s*/g, " ").replace(/"/g, '\\"')}"\n`,
+  "\nThe statement was also written to a file, so no shell quoting is needed\n" +
+    "(this works the same in PowerShell, cmd and bash):\n" +
+    `  node scripts/run-sql.mjs ${path.relative(ROOT, sqlFile).split(path.sep).join("/")}\n`,
 );
 console.log(
-  "Note: the alt text says 'representation' on purpose. These models are\n" +
-    "likenesses, not the specific variant — claiming otherwise would be the\n" +
-    "same sort of invention the data-honesty rule forbids.\n",
+  "Note: is_exact_model is false on purpose. These models are likenesses, not\n" +
+    "the specific variant; the viewer labels them '3D REPRESENTATION'. Claiming\n" +
+    "otherwise would be the sort of invention the data-honesty rule forbids.\n",
 );

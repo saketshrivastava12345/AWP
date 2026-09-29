@@ -8,10 +8,16 @@ export type Crumb = { label: string; href?: string };
  * is what assistive technology expects; the final item is the current page and
  * carries aria-current rather than a link.
  */
-export function Breadcrumbs({ items }: { items: Crumb[] }) {
+export function Breadcrumbs({
+  items,
+  className,
+}: {
+  items: Crumb[];
+  className?: string;
+}) {
   return (
-    <nav aria-label="Breadcrumb">
-      <ol className="flex flex-wrap items-center gap-1.5 text-xs">
+    <nav aria-label="Breadcrumb" className={className}>
+      <ol className="flex flex-wrap items-center gap-1.5 font-mono text-xs tracking-[0.08em] text-ink-400 uppercase">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
           return (
@@ -19,7 +25,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
               {item.href && !isLast ? (
                 <Link
                   href={item.href}
-                  className="text-ink-400 transition-colors duration-200 hover:text-gold-300"
+                  className="inline-flex min-h-6 items-center text-ink-400 transition-colors duration-(--duration-fast) hover:text-cyan-200"
                 >
                   {item.label}
                 </Link>
@@ -29,7 +35,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
                 </span>
               )}
               {!isLast ? (
-                <ChevronRight className="size-3 text-ink-600" aria-hidden="true" />
+                <ChevronRight className="size-3 text-cyan-700" aria-hidden="true" />
               ) : null}
             </li>
           );

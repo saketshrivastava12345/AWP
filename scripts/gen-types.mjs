@@ -38,6 +38,19 @@ if (!connectionString) {
   process.exit(1);
 }
 
+// The example connection string from .env.example points at a host that does
+// not exist, so a copy of that file that was never filled in fails here with
+// "ENOTFOUND aws-0-region.pooler.supabase.com". Say so instead.
+if (/your-project-ref|YOUR_DB_PASSWORD|aws-0-region/.test(connectionString)) {
+  console.error(
+    "SUPABASE_DB_URL in .env.local still holds the example value from .env.example.\n" +
+      "Replace it with your project's connection string: Supabase dashboard -> Project\n" +
+      "Settings -> Database -> Connection string (URI), with your database password\n" +
+      "filled in. `npm run doctor` checks every value in .env.local.",
+  );
+  process.exit(1);
+}
+
 // --- postgres type -> typescript type -------------------------------------
 
 const SCALARS = new Map([

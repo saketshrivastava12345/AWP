@@ -1,68 +1,125 @@
 # AURIX — Global Automotive Intelligence
 
 A premium 3D automotive encyclopedia. Browse the world's cars from country down
-to individual component, explore them in an interactive 3D viewer, and compare
-full specifications side by side.
+to individual component, inspect each one in an interactive 3D viewer, check
+sourced market prices down to city level, and compare up to four cars side by
+side.
 
 Built as a mini project for **B.Tech Computer Science and Engineering, Pimpri
 Chinchwad University.**
 
-**Content hierarchy:** Country → Manufacturer → Model → Variant → Specifications → Parts
+**Content hierarchy:** Country → Manufacturer → Model → Generation → Variant →
+Specifications → Parts
+
+**The one rule the whole project is built around:** nothing is invented. A
+specification, price, colour or photograph that has no source is stored as
+`NULL` and shown as "Not available". Every price carries its type, market,
+source and verification date. The 3D car says whether it is the exact vehicle
+or a representation.
 
 ---
 
 ## Contents
 
-1. [Install and run](#1-install-and-run)
-2. [Creating the Supabase project](#2-creating-the-supabase-project)
-3. [Applying migrations and seed](#3-applying-migrations-and-seed)
-4. [Making your account an admin](#4-making-your-account-an-admin)
-5. [Adding images and 3D models](#5-adding-images-and-3d-models)
-6. [Adding catalogue data](#6-adding-catalogue-data)
-7. [Deploying to Vercel](#7-deploying-to-vercel)
-8. [Known limitations and next steps](#8-known-limitations-and-next-steps)
-9. [Screenshot checklist for the report](#9-screenshot-checklist-for-the-report)
+1. [Features](#1-features)
+2. [Install and run](#2-install-and-run)
+3. [Environment variables](#3-environment-variables)
+4. [Creating the Supabase project](#4-creating-the-supabase-project)
+5. [Applying migrations and seed](#5-applying-migrations-and-seed)
+6. [Making your account an admin](#6-making-your-account-an-admin)
+7. [Managing content in the admin panel](#7-managing-content-in-the-admin-panel)
+8. [How pricing works](#8-how-pricing-works)
+9. [Photographs and 3D models](#9-photographs-and-3d-models)
+10. [Adding catalogue data with SQL](#10-adding-catalogue-data-with-sql)
+11. [Deploying to Vercel](#11-deploying-to-vercel)
+12. [Testing and quality checks](#12-testing-and-quality-checks)
+13. [Known limitations](#13-known-limitations)
+14. [Screenshot checklist for the report](#14-screenshot-checklist-for-the-report)
 
 ---
 
-## 1. Install and run
+## 1. Features
 
-**Requirements:** Node.js 20.9 or newer. No Docker, and no local database.
+| Area                  | What it does                                                                                                                                                                                                                                                                                                                                  |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **3D viewer**         | Loads a GLB/glTF model (Draco and KTX2 decoders self-hosted) or falls back to a parametric car built from the variant's published dimensions. Camera presets, lighting presets, exploded view, X-ray/engineering mode, hotspots, dimension overlay, paint configurator from sourced colours only.                                             |
+| **Car pages**         | A long-scroll page per variant: key figures and price above the fold, a scroll-driven 3D blueprint that takes the car apart system by system, specifications grouped by powertrain, Car DNA percentiles, powertrain diagram, gallery, pricing, parts, related cars and a data-provenance section.                                             |
+| **Market pricing**    | Country → state → city selection with a full on-road breakdown (ex-showroom, RTO, registration, insurance, handling, FASTag). Every price shows its type, source, source link and verification date. Nothing is converted between currencies.                                                                                                 |
+| **Catalogue**         | Filters and sorts that live in the URL (shareable, back/forward works, usable without JavaScript), plain-English search ("german supercars under 700 hp"), cards with quick stats. No WebGL on listing pages.                                                                                                                                 |
+| **Compare**           | Two to four cars, grouped rows, visual bars, best-in-row only when at least two cars publish the figure, "differences only", shareable URL.                                                                                                                                                                                                   |
+| **Search**            | ⌘K / Ctrl K command palette with fuzzy matching across cars, manufacturers, countries and parts.                                                                                                                                                                                                                                              |
+| **Accounts**          | Email + password sign-in, favourites (kept locally for guests and merged on sign-in), recently viewed.                                                                                                                                                                                                                                        |
+| **Admin**             | A real CMS: vehicles and specifications with provenance, publish/unpublish, prices (with CSV import), market geography, photographs and 3D models (validated uploads), colours, availability, and a data-quality dashboard.                                                                                                                   |
+| **Brands and places** | Manufacturer, country (world map) and parts-encyclopedia pages.                                                                                                                                                                                                                                                                               |
+| **Interface**         | A futuristic HUD look with heavy but optional motion: scroll reveals, decoding headlines, counting figures, tilting cards, parallax, marquees, a boot-sequence loading screen. Reduced-motion visitors get a still version, and content never depends on JavaScript. `/lab` shows the auto-scaling amount input and the animated-caret input. |
+
+---
+
+## 2. Install and run
+
+**Requirements:** Node.js **22.12 or newer** (`.nvmrc` pins 22) and npm. No
+Docker, and no local database — the app talks to a hosted Supabase project.
 
 ```bash
 git clone <your-repo-url> aurix
 cd aurix
 npm install
 
-cp .env.example .env.local      # then fill it in — see section 2
+cp .env.example .env.local      # then fill it in — see sections 3 and 4
 npm run dev                     # http://localhost:3000
 ```
 
+If pages come up empty or the terminal fills with `TypeError: fetch failed`,
+run **`npm run doctor`**: it checks `.env.local`, the project URL, DNS, the
+key, the migrations and the seed in order, and prints the one thing to fix.
+
+The app also starts **without** a Supabase project: every page renders its
+empty state instead of crashing. That is useful for checking the UI, but you
+need the database for any real content.
+
 ### All commands
 
-| Command             | Purpose                                            |
-| ------------------- | -------------------------------------------------- |
-| `npm run dev`       | Development server (Turbopack)                     |
-| `npm run build`     | Production build                                   |
-| `npm run start`     | Serve the production build                         |
-| `npm run lint`      | ESLint                                             |
-| `npm run typecheck` | `tsc --noEmit`                                     |
-| `npm run test`      | Vitest — 47 tests for the search parser            |
-| `npm run format`    | Prettier                                           |
-| `npm run verify`    | lint → build → typecheck                           |
-| `npm run db:push`   | Apply migrations to the hosted database            |
-| `npm run db:seed`   | Apply the seed data (safe to re-run)               |
-| `npm run db:verify` | Print row counts for every table                   |
-| `npm run db:types`  | Regenerate `src/types/database.ts` from the schema |
+| Command                           | Purpose                                                                  |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| `npm run dev`                     | Development server (Turbopack)                                           |
+| `npm run build`                   | Production build                                                         |
+| `npm run start`                   | Serve the production build                                               |
+| `npm run lint` / `lint:fix`       | ESLint                                                                   |
+| `npm run typecheck`               | Generates Next's route types (`next typegen`), then `tsc --noEmit`       |
+| `npm run test` / `test:watch`     | Vitest unit tests                                                        |
+| `npm run format` / `format:check` | Prettier                                                                 |
+| `npm run verify`                  | lint → typecheck → test → build (what CI runs, plus `format:check`)      |
+| `npm run db:push`                 | Apply `supabase/migrations/` to the hosted database                      |
+| `npm run db:seed`                 | Apply `supabase/seed.sql` (idempotent — safe to re-run)                  |
+| `npm run db:verify`               | Row counts for every table plus checks of the views and search function  |
+| `npm run db:types`                | Regenerate `src/types/database.ts` from the hosted schema                |
+| `npm run doctor`                  | Checks the setup step by step: env file, URL, DNS, key, migrations, seed |
 
-> **Note:** `npm run verify` runs **build before typecheck** deliberately.
-> Next 16 generates the global `PageProps` / `LayoutProps` route types into
-> `.next/types` during a build, so a standalone `tsc --noEmit` fails on a fresh
-> clone until one build has run.
+> **Windows note.** `.gitattributes` forces LF line endings, so `format:check`
+> passes regardless of `core.autocrlf`. The first `npm run build` needs
+> internet access because `next/font` downloads the three typefaces.
 
 ---
 
-## 2. Creating the Supabase project
+## 3. Environment variables
+
+| Name                            | Where it is used                 | Required | Notes                                                                                 |
+| ------------------------------- | -------------------------------- | -------- | ------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Browser and server               | Yes      | Project URL                                                                           |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser and server               | Yes      | Publishable (anon) key. Safe to expose: every table has Row Level Security            |
+| `NEXT_PUBLIC_SITE_URL`          | Server (metadata, sitemap, OG)   | Yes      | `http://localhost:3000` locally, your domain in production                            |
+| `SUPABASE_DB_URL`               | Local `db:*` and `scripts/` only | Tooling  | Direct Postgres connection string. **Never** add it to Vercel or any client-side code |
+
+**There is no service-role key anywhere in this project, and one must never be
+added.** Admin writes go through server actions that use the signed-in user's
+own session; the database's RLS policies and `is_admin()` decide what that user
+may do, and the server re-checks the admin role before every write as well.
+
+`.env.local` is git-ignored. `.env.example` is committed.
+
+---
+
+## 4. Creating the Supabase project
 
 1. Create a project at [supabase.com](https://supabase.com) (the free tier is
    enough).
@@ -87,74 +144,87 @@ SUPABASE_DB_URL=postgresql://postgres.your-ref:PASSWORD@aws-0-region.pooler.supa
 > pasted, the last few characters are easily lost and the API returns
 > `401 Invalid API key` with no other clue.
 
-Only the two `NEXT_PUBLIC_` values ever reach the browser. They are safe to
-expose — every table has Row Level Security, so the key grants exactly the
-read access the policies allow. **The service-role key is not used anywhere in
-this project and should never be added to it.**
+**Authentication settings** (Supabase dashboard → Authentication):
 
-`.env.local` is git-ignored. `.env.example` is committed.
+- **URL Configuration → Site URL**: the same value as `NEXT_PUBLIC_SITE_URL`.
+- **URL Configuration → Redirect URLs**: add `<your site>/auth/confirm`.
+- **Email Templates** (recommended): point the _Confirm signup_ and _Reset
+  password_ links at
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup&next=/`
+  and
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/account/password`.
+  The default links also work, but only when opened in the same browser that
+  requested them.
 
 ---
 
-## 3. Applying migrations and seed
+## 5. Applying migrations and seed
 
-There are four SQL files, and they must be applied in order:
+Apply the migrations **in order**, then the seed:
 
-| File                                   | Contents                                                                 |
-| -------------------------------------- | ------------------------------------------------------------------------ |
-| `supabase/migrations/0001_schema.sql`  | 20 tables, 11 enums, 1 domain, the `car_catalog` view, triggers, indexes |
-| `supabase/migrations/0002_rls.sql`     | Row Level Security policies and grants                                   |
-| `supabase/migrations/0003_storage.sql` | Five storage buckets and their policies                                  |
-| `supabase/seed.sql`                    | 10 countries, 22 manufacturers, 46 models, 54 variants, 70 parts         |
+| File                               | Contents                                                                                                                                                                    |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0001_schema.sql`                  | Core catalogue: 20 tables, enums, the `car_catalog` view, triggers, full-text search                                                                                        |
+| `0002_rls.sql`                     | Row Level Security policies and grants                                                                                                                                      |
+| `0003_storage.sql`                 | Five storage buckets and their policies                                                                                                                                     |
+| `0004_fix_role_administration.sql` | Lets a database administrator set `profiles.role`                                                                                                                           |
+| `0005_role_guard_use_jwt.sql`      | Detects API callers by JWT so a user can never promote themselves                                                                                                           |
+| `0006_engine_position.sql`         | Where the engine sits (front / mid / rear), used by the 3D layout                                                                                                           |
+| `0007_viewer_group_exhaust.sql`    | Adds the exhaust as a 3D subsystem (must be committed before 0008 and the seed use it)                                                                                      |
+| `0008_markets_pricing_media.sql`   | Markets (states, cities), sourced prices with history, availability, generations, vehicle status, colours, media and 3D-model provenance, recently viewed, catalogue search |
+| `supabase/seed.sql`                | 10 countries, 22 manufacturers, 46 models, 54 variants, 71 parts, Indian states and cities, the 8 committed photographs                                                     |
 
-### Method A — SQL Editor (no tooling required)
+All migrations live in `supabase/migrations/`.
 
-1. Open your project → **SQL Editor** → **New query**.
-2. Paste the entire contents of `0001_schema.sql`, run it.
-3. Repeat for `0002_rls.sql`, then `0003_storage.sql`, then `seed.sql`.
-4. Paste `supabase/verify.sql` and run it to confirm the row counts.
-
-### Method B — Supabase CLI (no Docker)
+### Method A — Supabase CLI over a direct connection (no Docker)
 
 ```bash
-npm run db:push        # applies pending migrations over a direct connection
+npm run db:push        # applies every pending migration
 npm run db:seed        # applies seed.sql
 npm run db:verify      # prints row counts
-npm run db:types       # regenerates the TypeScript types
 ```
 
-`npm run db:push -- --dry-run` previews without applying.
+`npm run db:push -- --dry-run` previews without applying. **Upgrading an
+existing AURIX database** is the same two commands: `db:push` applies only the
+migrations it has not seen, and the seed only inserts what is missing.
 
-> **Why not `supabase start`?** The CLI's local development stack runs Postgres
-> in Docker, and this project deliberately avoids Docker. Note that `db dump`,
-> `db reset` and `gen types --db-url` **also** shell out to Docker — only
-> `db push` talks to Postgres directly. That is why type generation here uses
-> `scripts/gen-types.mjs`, which introspects `pg_catalog` over a normal
-> connection and needs neither Docker nor a Supabase access token.
+### Method B — SQL Editor (no tooling)
 
-### Verifying
+Open **SQL Editor → New query**, paste each migration file in the order above
+and run it, one file per run. Then run `supabase/seed.sql`, then
+`supabase/verify.sql`.
 
-`npm run db:verify` should print:
+> **Why not `supabase start`?** The CLI's local stack runs Postgres in Docker,
+> which this project deliberately avoids. `db dump`, `db reset` and
+> `gen types --db-url` also shell out to Docker; only `db push` talks to
+> Postgres directly. Type generation therefore uses `scripts/gen-types.mjs`,
+> which introspects `pg_catalog` over a normal connection.
 
-| Table                  | Rows   |     | Table            | Rows |
-| ---------------------- | ------ | --- | ---------------- | ---- |
-| countries              | 10     |     | parts            | 70   |
-| manufacturers          | 22     |     | part_categories  | 9    |
-| categories             | 13     |     | part_relations   | 63   |
-| car_models             | 46     |     | variant_parts    | 20   |
-| car_variants           | 54     |     | features         | 18   |
-| engines                | 30     |     | variant_features | 88   |
-| transmissions          | 29     |     | car_media        | 0    |
-| performance_specs      | 54     |     | dimensions       | 54   |
-| fuel_specs             | 37     |     | ev_specs         | 22   |
-| **car_catalog (view)** | **54** |     |                  |      |
+### Expected counts on a fresh database
 
-The seed is idempotent — every insert uses `ON CONFLICT DO NOTHING` against a
-natural key, so re-running it changes nothing.
+| Table             | Rows |     | Table                  | Rows   |
+| ----------------- | ---- | --- | ---------------------- | ------ |
+| countries         | 10   |     | parts                  | 71     |
+| manufacturers     | 22   |     | part_categories        | 9      |
+| categories        | 13   |     | part_relations         | 64     |
+| car_models        | 46   |     | variant_parts          | 20     |
+| car_generations   | 34   |     | features               | 18     |
+| car_variants      | 54   |     | variant_features       | 88     |
+| engines           | 30   |     | car_media              | 8      |
+| transmissions     | 29   |     | market_regions         | 14     |
+| performance_specs | 54   |     | market_cities          | 22     |
+| dimensions        | 54   |     | market_prices          | **0**  |
+| fuel_specs        | 37   |     | variant_markets        | **0**  |
+| ev_specs          | 22   |     | car_colors             | **0**  |
+|                   |      |     | **car_catalog (view)** | **54** |
+
+The three zeros are deliberate: no price, availability or paint colour is
+seeded, because none has been sourced yet. Add them through the admin panel
+with their sources (section 7).
 
 ---
 
-## 4. Making your account an admin
+## 6. Making your account an admin
 
 Sign up through the app at `/login` first, then run this in the SQL Editor:
 
@@ -164,192 +234,295 @@ set role = 'admin'
 where id = (select id from auth.users where email = 'you@example.com');
 ```
 
-Confirm it took effect:
+Reload the site: **Admin dashboard** appears in the account menu, linking to
+`/admin`.
 
-```sql
-select u.email, p.role
-from public.profiles p
-join auth.users u on u.id = p.id;
-```
-
-Then reload the site — a shield icon appears in the navbar linking to `/admin`.
-
-> You cannot do this from inside the application. A `BEFORE UPDATE` trigger on
-> `profiles` restores the previous role unless the caller is already an admin,
-> so a user cannot promote themselves. This is verified by an automated check.
+> You cannot do this from inside the application. A trigger on `profiles`
+> keeps the previous role for any change that arrives through the API unless
+> the caller is already an admin, so a user cannot promote themselves (see
+> migrations 0004 and 0005 for why this took two attempts to get right).
 
 ---
 
-## 5. Adding images and 3D models
+## 7. Managing content in the admin panel
 
-Five public-read, admin-write storage buckets are created by `0003_storage.sql`:
+Everything below is done at **`/admin`** while signed in as an admin. Every
+write is validated on the server, checked against your role, and then
+enforced a second time by the database's RLS policies. A change is visible on
+the public site on the next request. Visitors who are not admins — signed in
+or not — get exactly the same "not found" response, so the panel cannot be
+used to discover who is an admin.
 
-| Bucket          | For                | Limit                      |
-| --------------- | ------------------ | -------------------------- |
-| `cars`          | Car photographs    | 10 MB, JPEG/PNG/WebP/AVIF  |
-| `manufacturers` | Brand logos        | 2 MB, + SVG                |
-| `countries`     | Country imagery    | 2 MB, + SVG                |
-| `parts`         | Component diagrams | 10 MB                      |
-| `models-3d`     | GLB models         | 50 MB, `model/gltf-binary` |
+| Section      | Path              | What it does                                                                                                                       |
+| ------------ | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard    | `/admin`          | Counts and data-quality panels (unsourced figures, stale prices, cars without photos …)                                            |
+| Vehicles     | `/admin/vehicles` | Search, filter, publish/unpublish, create; each vehicle has core, spec, feature, part, price, media, availability and source pages |
+| Models       | `/admin/models`   | Model details, model-level photos and the sourced paint colours                                                                    |
+| Prices       | `/admin/prices`   | Current prices and history across vehicles; **Import** for CSV                                                                     |
+| Markets      | `/admin/markets`  | Countries' states and cities used by prices                                                                                        |
+| Media        | `/admin/media`    | Every photograph and 3D model, with the ones that need provenance flagged                                                          |
+| Data sources | `/admin/sources`  | Every recorded figure with its source and verification status                                                                      |
 
-### Registering a car photograph
+### Adding a vehicle
 
-Upload through **Storage** in the dashboard, then register it:
+**Vehicles → New vehicle** (`/admin/vehicles/new`). Pick the manufacturer, then the model (or create
+one), then fill in the variant: name, years, fuel type, drive, status, engine
+and transmission. Each specification section — performance, dimensions,
+engine, transmission, fuel, EV and charging — is edited separately and has
+its own **source**, **source URL** and **last verified** fields, with a
+**Mark verified today** action. Fields you do not have a published figure for
+stay **empty**; they are stored as `NULL` and shown as "Not available". The
+database rejects a fuel section on an electric car, an EV section on a
+petrol car, and a range figure without its test standard.
+
+New vehicles start as drafts. **Publish** makes them public; unpublished
+vehicles are invisible to everyone but admins.
+
+### Adding or updating a price
+
+**Vehicles → (vehicle) → Prices → Add price.** Choose the market — a country, and
+optionally a state and a city — then the price type and the amounts. Source,
+source URL and verification date are **required**; the form will not save a
+price without them. A live preview shows exactly how the public page will
+label the price.
+
+To record a price change, use **Add newer price** on the existing row: it
+pre-fills a copy with a new effective date, and the old row stays in the
+history (which feeds the price-history chart once there are enough points).
+**Close** ends a price's validity without replacing it.
+
+**CSV import:** download the template (a header row only), fill one row per
+price, upload it. Every row is validated on the server and shown in a preview
+with its errors; only valid rows are committed.
+
+### Adding photographs
+
+**Vehicles → (vehicle) → Media → Upload.** JPEG, PNG, WebP or AVIF up to 10 MB. The
+server checks the file's real type from its first bytes (not its name or the
+browser's claim), reads its pixel size, and stores it in the `cars` bucket.
+Source, source URL, licence and author are required, together with alt text
+and the shot type (hero, side, interior …). Only use photographs you have the
+right to publish — see section 9.
+
+### Adding a 3D model
+
+**Vehicles → (vehicle) → Media → 3D model.** GLB only, up to 50 MB. The server checks
+the glTF binary header, detects Draco / KTX2 / meshopt compression from the
+file itself, and records size and format. You must answer one question
+honestly: **is this the exact vehicle, or a representation?** The viewer
+labels the model accordingly. One model per variant; uploading another offers
+to replace it.
+
+### Colours, availability and data sources
+
+- **Colours** (per model) feed the paint configurator. Each needs a source;
+  the hex value is a rendering approximation and the UI says so. A model with
+  no sourced colours shows "Configuration unavailable for this model."
+- **Availability** records in which countries a variant is sold, upcoming or
+  discontinued, with a source.
+- **Data sources** lists every populated figure of a vehicle with its source
+  and verification status, and ranks the least-verified vehicles.
+
+The dashboard's data-quality panels (unsourced specifications, stale prices,
+vehicles without photographs …) link straight to the rows that need work.
+
+---
+
+## 8. How pricing works
+
+- **Types are never mixed up.** A price is one of: manufacturer list price,
+  dealer list price, ex-showroom, on-road, or estimated on-road. When AURIX
+  adds up components itself (ex-showroom + road tax + insurance + …), the
+  total is labelled **Calculated on-road** — never passed off as a published
+  figure — and it is only shown when the components it needs are all present.
+- **Scope.** A price applies to a whole country, a state, or a single city.
+  Choosing _Mumbai_ shows a Mumbai price if one exists, otherwise a
+  Maharashtra price, otherwise a national one — and says which it is showing.
+- **Provenance.** Every price shows its source (linked), market and "last
+  verified" date. Prices not verified for 180 days are flagged as possibly out
+  of date.
+- **No conversion.** A car priced in euros is shown in euros. Compare never
+  crowns a "cheapest" car across currencies.
+- **History.** Superseded prices are kept. The history chart appears only when
+  a market has enough data points to draw a line honestly.
+- **When there is no price**, the page says "Price data unavailable" and
+  nothing else.
+
+Every price block carries the disclaimer: _Prices vary by dealer, insurance
+provider, variant, tax rules and registration date._
+
+### Adding a price with SQL
+
+The admin panel is the intended route, but a price can also be inserted
+directly. Source, source URL and verification date are enforced by the
+database:
 
 ```sql
-insert into public.car_media (variant_id, type, url, alt, is_primary)
-select v.id, 'image',
-       'https://<your-ref>.supabase.co/storage/v1/object/public/cars/911-turbo-s.jpg',
-       'Porsche 911 Turbo S, front three-quarter view',
-       true
+insert into public.market_prices
+  (variant_id, country_id, region_id, city_id, price_type,
+   ex_showroom_price, rto_tax, registration_fee, insurance_estimate,
+   on_road_price, source, source_url, last_verified_at, effective_from)
+select v.id, c.id, r.id, ci.id, 'on_road',
+       /* amounts exactly as published — leave NULL what is not published */
+       null, null, null, null, null,
+       'Name of the publisher', 'https://…the page you read it on…',
+       date '2026-09-01', date '2026-09-01'
 from public.car_variants v
-join public.car_models m      on m.id  = v.model_id
+join public.car_models m      on m.id = v.model_id
 join public.manufacturers mf  on mf.id = m.manufacturer_id
-where mf.slug = 'porsche' and m.slug = '911' and v.slug = 'turbo-s';
+join public.countries c       on c.slug = 'india'
+join public.market_regions r  on r.country_id = c.id and r.slug = 'maharashtra'
+join public.market_cities ci  on ci.region_id = r.id and ci.slug = 'mumbai'
+where mf.slug = 'tata' and m.slug = 'altroz' and v.slug = '1-2-petrol';
 ```
 
-### Registering a GLB model
-
-Identical, with `type = 'glb'` and the `models-3d` bucket. The viewer picks it
-up automatically and the "concept representation" badge disappears.
-
-```sql
-insert into public.car_media (variant_id, type, url, alt)
-select v.id, 'glb',
-       'https://<your-ref>.supabase.co/storage/v1/object/public/models-3d/911-turbo-s.glb',
-       'Porsche 911 Turbo S 3D model'
-from public.car_variants v
-join public.car_models m     on m.id  = v.model_id
-join public.manufacturers mf on mf.id = m.manufacturer_id
-where mf.slug = 'porsche' and m.slug = '911' and v.slug = 'turbo-s';
-```
-
-**Model requirements.** Any scale and origin work — `GLBCar` measures the
-bounding box and normalises both. A model that fails to load falls back to the
-procedural car via an error boundary; it never breaks the page. At most one GLB
-per variant, enforced by a partial unique index.
-
-Local files in `public/models/` also work; use a path like `/models/car.glb`
-as the URL.
+The currency defaults to the country's currency, and a trigger rejects a
+state that is not in the country or a city that is not in the state.
 
 ---
 
-## 6. Adding catalogue data
+## 9. Photographs and 3D models
 
-Everything is addressed by slug, so no UUIDs are ever typed by hand.
+### Photographs
 
-### A country
+Only publish images you have the right to publish. The project takes car
+photographs from **Wikimedia Commons**, where every file is freely licensed
+and carries its author and licence:
+
+```bash
+node scripts/fetch-images.mjs --all                 # preview every pick
+node scripts/fetch-images.mjs --all --download      # download into public/images/cars/
+```
+
+**Check every automatic pick by eye.** Of the first 18, 10 showed the wrong
+car (a NASCAR Supra, a dashboard, a concept, an older generation). Those are
+listed in `scripts/image-skip.txt` so a re-run cannot reinstall them; add a
+correct photograph for them by hand through the admin panel. Credits are
+written to `public/images/CREDITS.md` and stored with each image, and the
+gallery shows them next to the photograph.
+
+A car without a photograph shows a body-style silhouette labelled as a
+placeholder — never a broken image and never a stand-in photo of another car.
+
+### 3D models
+
+A car with no model uses the **parametric car**: a lofted body built from the
+variant's published length, width, height and wheelbase, with an engine,
+motors, battery, exhaust and drivetrain laid out from its specification rows.
+It is always labelled **3D representation**.
+
+To use a real model:
+
+- GLB (binary glTF 2.0). Any scale and origin — the viewer normalises both
+  from the bounding box. Keep it under ~15 MB for mobile; Draco-compressed
+  geometry and KTX2 textures are supported, with the decoders served from
+  `/draco` and `/basis` in this app (no third-party CDN at runtime).
+- A licence that allows publication (CC0 or CC BY, with the credit recorded).
+  **Do not use ripped game assets or models from sites whose licence you have
+  not read.**
+- Declare whether it is the **exact vehicle** or a **representation**.
+
+`scripts/fetch-models.mjs` can find CC-licensed models on Poly Pizza and write
+the SQL that registers one as a representation of a chosen variant. Most
+free models are generic cars, not specific variants, so they are always
+registered as representations.
+
+If a model fails to load, the viewer falls back to the parametric car with a
+"3D model unavailable" notice; the page itself never breaks.
+
+---
+
+## 10. Adding catalogue data with SQL
+
+The admin panel covers everything below; SQL remains useful for bulk work.
+Everything is addressed by slug, so no UUIDs are typed by hand.
+
+### A country, manufacturer and model
 
 ```sql
-insert into public.countries (name, slug, iso_code, flag_emoji, description, automotive_history)
-values ('Spain', 'spain', 'ES', '🇪🇸',
+insert into public.countries (name, slug, iso_code, flag_emoji, currency_code, description, automotive_history)
+values ('Spain', 'spain', 'ES', '🇪🇸', 'EUR',
         'Short description shown on the country card.',
         'Longer history shown on the country page.');
-```
 
-### A manufacturer
-
-```sql
 insert into public.manufacturers (country_id, name, slug, founded_year, headquarters, segment, website, description)
 select c.id, 'SEAT', 'seat', 1950, 'Martorell, Catalonia', 'mass',
        'https://www.seat.com', 'Description of the marque.'
-from public.countries c
-where c.slug = 'spain';
-```
+from public.countries c where c.slug = 'spain';
 
-`segment` is one of `luxury`, `performance`, `mass`, `ev`, `commercial`.
-
-### A model
-
-```sql
-insert into public.car_models (manufacturer_id, category_id, name, slug, generation, body_type, production_start, description)
-select mf.id, cat.id, 'Leon', 'leon', 'Mk4', 'hatchback', 2020,
-       'Description of the model.'
-from public.manufacturers mf
-cross join public.categories cat
+insert into public.car_models (manufacturer_id, category_id, name, slug, generation, body_type,
+                               production_start, engine_position, description)
+select mf.id, cat.id, 'Leon', 'leon', 'Mk4', 'hatchback', 2020, 'front', 'Description of the model.'
+from public.manufacturers mf cross join public.categories cat
 where mf.slug = 'seat' and cat.slug = 'hatchback';
 ```
 
+`segment` is one of `luxury`, `performance`, `mass`, `ev`, `commercial`.
 `body_type` is one of `hatchback`, `sedan`, `coupe`, `convertible`, `roadster`,
-`suv`, `wagon`, `mpv`, `pickup`, `off_road`.
+`suv`, `wagon`, `mpv`, `pickup`, `off_road`. `engine_position` is `front`,
+`mid` or `rear`, and `NULL` for battery-electric models.
 
 ### A variant and its specifications
 
 ```sql
--- 1. The variant
 insert into public.car_variants
-  (model_id, name, slug, year_start, fuel_type, drive_type, transmission_id, description, source)
+  (model_id, name, slug, year_start, fuel_type, drive_type, transmission_id,
+   status, description, source, source_url, last_verified_at)
 select m.id, '1.5 TSI', '1-5-tsi', 2020, 'petrol', 'fwd', t.id,
-       'Description of this specific variant.',
-       'Manufacturer published specifications'
+       'available', 'Description of this specific variant.',
+       'Manufacturer published specifications', 'https://…', current_date
 from public.car_models m
 join public.manufacturers mf on mf.id = m.manufacturer_id
 left join public.transmissions t on t.name = '6-speed manual'
 where mf.slug = 'seat' and m.slug = 'leon';
 
--- 2. Performance. Leave a column NULL if the figure is not published —
---    never estimate it.
-insert into public.performance_specs (variant_id, power_hp, torque_nm, top_speed_kmh, zero_to_100_s, source)
-select v.id, 150, 250, 216, 8.4, 'Manufacturer published specifications'
+-- Leave a column NULL if the figure is not published — never estimate it.
+insert into public.performance_specs (variant_id, power_hp, torque_nm, top_speed_kmh, zero_to_100_s,
+                                      source, source_url, last_verified_at)
+select v.id, 150, 250, 216, 8.4, 'Manufacturer published specifications', 'https://…', current_date
 from public.car_variants v
 join public.car_models m     on m.id  = v.model_id
 join public.manufacturers mf on mf.id = m.manufacturer_id
 where mf.slug = 'seat' and m.slug = 'leon' and v.slug = '1-5-tsi';
 
--- 3. Dimensions, and fuel_specs (ICE/hybrid) or ev_specs (EV/PHEV)
---    follow exactly the same pattern.
+-- dimensions, and fuel_specs (combustion/hybrid) or ev_specs (EV/PHEV)
+-- follow exactly the same pattern.
 ```
 
 > **Powertrain rules are enforced by the database.** `fuel_specs` cannot be
-> attached to a battery-electric variant and `ev_specs` cannot be attached to a
-> pure combustion one — triggers reject both. An EV must also have
-> `engine_id IS NULL`. If you record `range_km` you must also record
-> `range_standard`, because a range figure without its test standard is not
-> comparable to anything.
+> attached to a battery-electric variant and `ev_specs` cannot be attached to
+> a pure combustion one. An EV must have `engine_id IS NULL`. A `range_km`
+> requires its `range_standard` (WLTP, EPA …), because a range without its
+> test cycle is not comparable to anything.
 
 ### A part
 
 ```sql
 insert into public.parts
-  (category_id, name, slug, viewer_group, description, function, typical_materials,
+  (category_id, name, slug, viewer_group, description, "function", typical_materials,
    location, common_failure_points, performance_impact)
 select pc.id, 'Intercooler', 'intercooler-example', 'engine',
        'What it is.', 'What it does.', 'What it is made of.',
        'Where it sits.', 'How it fails.', 'What it contributes.'
-from public.part_categories pc
-where pc.slug = 'engine';
+from public.part_categories pc where pc.slug = 'engine';
 ```
 
-`viewer_group` links a part to a subsystem of the 3D car and is one of `body`,
-`engine`, `transmission`, `suspension`, `brakes`, `wheels`, `interior`,
-`electronics`, `battery`.
+`viewer_group` links a part to a subsystem of the 3D car: `body`, `engine`,
+`transmission`, `suspension`, `brakes`, `wheels`, `interior`, `electronics`,
+`battery` or `exhaust`. Related parts are stored once per pair:
+`insert into part_relations (part_id, related_part_id) select least(a.id, b.id), greatest(a.id, b.id) …`.
 
-### Relating two parts
-
-```sql
-insert into public.part_relations (part_id, related_part_id)
-select least(a.id, b.id), greatest(a.id, b.id)
-from public.parts a, public.parts b
-where a.slug = 'turbocharger' and b.slug = 'intercooler-example';
-```
-
-`least`/`greatest` satisfy the canonical-ordering constraint — one row per
-unordered pair, read in both directions by the query.
-
-### After any change
-
-```bash
-npm run db:types      # if you altered the schema
-npm run db:verify     # confirm the row counts
-```
+After a schema change run `npm run db:types`; after any data change,
+`npm run db:verify`.
 
 ---
 
-## 7. Deploying to Vercel
+## 11. Deploying to Vercel
 
 1. Push the repository to GitHub.
 2. In Vercel, **Add New → Project** and import it. The framework is detected
-   automatically; build settings need no changes.
+   automatically; build settings need no changes. Set **Node.js Version** to
+   **22.x** in Project Settings.
 3. Add these **Environment Variables** (Production, Preview and Development):
 
    | Name                            | Value                         |
@@ -358,135 +531,154 @@ npm run db:verify     # confirm the row counts
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your publishable key          |
    | `NEXT_PUBLIC_SITE_URL`          | `https://your-app.vercel.app` |
 
-   `SUPABASE_DB_URL` is **not** needed in Vercel — it is only used by the local
-   `db:*` scripts.
+   `SUPABASE_DB_URL` is **not** needed in Vercel and should not be added.
 
-4. Deploy.
-5. Update `NEXT_PUBLIC_SITE_URL` to the real domain once assigned, and redeploy,
-   so canonical URLs, OpenGraph tags and the sitemap point at the right host.
+4. Deploy, then set `NEXT_PUBLIC_SITE_URL` to the final domain and redeploy so
+   canonical URLs, OpenGraph tags and the sitemap point at the right host.
+5. In Supabase, set **Authentication → URL Configuration → Site URL** to the
+   same domain.
 
-Build settings, for reference:
-
-| Setting          | Value                   |
-| ---------------- | ----------------------- |
-| Framework        | Next.js                 |
-| Build command    | `next build` (default)  |
-| Output directory | `.next` (default)       |
-| Install command  | `npm install` (default) |
-| Node version     | 20.x or 22.x            |
-
-Catalogue pages revalidate hourly. To publish a data change immediately,
-redeploy or wait out the hour.
+Catalogue pages are statically prerendered and revalidate hourly (prices every
+ten minutes). Admin edits refresh the affected pages immediately.
 
 ---
 
-## 8. Known limitations and next steps
+## 12. Testing and quality checks
+
+```bash
+npm run verify        # lint → typecheck → unit tests → production build
+npm run format:check
+```
+
+- **Unit tests (Vitest): 818 tests in 62 files**, all passing. They cover the pure logic: the search-query parser, the
+  pricing engine (scope fallback, on-road breakdown, calculated totals,
+  history), market selection, the anatomy tour, compare rows, filters and
+  URL parsing, the command palette, the 3D viewer's quality and preset logic,
+  the admin validators (CSV rows, prices, file signatures, number parsing),
+  favourites and sign-in helpers (safe return paths, guest-list merging), and
+  the car page's helpers (performance standing, gallery credits, JSON-LD).
+- **CI** (`.github/workflows/ci.yml`) runs lint, format check, typecheck, the
+  tests and a production build on every pull request and every push to
+  `main`. The build runs **without** Supabase credentials on purpose, which
+  proves a fresh clone builds and every page degrades to its empty state.
+- **Database invariants** (RLS, the role guard, price scope and provenance
+  constraints) were verified with direct probes against a Postgres + PostgREST
+  instance; see the decisions log in `CLAUDE.md`.
+
+---
+
+## 13. Known limitations
 
 Stated plainly, because an honest limitations section is more useful than a
 polished one.
 
 ### Data
 
-- **Fuel economy is empty for every car.** `mileage_kmpl` is NULL throughout.
-  European and American makers publish l/100 km and mpg, and Indian ARAI figures
-  vary by variant and model year. Converting or approximating would breach the
-  project's data-honesty rule, so the column waits for an authoritative source.
-  This is the single largest gap.
+- **No prices, availability or paint colours are seeded.** The whole pricing
+  system — markets, breakdowns, history, provenance — is built and tested,
+  but a price is only shown once someone records one with its source. Until
+  then every car says "Price data unavailable", which is the truth.
+- **Fuel economy is empty for every car.** `mileage_kmpl` is NULL throughout:
+  European and American makers publish l/100 km and mpg, and Indian ARAI
+  figures vary by variant and year. Converting or approximating would breach
+  the data-honesty rule.
 - **Kerb weight is missing for Ferrari, Lamborghini and Koenigsegg**, which
-  publish _dry_ weight instead. The dry figure is recorded in
-  `dimensions.notes`. Consequently those cars show no power-to-weight and no
-  Car DNA performance bar — correct behaviour, but worth knowing.
-- **Tesla power output and battery capacity are NULL** because Tesla does not
-  publish them. The Nissan GT-R has no 0–100 figure (not consistently published
-  across markets) and the Koenigsegg Jesko no top speed (never verified — the
-  500 km/h figures are simulations).
-- **Power mixes two conventions.** European makers publish metric PS/cv, US and
-  Japanese makers SAE net hp; they differ by about 1.4%. Each row records which
-  in `performance_specs.source`, but the compare table does not convert.
-- **`car_media` is empty**, so every car currently shows the procedural 3D
-  representation. See section 5 to add real assets.
+  publish _dry_ weight (recorded in `dimensions.notes`). Those cars show no
+  power-to-weight and no Car DNA performance bar.
+- **Tesla power and battery capacity are NULL** (Tesla does not publish
+  them); the Nissan GT-R has no 0–100 and the Koenigsegg Jesko no top speed.
+- **Power mixes two conventions**: metric PS for European makers, SAE hp for
+  US and Japanese makers (about 1.4% apart). Each row records which.
+- **Only 8 of 54 variants have a photograph** in the repository. The rest show
+  a labelled silhouette until a correctly licensed photograph is added
+  (section 9).
 
 ### 3D
 
-- **The procedural car is the weakest part of the project.** It is
-  architecturally correct — named subsystems, real dimensions, working exploded
-  view and camera presets — but it reads as a stylised block model rather than a
-  sleek car. Improving the body profile would give the largest visual return of
-  any remaining work.
-- The exploded view separates nine subsystems, not individual parts. Genuine
-  part-level explosion needs modelled geometry per component.
+- **No licensed GLB models are bundled.** Every car uses the parametric
+  representation, clearly labelled as such. The GLB pipeline (Draco, KTX2,
+  normalisation, fallback, exact-vs-representation labelling) is complete and
+  ready for real models.
+- The exploded view separates subsystems (engine, exhaust, brakes …), not
+  every individual part; part-level explosion needs modelled geometry.
+- Paint changes apply to the body material of the model in view. The
+  configurator only offers colours that have been recorded with a source.
 
 ### Application
 
-- `/admin` is **read-only**: row counts and a recent-activity list. Writes are
-  already admin-gated by RLS, so CRUD forms can be added without any further
-  policy work.
-- The search parser understands a fixed vocabulary (nationalities, categories,
-  powertrains, engine layouts, numeric comparisons). Unrecognised words fall
-  through to full-text search rather than being ignored, but it does not parse
-  free-form natural language.
-- Email confirmation follows whatever the Supabase project is configured for.
-  On the free tier, sign-up emails are rate-limited to a few per hour.
-- There are no end-to-end tests. The 47 unit tests cover the query parser; the
-  database invariants were verified with direct SQL probes rather than an
-  automated suite.
+- The search parser understands a fixed vocabulary (nationalities,
+  categories, powertrains, engine layouts, numeric comparisons). Unrecognised
+  words fall through to full-text search rather than being ignored.
+- Email confirmation follows the Supabase project's settings; on the free
+  tier sign-up emails are rate-limited to a few per hour.
+- There are no browser end-to-end tests in CI. Pages were checked in a real
+  browser at 375–1920 px during development.
+- **Admin uploads on serverless hosts.** Photos and GLB files are posted to a
+  route handler, which validates them before storing them. Vercel limits a
+  request body to 4.5 MB, so on Vercel larger files need a switch to signed
+  direct-to-Storage upload URLs (validation would then run after the upload).
+  Self-hosted (`npm run start`) there is no such limit.
+- **Without JavaScript**, static pages (car pages, brands, countries, parts)
+  read fully. Pages that depend on the request — the filtered catalogue,
+  favourites and the account — stream their content, and a browser with
+  JavaScript turned off only sees their loading skeleton. Search engines are
+  served the complete page.
+- An unknown car or brand URL shows the "not found" page but, because the page
+  shell has already started streaming, answers with HTTP 200 and a `noindex`
+  tag rather than a 404 status.
+- The admin panel cannot yet delete an engine or transmission that no vehicle
+  uses any more; that needs SQL.
 
-### Next steps, in order of value
+### If something goes wrong
 
-1. Source fuel-economy figures and fill `mileage_kmpl`.
-2. Add real photographs to the `cars` bucket — the grid is image-shaped and
-   currently shows placeholders.
-3. Improve the procedural car's body profile, or commission a handful of GLBs.
-4. Add CRUD forms to `/admin`.
-5. Add Playwright end-to-end tests for the auth and favourites flows.
+Run `npm run doctor` first; it names the failing step. The usual causes:
+
+| Symptom                                       | Cause and fix                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Every page logs `TypeError: fetch failed`     | The app cannot reach the project URL at all: the example URL is still in `.env.local`, the URL is mistyped, the project was deleted, or a firewall/VPN/proxy blocks Node (Node's `fetch` ignores `HTTPS_PROXY`).                                                                                       |
+| `401 Invalid API key`                         | The publishable key lost characters when pasted; copy it again in one piece.                                                                                                                                                                                                                           |
+| "The database is older than this code" banner | Run `npm run db:push`, then `npm run db:seed`.                                                                                                                                                                                                                                                         |
+| Pages are empty but `doctor` passes           | Run `npm run db:seed`; the catalogue tables exist but hold no rows.                                                                                                                                                                                                                                    |
+| `EBADENGINE` on install, or odd test errors   | Node is older than 22.12.                                                                                                                                                                                                                                                                              |
+| Every car says "Price data unavailable"       | Expected: no prices ship with the project. Add them, with a source, in `/admin`.                                                                                                                                                                                                                       |
+| "Invalid path specified in request URL"       | `NEXT_PUBLIC_SUPABASE_URL` has extra text after `.supabase.co` (often `/rest/v1`). Set it to the bare Project URL and restart `npm run dev`.                                                                                                                                                           |
+| The site feels slow                           | Judge speed on a production build (`npm run build && npm start`), never `npm run dev`. On low-power devices the site switches to a lighter animation mode by itself; run `localStorage.setItem("aurix-fx", "full")` in the browser console to force full effects, or `"lite"` to force the light mode. |
 
 ---
 
-## 9. Screenshot checklist for the report
+## 14. Screenshot checklist for the report
 
-Suggested captures, in the order they tell the best story. Use a **1440×900**
-window unless noted.
+Use a **1440×900** window unless noted.
 
-| #   | Screen                       | Where                                                                                  | What to show                                                                                                         |
-| --- | ---------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Loading screen**           | any page, first visit in a session                                                     | Wordmark, gold progress bar, "LOADING VEHICLE SYSTEMS 087%" — refresh with a new session to catch it                 |
-| 2   | **Home hero**                | `/`                                                                                    | "ENGINEERED WITHOUT LIMITS" with the gold gradient, CTAs, live catalogue counts                                      |
-| 3   | **Scroll storytelling**      | `/`, scroll into the pinned section                                                    | Mid-beat, e.g. "Stopping is the harder problem", with the car framed on the brakes and the progress rail part-filled |
-| 4   | **Car collection grid**      | `/cars`                                                                                | Filter rail open on the left, cards with power/top-speed/0–100 stats                                                 |
-| 5   | **Search understanding**     | `/cars?q=german+supercars`                                                             | The "Understood as" chips — this is the query parser's headline feature                                              |
-| 6   | **Car detail, 3D viewer**    | `/cars/porsche/911/turbo-s`                                                            | Viewer with camera preset buttons and the "concept representation" badge                                             |
-| 7   | **Exploded view**            | same page → **Explode**                                                                | Subsystems separated, "Exploded view" badge visible                                                                  |
-| 8   | **Subsystem info panel**     | same page → click a group or use "Inspect a subsystem"                                 | Side sheet with the real catalogued parts                                                                            |
-| 9   | **Engineering Mode**         | same page → **Engineering**                                                            | Wireframe car with dimension lines labelled from real data                                                           |
-| 10  | **Specifications + Car DNA** | same page, scrolled down                                                               | Sticky section nav, spec rows, and the DNA percentile bars                                                           |
-| 11  | **Powertrain flow — ICE**    | same page                                                                              | Fuel → Engine → Transmission → Differential → Wheels, with driven wheels in gold                                     |
-| 12  | **Powertrain flow — EV**     | `/cars/tesla/model-s/plaid`                                                            | Battery → Inverter → Motor → Wheels, **and no Engine section anywhere on the page** — a good contrast pair with #11  |
-| 13  | **Compare table**            | `/compare?car=porsche/911/turbo-s&car=tesla/model-s/plaid&car=ferrari/296-gtb/296-gtb` | Best-in-row highlighting and em dashes for unpublished figures                                                       |
-| 14  | **Country page**             | `/countries/japan`                                                                     | History, manufacturers grouped by segment, cars                                                                      |
-| 15  | **World map**                | `/countries`                                                                           | Markers sized by catalogue contribution, one hovered                                                                 |
-| 16  | **Parts encyclopedia**       | `/parts`                                                                               | Category navigation and the component grid                                                                           |
-| 17  | **Part detail**              | `/parts/turbocharger`                                                                  | Function, materials, failure points, related components                                                              |
-| 18  | **Manufacturer page**        | `/manufacturers/porsche`                                                               | Brand history and models grouped by category                                                                         |
-| 19  | **Admin dashboard**          | `/admin` (as an admin)                                                                 | Row counts across all 20 tables                                                                                      |
-| 20  | **404 page**                 | `/no-such-page`                                                                        | "NO SUCH VEHICLE"                                                                                                    |
-| 21  | **Mobile — home**            | `/` at 375 px                                                                          | Hero and mobile navigation                                                                                           |
-| 22  | **Mobile — detail**          | a car page at 375 px                                                                   | Viewer and stacked specs                                                                                             |
-| 23  | **Mobile — filters**         | `/cars` at 375 px → **Filters**                                                        | The filter drawer open                                                                                               |
-
-**Two extras worth including for a technical report:**
-
-- The Supabase **table editor** showing the 20-table schema, or the ER diagram.
-- `npm run test` output showing **47 passing parser tests**.
+| #   | Screen                    | Where                                                      | What to show                                                         |
+| --- | ------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------- |
+| 1   | Loading screen            | any page, first visit in a session                         | Wordmark and progress                                                |
+| 2   | Home hero                 | `/`                                                        | The 3D hero and "The world of automotive engineering."               |
+| 3   | Command palette           | any page → ⌘K / Ctrl K, type "911 gt"                      | Fuzzy results grouped by kind                                        |
+| 4   | Catalogue                 | `/cars`                                                    | Filters, sort, cards with quick stats                                |
+| 5   | Search understanding      | `/cars?q=german+supercars`                                 | The "Understood as" chips                                            |
+| 6   | Car page — above the fold | `/cars/porsche/911/gt3`                                    | 3D viewer, key figures, price block, actions                         |
+| 7   | Exploded view             | same page → **Explode**                                    | Subsystems separated, hover tooltip                                  |
+| 8   | X-ray / engineering mode  | same page → **X-ray**                                      | Ghosted body with the engine and dimensions visible                  |
+| 9   | Anatomy tour              | same page, scrolled                                        | A tour stop with its figures                                         |
+| 10  | Pricing                   | same page → market selector                                | Country → state → city and the breakdown (or the honest empty state) |
+| 11  | EV contrast               | `/cars/tesla/model-s/plaid`                                | Motors and battery, no engine anywhere on the page                   |
+| 12  | Compare                   | `/compare?car=porsche/911/turbo-s&car=tesla/model-s/plaid` | Grouped rows, bars, "—" for unpublished figures                      |
+| 13  | Country page and map      | `/countries`, `/countries/japan`                           | Map hover, manufacturers by segment                                  |
+| 14  | Parts encyclopedia        | `/parts/turbocharger`                                      | Function, materials, failure points, related parts                   |
+| 15  | Admin dashboard           | `/admin`                                                   | Counts and data-quality panels                                       |
+| 16  | Admin price editor        | `/admin` → Prices → Add price                              | Required provenance and the live label preview                       |
+| 17  | Mobile                    | home, a car page and the menu at 390 px                    | Mobile navigation and stacked layout                                 |
 
 ---
 
 ## Technology
 
-Next.js 16 (App Router) · React 19 · TypeScript 5.9 strict · Tailwind CSS v4 ·
-React Three Fiber 9 · Three.js · GSAP + ScrollTrigger · Supabase (Postgres,
-Auth, Storage) · Vitest
+Next.js 16 (App Router, Partial Prerendering) · React 19 · TypeScript 5.9
+strict · Tailwind CSS v4 · React Three Fiber 9 · Three.js · GSAP +
+ScrollTrigger · Supabase (Postgres, Auth, Storage, RLS) · Vitest
 
-Architecture notes, version-pinning rationale and a full decisions log are in
+Architecture notes, version-pinning rationale and the full decisions log are in
 [`CLAUDE.md`](./CLAUDE.md).
 
 ---
@@ -494,5 +686,7 @@ Architecture notes, version-pinning rationale and a full decisions log are in
 ## Disclaimer
 
 Technical information may vary by market, model year, trim and manufacturer
-specification. All marque names, model names and specifications are the property
-of their respective manufacturers. This is a non-commercial educational project.
+specification. Prices vary by dealer, insurance provider, variant, tax rules
+and registration date. All marque names, model names and specifications are
+the property of their respective manufacturers. This is a non-commercial
+educational project.

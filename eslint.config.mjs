@@ -37,6 +37,9 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "src/types/database.ts",
+    // Vendored three.js decoders (Draco, Basis/KTX2), copied verbatim.
+    "public/draco/**",
+    "public/basis/**",
   ]),
 ]);
 

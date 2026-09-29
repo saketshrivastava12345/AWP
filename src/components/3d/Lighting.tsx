@@ -1,44 +1,54 @@
 "use client";
 
-import { ContactShadows, Environment } from "@react-three/drei";
+import { SceneLighting, ViewerFloor } from "./CarLighting";
 
 /**
- * Cinematic three-point lighting plus an environment map.
- *
- * The environment map is what makes metallic paint read as metal at all — a
- * PBR metal with nothing to reflect renders nearly black. `studio` is a drei
- * preset bundled with the library, so there is no runtime fetch to a CDN.
+ * The studio rig and floor with the settings the scroll-driven scenes (the
+ * anatomy tour and the home page story) were tuned with. Those scenes set
+ * their own backdrop and fog, so only the lights and the environment come
+ * from here. The interactive viewer uses SceneLighting directly, with its
+ * lighting presets and quality levels.
  */
 export function Lighting({ lowDetail = false }: { lowDetail?: boolean }) {
   return (
-    <>
-      {/* Key: high and slightly forward, warm. */}
-      <directionalLight
-        position={[5, 8, 5]}
-        intensity={2.4}
-        color="#fff6e3"
-        castShadow={!lowDetail}
-        shadow-mapSize={lowDetail ? 512 : 1024}
-        shadow-bias={-0.0005}
-      />
-      {/* Rim: behind and opposite, cool, to separate the car from the ground. */}
-      <directionalLight position={[-6, 4, -7]} intensity={1.5} color="#b9ccd6" />
-      {/* Fill: low and soft, so shadow sides are not pure black. */}
-      <directionalLight position={[0, 2, 8]} intensity={0.55} color="#c8a34a" />
-      <ambientLight intensity={0.22} />
+    <SceneLighting
+      preset="studio"
+      backdrop={false}
+      extent={5}
+      quality={{
+        shadows: !lowDetail,
+        shadowMapSize: 1024,
+        envResolution: lowDetail ? 128 : 256,
+      }}
+    />
+  );
+}
 
-      <Environment preset="studio" environmentIntensity={0.55} />
-
-      {/* Grounds the car. Without it the model appears to float. */}
-      <ContactShadows
-        position={[0, 0, 0]}
-        opacity={0.55}
-        scale={14}
-        blur={2.4}
-        far={4}
-        resolution={lowDetail ? 256 : 512}
-        color="#000000"
-      />
-    </>
+/**
+ * Showroom floor: a softly reflective ground plus contact shadows. The
+ * reflection renders the scene a second time, so small devices get a plain
+ * matte floor instead. `contactFrames` defaults to re-rendering every frame,
+ * for scenes whose car moves apart (the home page finale).
+ */
+export function StudioFloor({
+  lowDetail = false,
+  size = 60,
+  contactFrames = Infinity,
+}: {
+  lowDetail?: boolean;
+  size?: number;
+  contactFrames?: number;
+}) {
+  return (
+    <ViewerFloor
+      preset="studio"
+      size={size}
+      contactFrames={contactFrames}
+      quality={{
+        reflector: !lowDetail,
+        reflectorResolution: 1024,
+        contactShadowResolution: lowDetail ? 256 : 512,
+      }}
+    />
   );
 }

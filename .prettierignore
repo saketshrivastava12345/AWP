@@ -5,3 +5,5 @@ build
 package-lock.json
 src/types/database.ts
 public/map
+public/draco
+public/basis

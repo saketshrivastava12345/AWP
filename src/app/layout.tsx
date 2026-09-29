@@ -4,82 +4,140 @@ import { fontVariables } from "@/lib/fonts";
 import { siteConfig } from "@/lib/site-config";
 import { BOOT_FLAG_SCRIPT } from "@/lib/boot-script";
 import { Navbar } from "@/components/layout/Navbar";
-import { AccountMenu } from "@/components/layout/AccountMenu";
+import {
+  AccountMenu,
+  AccountMenuFallback,
+  AccountPanel,
+  AccountPanelFallback,
+  FavoritesCount,
+} from "@/components/layout/AccountMenu";
+import { CommandPalette } from "@/components/layout/CommandPalette";
 import { Footer } from "@/components/layout/Footer";
 import { LoadingScreen } from "@/components/layout/LoadingScreen";
-import { PageTransition } from "@/components/layout/PageTransition";
-import { SearchOverlay } from "@/components/layout/SearchOverlay";
+import { LOADING_SCREEN_NOSCRIPT } from "@/components/layout/loading-screen-shared";
 import { SearchProvider } from "@/components/layout/SearchProvider";
+import { SetupNotice } from "@/components/layout/SetupNotice";
+import { ToastProvider } from "@/components/ui/Toast";
+import { FxRuntime } from "@/components/fx/FxRuntime";
+import { CursorGlow } from "@/components/fx/Backgrounds";
 import "./globals.css";
 
+const defaultTitle = `${siteConfig.name} — ${siteConfig.tagline}`;
+
+// Icons and the default social image come from the file conventions next to
+// this layout: icon.svg, apple-icon.tsx and opengraph-image.tsx.
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: `${siteConfig.name} — ${siteConfig.tagline}`,
-    template: `%s — ${siteConfig.name}`,
+    default: defaultTitle,
+    template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
   openGraph: {
     type: "website",
     siteName: siteConfig.name,
-    title: `${siteConfig.name} — ${siteConfig.tagline}`,
+    title: defaultTitle,
     description: siteConfig.description,
     url: siteConfig.url,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteConfig.name} — ${siteConfig.tagline}`,
+    title: defaultTitle,
     description: siteConfig.description,
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#06060a",
+  themeColor: siteConfig.themeColor,
   colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${fontVariables} h-full antialiased`}>
+    // suppressHydrationWarning: the boot script sets data-booted on <html>
+    // before React hydrates, by design. It only silences this one element's
+    // attributes, not its children.
+    // data-scroll-behavior: globals.css makes scrolling smooth; this tells Next
+    // to switch that off during route transitions so a navigation does not
+    // visibly glide to the top of the new page.
+    <html
+      lang="en"
+      className={`${fontVariables} h-full antialiased`}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <head>
         {/* Must run before first paint — see src/lib/boot-script.ts. */}
         <script dangerouslySetInnerHTML={{ __html: BOOT_FLAG_SCRIPT }} />
+        {/* Without JavaScript nothing would ever dismiss the loading screen. */}
+        <noscript dangerouslySetInnerHTML={{ __html: LOADING_SCREEN_NOSCRIPT }} />
       </head>
       <body className="flex min-h-full flex-col bg-void text-ink-100">
         <a
           href="#main"
           className={
-            "sr-only rounded-xs bg-gold-500 px-4 py-2 font-display text-xs text-void " +
-            "tracking-[0.18em] uppercase focus:not-sr-only focus:fixed focus:top-4 " +
-            "focus:left-4 focus:z-[300]"
+            "sr-only rounded-control bg-cyan-400 px-4 py-2.5 font-display text-sm font-medium text-void " +
+            "focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-(--z-skip)"
           }
         >
           Skip to content
         </a>
 
-        <SearchProvider>
-          <LoadingScreen />
-          <Navbar
-            accountSlot={
-              /* The account menu reads cookies. Behind a Suspense boundary it
-                 becomes a streamed hole in an otherwise fully static page,
-                 instead of forcing every route to render dynamically. */
-              <Suspense fallback={<div className="h-[34px] w-[34px]" aria-hidden />}>
-                <AccountMenu />
-              </Suspense>
-            }
-          />
-          <SearchOverlay />
+        <ToastProvider>
+          <SearchProvider>
+            <LoadingScreen />
+            {/* The motion kit's single runtime, and the desktop cursor glow
+                it moves (both inert under reduced motion). */}
+            <FxRuntime />
+            <CursorGlow />
 
-          {/* pt-16 clears the fixed navbar. */}
-          <div className="flex flex-1 flex-col pt-16">
-            <main id="main" className="flex flex-1 flex-col">
-              <PageTransition>{children}</PageTransition>
-            </main>
-            <Footer />
-          </div>
-        </SearchProvider>
+            {/* The session-dependent slots read cookies. Each sits in its own
+                Suspense boundary, so under Partial Prerendering it streams in
+                as a small hole in an otherwise static shell — and each
+                fallback has the resolved content's footprint, so nothing
+                shifts when it arrives. */}
+            <Navbar
+              favoritesCount={
+                <Suspense fallback={null}>
+                  <FavoritesCount />
+                </Suspense>
+              }
+              account={
+                <Suspense fallback={<AccountMenuFallback />}>
+                  <AccountMenu />
+                </Suspense>
+              }
+              mobileAccount={
+                <Suspense fallback={<AccountPanelFallback />}>
+                  <AccountPanel />
+                </Suspense>
+              }
+            />
+
+            {/* Clears the fixed navbar (56px, 64px from md). A full-bleed hero
+                that should run under the transparent bar uses the
+                bleed-under-nav utility. */}
+            <div className="flex flex-1 flex-col pt-(--nav-h)">
+              {/* The route-enter animation lives in template.tsx. */}
+              <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
+                {children}
+              </main>
+              <Footer />
+            </div>
+
+            {/* The palette opens on Dialog's "palette" layer, above any sheet
+                or menu a page has open; Dialog tracks open order, so its
+                position in the document does not matter. */}
+            <CommandPalette />
+
+            {/* Development only: explains a missing .env.local or an
+                unmigrated database in one sentence. */}
+            <Suspense fallback={null}>
+              <SetupNotice />
+            </Suspense>
+          </SearchProvider>
+        </ToastProvider>
       </body>
     </html>
   );

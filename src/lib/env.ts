@@ -5,6 +5,8 @@
  * property is referenced literally, so these must not be read dynamically.
  */
 
+import { normalizeSupabaseUrl } from "./supabase-url";
+
 const PUBLIC_ENV = {
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -21,8 +23,13 @@ export type PublicEnv = { supabaseUrl: string; supabaseAnonKey: string };
  */
 export function getPublicEnv(): PublicEnv | null {
   const { supabaseUrl, supabaseAnonKey } = PUBLIC_ENV;
-  if (!supabaseUrl || !supabaseAnonKey) return null;
-  return { supabaseUrl, supabaseAnonKey };
+  if (!supabaseUrl?.trim() || !supabaseAnonKey?.trim()) return null;
+  // A URL pasted with the dashboard's "/rest/v1" suffix (or a trailing
+  // slash, or stray spaces) would break every request; see supabase-url.ts.
+  return {
+    supabaseUrl: normalizeSupabaseUrl(supabaseUrl).url,
+    supabaseAnonKey: supabaseAnonKey.trim(),
+  };
 }
 
 /** Same values, but throws — for server contexts where misconfiguration is a bug. */

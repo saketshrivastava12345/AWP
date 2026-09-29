@@ -1,10 +1,10 @@
 import type { SpecRow } from "@/components/cars/SpecSection";
 import type { VariantDetail } from "@/types/domain";
 import { powertrainKind } from "@/types/domain";
+import { generationName } from "@/lib/detail/vehicle";
 import {
   formatEnumLabel,
   formatNumber,
-  formatPrice,
   formatSeconds,
   formatYearRange,
 } from "@/lib/format";
@@ -39,6 +39,11 @@ function text(value: string | null | undefined): string | null {
  *   combustion  -> Engine, Fuel
  *   electric    -> Electric Drivetrain, Charging & Range   (no Engine section)
  *   hybrid/phev -> Engine, Electric Assist, Fuel, Charging & Range
+ *
+ * Section ids carry a "spec-" prefix so they never collide with the car
+ * page's chapter ids ("performance", "design", …). Prices are not part of the
+ * specification: they appear only in the pricing chapter and the hero, where
+ * each carries its type, market, source and date.
  */
 export function buildSpecSections(detail: VariantDetail): SpecSectionSpec[] {
   const { variant, model, manufacturer, country, category, engine, transmission } =
@@ -50,13 +55,13 @@ export function buildSpecSections(detail: VariantDetail): SpecSectionSpec[] {
 
   // ---------------------------------------------------------------- Overview
   sections.push({
-    id: "overview",
+    id: "spec-overview",
     title: "Overview",
     rows: [
       { label: "Manufacturer", value: manufacturer.name },
       { label: "Model", value: model.name },
       { label: "Variant", value: variant.name },
-      { label: "Generation", value: text(model.generation) },
+      { label: "Generation", value: generationName(detail) },
       { label: "Country of origin", value: country.name },
       { label: "Category", value: category.name },
       { label: "Body type", value: formatEnumLabel(model.body_type, "") || null },
@@ -64,21 +69,13 @@ export function buildSpecSections(detail: VariantDetail): SpecSectionSpec[] {
         label: "Production",
         value: formatYearRange(variant.year_start, variant.year_end),
       },
-      {
-        label: "Starting price",
-        value:
-          variant.base_price === null
-            ? null
-            : formatPrice(variant.base_price, variant.price_currency),
-        hint: "Indicative launch price in the market shown. Never converted between currencies.",
-      },
     ],
     note: text(variant.notes),
   });
 
   // ------------------------------------------------------------- Performance
   sections.push({
-    id: "performance",
+    id: "spec-performance",
     title: "Performance",
     rows: [
       {
@@ -133,7 +130,7 @@ export function buildSpecSections(detail: VariantDetail): SpecSectionSpec[] {
   // ------------------------------------------- Engine (combustion + hybrid)
   if (kind !== "electric") {
     sections.push({
-      id: "engine",
+      id: "spec-engine",
       title: "Engine",
       rows: [
         { label: "Engine", value: text(engine?.name) },
@@ -167,7 +164,7 @@ export function buildSpecSections(detail: VariantDetail): SpecSectionSpec[] {
   if (kind !== "combustion") {
     const isFullyElectric = kind === "electric";
     sections.push({
-      id: "electric",
+      id: "spec-electric",
       title: isFullyElectric ? "Electric Drivetrain" : "Electric Assist",
       rows: [
         {
@@ -188,7 +185,7 @@ export function buildSpecSections(detail: VariantDetail): SpecSectionSpec[] {
 
   // --------------------------------------------------- Transmission & drive
   sections.push({
-    id: "transmission",
+    id: "spec-transmission",
     title: "Transmission & Drivetrain",
     rows: [
       { label: "Transmission", value: text(transmission?.name) },
@@ -201,7 +198,7 @@ export function buildSpecSections(detail: VariantDetail): SpecSectionSpec[] {
 
   // --------------------------------------------------------- Dimensions
   sections.push({
-    id: "dimensions",
+    id: "spec-dimensions",
     title: "Dimensions & Weight",
     rows: [
       {
@@ -243,7 +240,7 @@ export function buildSpecSections(detail: VariantDetail): SpecSectionSpec[] {
   // ------------------------------------------------ Fuel (non-electric only)
   if (kind !== "electric") {
     sections.push({
-      id: "fuel",
+      id: "spec-fuel",
       title: "Fuel & Efficiency",
       rows: [
         { label: "Fuel type", value: formatEnumLabel(variant.fuel_type, "") || null },
@@ -264,7 +261,7 @@ export function buildSpecSections(detail: VariantDetail): SpecSectionSpec[] {
   if (kind !== "combustion") {
     const isFullyElectric = kind === "electric";
     sections.push({
-      id: "charging",
+      id: "spec-charging",
       title: isFullyElectric ? "Range & Charging" : "Electric Range & Charging",
       rows: [
         {

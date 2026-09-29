@@ -5,9 +5,10 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { getPublicEnv, requirePublicEnv } from "@/lib/env";
+import { CACHE_SECONDS, CACHE_TAGS, type CacheTag } from "@/lib/cache-tags";
 
 /** How long catalogue reads stay fresh. The data changes rarely. */
-export const CATALOGUE_REVALIDATE_SECONDS = 3600;
+export const CATALOGUE_REVALIDATE_SECONDS = CACHE_SECONDS.catalogue;
 
 /**
  * Anonymous, cookie-free client for public catalogue reads.
@@ -17,11 +18,16 @@ export const CATALOGUE_REVALIDATE_SECONDS = 3600;
  * every visitor — so instead we attach Next's fetch cache options and let
  * pages be prerendered and revalidated.
  *
+ * `tag` picks the cache bucket (and its lifetime): prices change more often
+ * than specifications, so they are cached separately and more briefly. Admin
+ * writes invalidate the bucket they touched with `updateTag`.
+ *
  * Row level security still applies: this client authenticates with the
  * publishable key and therefore acts as `anon`.
  */
-export function createStaticClient() {
+export function createStaticClient(tag: CacheTag = CACHE_TAGS.catalogue) {
   const { supabaseUrl, supabaseAnonKey } = requirePublicEnv();
+  const revalidate = CACHE_SECONDS[tag];
 
   return createSupabaseClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -29,7 +35,7 @@ export function createStaticClient() {
       fetch: (input, init) =>
         fetch(input, {
           ...init,
-          next: { revalidate: CATALOGUE_REVALIDATE_SECONDS, tags: ["catalogue"] },
+          next: { revalidate, tags: [tag] },
         }),
     },
   });

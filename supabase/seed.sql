@@ -948,6 +948,68 @@ from (values
 join public.manufacturers mf on mf.slug = v.manufacturer_slug
 join public.categories cat on cat.slug = v.category_slug
 on conflict (manufacturer_id, slug) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Engine position (migration 0006)
+--
+-- Set with an UPDATE rather than in the insert above, so re-running this seed
+-- fills the column in on a database seeded before the column existed. Models
+-- not listed are battery-electric and keep NULL: they have no engine.
+--
+-- rear: behind the rear axle. mid: between the cabin and the rear axle.
+-- ---------------------------------------------------------------------------
+
+do $do$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'car_models'
+      and column_name = 'engine_position'
+  ) then
+    update public.car_models m
+       set engine_position = v.engine_position::public.engine_position
+      from (values
+        ('porsche', '911', 'rear'),
+
+        ('audi', 'r8', 'mid'),
+        ('ferrari', '296-gtb', 'mid'),
+        ('ferrari', 'f8-tributo', 'mid'),
+        ('ferrari', 'sf90-stradale', 'mid'),
+        ('koenigsegg', 'jesko', 'mid'),
+        ('lamborghini', 'huracan', 'mid'),
+        ('lamborghini', 'revuelto', 'mid'),
+        ('mclaren', '750s', 'mid'),
+        ('mclaren', 'artura', 'mid'),
+
+        ('audi', 'rs6-avant', 'front'),
+        ('bmw', 'm3', 'front'),
+        ('ford', 'f-150', 'front'),
+        ('ford', 'mustang', 'front'),
+        ('honda', 'civic-type-r', 'front'),
+        ('hyundai', 'creta', 'front'),
+        ('jaguar', 'f-type', 'front'),
+        ('kia', 'seltos', 'front'),
+        ('lamborghini', 'urus', 'front'),
+        ('mahindra', 'scorpio-n', 'front'),
+        ('mahindra', 'thar', 'front'),
+        ('mahindra', 'xuv700', 'front'),
+        ('mercedes-benz', 'amg-gt-4-door', 'front'),
+        ('nissan', 'gt-r', 'front'),
+        ('peugeot', '3008', 'front'),
+        ('renault', 'clio', 'front'),
+        ('tata', 'altroz', 'front'),
+        ('tata', 'harrier', 'front'),
+        ('toyota', 'corolla', 'front'),
+        ('toyota', 'gr-supra', 'front'),
+        ('volvo', 'xc90', 'front')
+      ) as v(manufacturer_slug, model_slug, engine_position)
+      join public.manufacturers mf on mf.slug = v.manufacturer_slug
+     where m.manufacturer_id = mf.id
+       and m.slug = v.model_slug
+       and m.engine_position is distinct from v.engine_position::public.engine_position;
+  end if;
+end;
+$do$;
 -- ---------------------------------------------------------------------------
 -- Car variants
 --
@@ -1809,3 +1871,234 @@ join public.car_models m on m.manufacturer_id = mf.id and m.slug = v.model_slug
 join public.car_variants cv on cv.model_id = m.id and cv.slug = v.variant_slug
 join public.parts p on p.slug = v.part_slug
 on conflict (variant_id, part_id) do nothing;
+
+-- ===========================================================================
+-- Migration 0008 onwards: markets, exhaust group, generations
+--
+-- Guarded so this file still runs against a database that has not had the
+-- later migrations applied. Every statement is idempotent.
+--
+-- DATA HONESTY: geography and currencies are facts; NO prices, colours or
+-- availability are seeded. Those are added through /admin with a source, a
+-- source URL and a verification date.
+-- ===========================================================================
+
+do $do$
+begin
+  -- Currencies prices are quoted in, per market.
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'countries'
+               and column_name = 'currency_code') then
+    update public.countries c
+       set currency_code = v.code
+      from (values
+        ('CN', 'CNY'), ('FR', 'EUR'), ('DE', 'EUR'), ('IN', 'INR'), ('IT', 'EUR'),
+        ('JP', 'JPY'), ('KR', 'KRW'), ('SE', 'SEK'), ('GB', 'GBP'), ('US', 'USD')
+      ) as v(iso, code)
+     where c.iso_code = v.iso
+       and c.currency_code is distinct from v.code;
+  end if;
+
+  -- India: states / union territories and cities for on-road pricing.
+  if to_regclass('public.market_regions') is not null then
+    insert into public.market_regions (country_id, name, slug, display_order)
+    select co.id, v.name, v.slug::public.slug, v.ord::smallint
+    from (values
+      ('Maharashtra', 'maharashtra', 1),
+      ('Delhi', 'delhi', 2),
+      ('Karnataka', 'karnataka', 3),
+      ('Tamil Nadu', 'tamil-nadu', 4),
+      ('Telangana', 'telangana', 5),
+      ('West Bengal', 'west-bengal', 6),
+      ('Gujarat', 'gujarat', 7),
+      ('Haryana', 'haryana', 8),
+      ('Uttar Pradesh', 'uttar-pradesh', 9),
+      ('Rajasthan', 'rajasthan', 10),
+      ('Kerala', 'kerala', 11),
+      ('Madhya Pradesh', 'madhya-pradesh', 12),
+      ('Punjab', 'punjab', 13),
+      ('Chandigarh', 'chandigarh', 14)
+    ) as v(name, slug, ord)
+    cross join public.countries co
+    where co.iso_code = 'IN'
+    on conflict (country_id, slug) do nothing;
+
+    insert into public.market_cities (region_id, name, slug, display_order)
+    select r.id, v.name, v.slug::public.slug, v.ord::smallint
+    from (values
+      ('maharashtra', 'Mumbai', 'mumbai', 1),
+      ('maharashtra', 'Pune', 'pune', 2),
+      ('maharashtra', 'Nagpur', 'nagpur', 3),
+      ('delhi', 'New Delhi', 'new-delhi', 1),
+      ('karnataka', 'Bengaluru', 'bengaluru', 1),
+      ('karnataka', 'Mysuru', 'mysuru', 2),
+      ('tamil-nadu', 'Chennai', 'chennai', 1),
+      ('tamil-nadu', 'Coimbatore', 'coimbatore', 2),
+      ('telangana', 'Hyderabad', 'hyderabad', 1),
+      ('west-bengal', 'Kolkata', 'kolkata', 1),
+      ('gujarat', 'Ahmedabad', 'ahmedabad', 1),
+      ('gujarat', 'Surat', 'surat', 2),
+      ('haryana', 'Gurugram', 'gurugram', 1),
+      ('uttar-pradesh', 'Lucknow', 'lucknow', 1),
+      ('uttar-pradesh', 'Noida', 'noida', 2),
+      ('rajasthan', 'Jaipur', 'jaipur', 1),
+      ('kerala', 'Kochi', 'kochi', 1),
+      ('kerala', 'Thiruvananthapuram', 'thiruvananthapuram', 2),
+      ('madhya-pradesh', 'Indore', 'indore', 1),
+      ('madhya-pradesh', 'Bhopal', 'bhopal', 2),
+      ('punjab', 'Ludhiana', 'ludhiana', 1),
+      ('chandigarh', 'Chandigarh', 'chandigarh', 1)
+    ) as v(region_slug, name, slug, ord)
+    join public.market_regions r on r.slug = v.region_slug
+    join public.countries co on co.id = r.country_id and co.iso_code = 'IN'
+    on conflict (region_id, slug) do nothing;
+  end if;
+
+  -- Generations from the free-text column (see migration 0008).
+  if to_regclass('public.car_generations') is not null then
+    insert into public.car_generations (model_id, name, slug, year_start, year_end)
+    select m.id, trim(m.generation), g.slug, m.production_start, m.production_end
+    from public.car_models m
+    cross join lateral (
+      select lower(regexp_replace(regexp_replace(trim(m.generation), '[^A-Za-z0-9]+', '-', 'g'),
+                                  '(^-+|-+$)', '', 'g')) as slug
+    ) g
+    where m.generation is not null and g.slug <> ''
+    on conflict (model_id, slug) do nothing;
+
+    update public.car_variants v
+       set generation_id = g.id
+      from public.car_generations g
+      join public.car_models m on m.id = g.model_id
+     where v.model_id = m.id
+       and v.generation_id is null
+       and g.name = trim(m.generation);
+  end if;
+end;
+$do$;
+
+-- The exhaust as its own 3D subsystem (migration 0007). A separate block: the
+-- enum value only exists once 0007 has committed.
+do $do$
+begin
+  if exists (select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
+             where t.typname = 'viewer_group' and e.enumlabel = 'exhaust') then
+    insert into public.parts (category_id, name, slug, viewer_group, description, "function",
+                              typical_materials, location, common_failure_points,
+                              performance_impact, display_order)
+    select pc.id, 'Silencer (Muffler)', 'exhaust-silencer'::public.slug,
+           'exhaust'::public.viewer_group,
+           'The rear section of the exhaust. Chambers, baffles and perforated tubes reflect and absorb the pressure pulses in the exhaust gas so that far less of their energy leaves the tailpipe as sound.',
+           'Brings exhaust noise within legal limits, shapes the character of the car''s sound, and discharges the gas away from the cabin.',
+           'Stainless or aluminised steel shells; perforated tubes and baffles; mineral-wool or glass-fibre packing.',
+           'At the rear of the exhaust system, usually mounted across the car ahead of the rear bumper.',
+           'Internal corrosion from condensed water on short journeys; packing blow-out; failed hangers and joints.',
+           'A restrictive silencer adds back-pressure and costs power. Valved systems open a straight-through path at high load to cut restriction, then close again to meet drive-by noise limits.',
+           17::smallint
+    from public.part_categories pc
+    where pc.slug = 'engine'
+    on conflict (slug) do nothing;
+
+    update public.parts
+       set viewer_group = 'exhaust'::public.viewer_group
+     where slug in ('exhaust-manifold', 'catalytic-converter', 'exhaust-silencer')
+       and viewer_group is distinct from 'exhaust'::public.viewer_group;
+
+    insert into public.part_relations (part_id, related_part_id)
+    select least(a.id, b.id), greatest(a.id, b.id)
+    from public.parts a, public.parts b
+    where a.slug = 'catalytic-converter' and b.slug = 'exhaust-silencer'
+    on conflict do nothing;
+  end if;
+end;
+$do$;
+
+-- The eight photographs committed under public/images/cars/. Each was picked
+-- by scripts/fetch-images.mjs from Wikimedia Commons and then checked by eye
+-- (wrong picks are listed in scripts/image-skip.txt instead). Author and
+-- licence come from public/images/CREDITS.md; the Commons file-page URL was
+-- not recorded when they were downloaded, so source_url stays NULL rather
+-- than being guessed — re-running fetch-images on a networked machine fills
+-- it in for new picks.
+--
+-- A row is added only when the variant has no image at all, so this never
+-- duplicates or overrides a photograph registered some other way.
+do $do$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'car_media'
+               and column_name = 'license') then
+    insert into public.car_media (variant_id, type, url, alt, is_primary, display_order,
+                                  credit, shot, source, license, author, width, height,
+                                  file_size_bytes)
+    select v.id, 'image', p.url, p.alt, true, 0,
+           'Photo: ' || p.author || ' / Wikimedia Commons (' || p.license || ')',
+           'hero'::public.media_shot, 'Wikimedia Commons', p.license, p.author,
+           p.width, p.height, p.bytes
+    from (values
+      ('porsche', '911',     'carrera-s',               '/images/cars/porsche-911-carrera-s.jpg',              'Porsche 911 Carrera S',                  'MrWalkr',      'CC BY-SA 4.0',    1280, 665, 181166),
+      ('porsche', '911',     'gt3',                     '/images/cars/porsche-911-gt3.jpg',                    'Porsche 911 GT3',                        'MrWalkr',      'CC BY-SA 4.0',    1280, 636, 238331),
+      ('porsche', '911',     'turbo-s',                 '/images/cars/porsche-911-turbo-s.jpg',                'Porsche 911 Turbo S',                    'Alexander-93', 'CC BY-SA 4.0',    1280, 620, 174456),
+      ('tata',    'altroz',  '1-2-petrol',              '/images/cars/tata-altroz-1-2-petrol.jpg',             'Tata Altroz 1.2 Petrol',                 'Dairokkan9',   'CC BY-SA 4.0',    1280, 720, 236705),
+      ('tesla',   'model-s', 'plaid',                   '/images/cars/tesla-model-s-plaid.jpg',                'Tesla Model S Plaid',                    'Alexander-93', 'CC BY-SA 4.0',    1280, 692, 262854),
+      ('toyota',  'corolla', '1-8-hybrid',              '/images/cars/toyota-corolla-1-8-hybrid.jpg',          'Toyota Corolla 1.8 Hybrid',              'Alexander-93', 'CC BY-SA 4.0',    1280, 662, 270835),
+      ('volvo',   'ex30',    'twin-motor-performance',  '/images/cars/volvo-ex30-twin-motor-performance.jpg',  'Volvo EX30 Twin Motor Performance',      'Alexander-93', 'CC BY-SA 4.0',    1280, 926, 351018),
+      ('volvo',   'xc90',    't8-recharge',             '/images/cars/volvo-xc90-t8-recharge.jpg',             'Volvo XC90 T8 Recharge',                 '© M 93',       'CC BY-SA 3.0 de', 1280, 706, 262837)
+    ) as p (manufacturer, model, variant, url, alt, author, license, width, height, bytes)
+    join public.manufacturers mf on mf.slug = p.manufacturer
+    join public.car_models m on m.manufacturer_id = mf.id and m.slug = p.model
+    join public.car_variants v on v.model_id = m.id and v.slug = p.variant
+    where not exists (select 1 from public.car_media cm
+                      where cm.variant_id = v.id and cm.type = 'image');
+  end if;
+end;
+$do$;
+
+-- ---------------------------------------------------------------------------
+-- AI-generated illustrations supplied by the site owner
+-- ---------------------------------------------------------------------------
+-- Views cropped from infographics the owner supplied, committed under
+-- public/images/cars/ai/. They are illustrations, not photographs, and are
+-- recorded as such: the licence column says "AI-generated illustration",
+-- which (with the folder) is what makes every card, gallery tile and credit
+-- label them (src/lib/media-kind.ts). None is primary, so a real photograph
+-- always wins; a car with no photograph shows the first one, labelled.
+-- The spec tables printed on those infographics are NOT imported: they
+-- disagree with each other and with the published figures.
+do $do$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'car_media'
+               and column_name = 'license') then
+    insert into public.car_media (variant_id, type, url, alt, is_primary, display_order,
+                                  credit, shot, source, license, author, width, height,
+                                  file_size_bytes)
+    select v.id, 'image', '/images/cars/ai/' || p.file || '.webp',
+           p.alt || ' (AI-generated illustration)', false, p.display_order,
+           'AI-generated illustration supplied by the site owner; not a photograph',
+           p.shot::public.media_shot, 'Supplied by the site owner',
+           'AI-generated illustration', null, p.width, p.height, p.bytes
+    from (values
+      ('porsche',     '911',      'carrera-s', 'porsche-911-carrera-s-front-three-quarter',     'three_quarter', 'Porsche 911 Carrera S, front three-quarter',       10, 492, 220, 19596),
+      ('porsche',     '911',      'carrera-s', 'porsche-911-carrera-s-rear-three-quarter',      'rear',          'Porsche 911 Carrera S, rear three-quarter',        11, 520, 220, 18736),
+      ('porsche',     '911',      'carrera-s', 'porsche-911-carrera-s-side',                    'side',          'Porsche 911 Carrera S, side profile',              12, 500, 207, 16688),
+      ('porsche',     '911',      'carrera-s', 'porsche-911-carrera-s-interior',                'interior',      'Porsche 911 Carrera S, interior',                  13, 522, 220, 19750),
+      ('porsche',     '911',      'carrera-s', 'porsche-911-carrera-s-red-front-three-quarter', 'three_quarter', 'Porsche 911 Carrera S in red, front three-quarter', 14, 632, 215, 27708),
+      ('porsche',     '911',      'turbo-s',   'porsche-911-turbo-s-front-three-quarter',       'three_quarter', 'Porsche 911 Turbo S, front three-quarter',         10, 800, 237, 35428),
+      ('porsche',     '911',      'turbo-s',   'porsche-911-turbo-s-rear-three-quarter',        'rear',          'Porsche 911 Turbo S, rear three-quarter',          11, 347, 188, 12094),
+      ('porsche',     '911',      'turbo-s',   'porsche-911-turbo-s-side',                      'side',          'Porsche 911 Turbo S, side profile',                12, 795, 170, 26274),
+      ('porsche',     '911',      'turbo-s',   'porsche-911-turbo-s-interior',                  'interior',      'Porsche 911 Turbo S, interior',                    13, 465, 195, 17092),
+      ('lamborghini', 'revuelto', 'revuelto',  'lamborghini-revuelto-front-three-quarter',      'three_quarter', 'Lamborghini Revuelto, front three-quarter',        10, 740, 245, 34224),
+      ('lamborghini', 'revuelto', 'revuelto',  'lamborghini-revuelto-rear-three-quarter',       'rear',          'Lamborghini Revuelto, rear three-quarter',         11, 740, 192, 26838),
+      ('lamborghini', 'revuelto', 'revuelto',  'lamborghini-revuelto-side',                     'side',          'Lamborghini Revuelto, side profile',               12, 740, 124, 17696),
+      ('lamborghini', 'revuelto', 'revuelto',  'lamborghini-revuelto-interior',                 'interior',      'Lamborghini Revuelto, interior',                   13, 740, 150, 25232)
+    ) as p (manufacturer, model, variant, file, shot, alt, display_order, width, height, bytes)
+    join public.manufacturers mf on mf.slug = p.manufacturer
+    join public.car_models m on m.manufacturer_id = mf.id and m.slug = p.model
+    join public.car_variants v on v.model_id = m.id and v.slug = p.variant
+    where not exists (select 1 from public.car_media cm
+                      where cm.variant_id = v.id
+                        and cm.url = '/images/cars/ai/' || p.file || '.webp');
+  end if;
+end;
+$do$;

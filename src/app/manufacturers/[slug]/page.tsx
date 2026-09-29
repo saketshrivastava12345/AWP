@@ -1,21 +1,45 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowUpRight, CarFront } from "lucide-react";
 import { Container } from "@/components/ui/Container";
-import { Badge } from "@/components/ui/Badge";
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { ButtonLink } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { StatCard, StatRow } from "@/components/ui/StatCard";
+import { SubNav, type SubNavItem } from "@/components/ui/SubNav";
 import { CarGrid } from "@/components/cars/CarGrid";
+import { BrandHero } from "@/components/manufacturers/BrandHero";
+import { BrandTabs } from "@/components/manufacturers/BrandTabs";
+import { ModelLineup } from "@/components/manufacturers/ModelLineup";
 import {
-  getManufacturerDetail,
+  SEGMENT_LABELS,
+  brandTabs,
+  buildLineup,
+  heroVisual,
+  powerRange,
+  rangeLabel,
+  websiteLink,
+} from "@/components/manufacturers/brand";
+import { firstSentence } from "@/components/parts/parts-helpers";
+import { ScrambleText } from "@/components/fx/ScrambleText";
+import { Reveal } from "@/components/fx/Reveal";
+import {
   getAllManufacturerSlugs,
+  getManufacturerDetail,
 } from "@/lib/queries/manufacturers";
-import { formatEnumLabel, formatNumber } from "@/lib/format";
+import { breadcrumbJsonLd, serializeJsonLd, type JsonLd } from "@/lib/json-ld";
+import { carDisplayName, formatNumber } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
+import { PLACEHOLDER_PARAM, withPlaceholder } from "@/lib/static-params";
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
   const slugs = await getAllManufacturerSlugs();
-  return slugs.map((slug) => ({ slug }));
+  return withPlaceholder(
+    slugs.map((slug) => ({ slug })),
+    { slug: PLACEHOLDER_PARAM },
+  );
 }
 
 export async function generateMetadata({
@@ -23,19 +47,29 @@ export async function generateMetadata({
 }: PageProps<"/manufacturers/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const detail = await getManufacturerDetail(slug);
-  if (!detail) return { title: "Manufacturer not found" };
+  if (!detail) return { title: "Manufacturer not found", robots: { index: false } };
 
+  const { manufacturer, country } = detail;
   const description =
-    detail.manufacturer.description ??
-    `${detail.manufacturer.name}: models, specifications and history.`;
+    manufacturer.description ??
+    `${manufacturer.name} of ${country.name}: its history, its models and their published specifications.`;
+  const url = `${siteConfig.url}/manufacturers/${manufacturer.slug}`;
 
   return {
-    title: detail.manufacturer.name,
+    title: manufacturer.name,
     description,
-    alternates: { canonical: `${siteConfig.url}/manufacturers/${slug}` },
-    openGraph: { title: detail.manufacturer.name, description, type: "profile" },
+    alternates: { canonical: url },
+    openGraph: {
+      title: `${manufacturer.name} — ${country.name}`,
+      description,
+      type: "website",
+      url,
+    },
   };
 }
+
+const linkClass =
+  "text-ink-100 underline decoration-ink-600 underline-offset-4 transition-colors duration-(--duration-fast) hover:text-ink-50 hover:decoration-ink-300";
 
 export default async function ManufacturerPage({
   params,
@@ -44,122 +78,278 @@ export default async function ManufacturerPage({
   const detail = await getManufacturerDetail(slug);
   if (!detail) notFound();
 
-  const { manufacturer, country, groups, totalVariants } = detail;
+  const { manufacturer, country, cars, models } = detail;
+  const lineup = buildLineup(models, cars);
+  const tabs = brandTabs(cars);
+  const power = powerRange(cars);
+  const website = websiteLink(manufacturer.website);
+  const visual = heroVisual(cars);
+  const path = `/manufacturers/${manufacturer.slug}`;
+  const catalogueHref = `/cars/${manufacturer.slug}`;
 
-  const jsonLd = {
+  // Structured data asserts only what the row holds: no invented logo, no
+  // guessed address beyond the recorded headquarters and country.
+  const organization: JsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": `${siteConfig.url}${path}#organization`,
     name: manufacturer.name,
     ...(manufacturer.description ? { description: manufacturer.description } : {}),
     ...(manufacturer.founded_year
       ? { foundingDate: String(manufacturer.founded_year) }
       : {}),
-    ...(manufacturer.headquarters
-      ? {
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: manufacturer.headquarters,
-            addressCountry: country.name,
-          },
-        }
-      : {}),
-    ...(manufacturer.website ? { url: manufacturer.website } : {}),
+    ...(website ? { url: website.href } : {}),
+    address: {
+      "@type": "PostalAddress",
+      ...(manufacturer.headquarters
+        ? { addressLocality: manufacturer.headquarters }
+        : {}),
+      addressCountry: country.iso_code,
+    },
   };
+  const breadcrumbs = breadcrumbJsonLd(
+    [
+      { name: siteConfig.name, path: "/" },
+      { name: "Brands", path: "/manufacturers" },
+      { name: manufacturer.name, path },
+    ],
+    siteConfig.url,
+  );
+
+  const sections: SubNavItem[] = [
+    { label: "History", href: "#history" },
+    ...(cars.length > 0
+      ? [
+          { label: "Models", href: "#models" },
+          { label: "Cars", href: "#cars" },
+        ]
+      : []),
+  ];
+
+  const facts: { term: string; detail: ReactNode }[] = [
+    {
+      term: "Founded",
+      detail: manufacturer.founded_year ? String(manufacturer.founded_year) : null,
+    },
+    { term: "Headquarters", detail: manufacturer.headquarters },
+    {
+      term: "Country",
+      detail: (
+        <Link href={`/countries/${country.slug}`} className={linkClass}>
+          {country.name}
+        </Link>
+      ),
+    },
+    { term: "Segment", detail: SEGMENT_LABELS[manufacturer.segment] },
+    {
+      term: "Website",
+      detail: website ? (
+        <a
+          href={website.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`inline-flex items-center gap-1 ${linkClass}`}
+        >
+          {website.label}
+          <ArrowUpRight className="size-4 text-ink-400" aria-hidden="true" />
+          <span className="sr-only"> (official website, opens in a new tab)</span>
+        </a>
+      ) : null,
+    },
+  ];
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd([organization, breadcrumbs]) }}
       />
 
-      <Container className="py-10">
-        <Breadcrumbs
-          items={[
-            { label: "Manufacturers", href: "/manufacturers" },
-            { label: manufacturer.name },
-          ]}
-        />
-
-        <header className="mt-8">
-          <Badge tone={manufacturer.segment === "performance" ? "gold" : "neutral"}>
-            {formatEnumLabel(manufacturer.segment)}
-          </Badge>
-
-          <h1 className="mt-6 font-display text-3xl tracking-[0.04em] text-ink-50 sm:text-4xl lg:text-5xl">
-            {manufacturer.name}
-          </h1>
-
-          <p className="mt-5 text-sm text-ink-400">
-            <Link
-              href={`/countries/${country.slug}`}
-              className="transition-colors hover:text-gold-300"
-            >
-              {country.flag_emoji} {country.name}
-            </Link>
-            {manufacturer.headquarters ? ` · ${manufacturer.headquarters}` : ""}
-          </p>
-
-          {manufacturer.description ? (
-            <p className="mt-7 max-w-3xl leading-relaxed text-ink-300">
-              {manufacturer.description}
-            </p>
-          ) : null}
-        </header>
-
-        <StatRow className="mt-12 max-w-3xl lg:grid-cols-3">
+      <BrandHero
+        crumbs={[
+          { label: "Brands", href: "/manufacturers" },
+          { label: manufacturer.name },
+        ]}
+        title={manufacturer.name}
+        lead={firstSentence(manufacturer.description, 240)}
+        meta={[
+          <Link
+            key="country"
+            href={`/countries/${country.slug}`}
+            className="inline-flex items-center gap-2 transition-colors duration-(--duration-fast) hover:text-ink-50"
+          >
+            {country.flag_emoji ? (
+              <span aria-hidden="true" className="text-base leading-none">
+                {country.flag_emoji}
+              </span>
+            ) : null}
+            {country.name}
+          </Link>,
+          manufacturer.founded_year ? `Founded ${manufacturer.founded_year}` : null,
+          manufacturer.headquarters,
+        ]}
+        actions={
+          <>
+            {cars.length > 0 ? (
+              <ButtonLink href={catalogueHref}>
+                View all {cars.length} {cars.length === 1 ? "car" : "cars"}
+              </ButtonLink>
+            ) : null}
+            <ButtonLink href={`/countries/${country.slug}`} variant="secondary">
+              More from {country.name}
+            </ButtonLink>
+          </>
+        }
+        photo={
+          visual?.kind === "photo"
+            ? {
+                src: visual.src,
+                alt: carDisplayName(
+                  visual.car.manufacturer_name,
+                  visual.car.model_name,
+                  visual.car.variant_name,
+                ),
+                href: `/cars/${visual.car.manufacturer_slug}/${visual.car.model_slug}/${visual.car.variant_slug}`,
+                bodyType: visual.car.body_type,
+                fuelType: visual.car.fuel_type,
+              }
+            : null
+        }
+        drawing={
+          visual?.kind === "drawing"
+            ? { bodyType: visual.car.body_type, fuelType: visual.car.fuel_type }
+            : null
+        }
+      >
+        {/* Founded is in the meta line above and the history below; three
+            figures leave room for a wide power range ("720–1,000 hp"). */}
+        <StatRow className="lg:grid-cols-3">
           <StatCard
-            label="Founded"
-            value={manufacturer.founded_year ? String(manufacturer.founded_year) : null}
-            size="sm"
+            label="Models"
+            value={formatNumber(lineup.length)}
+            hint="Models with at least one published variant in the catalogue."
+            countUp
           />
-          <StatCard label="Models" value={formatNumber(groups.length)} size="sm" />
-          <StatCard label="Variants" value={formatNumber(totalVariants)} size="sm" />
+          <StatCard label="Variants" value={formatNumber(cars.length)} countUp />
+          <StatCard
+            label="Power"
+            value={power ? rangeLabel(power, formatNumber) : null}
+            unit={power ? "hp" : undefined}
+            hint={
+              power
+                ? `Lowest and highest published output across ${power.count} of ${cars.length} variants, as the maker publishes it: European makers quote metric PS, US and Japanese makers SAE net hp.`
+                : undefined
+            }
+          />
         </StatRow>
+      </BrandHero>
 
-        {manufacturer.website ? (
-          <p className="mt-8">
-            <a
-              href={manufacturer.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-display text-[10px] tracking-[0.18em] text-gold-300 uppercase transition-colors hover:text-gold-200"
+      <SubNav items={sections} label={`${manufacturer.name}: on this page`} />
+
+      <Container
+        as="section"
+        id="history"
+        aria-labelledby="history-heading"
+        className="py-16 lg:py-24"
+      >
+        <div className="grid gap-8 lg:grid-cols-12 lg:gap-12">
+          <h2 id="history-heading" className="text-h2 lg:col-span-4">
+            <ScrambleText text="History" />
+          </h2>
+          <div className="lg:col-span-8">
+            {manufacturer.description ? (
+              <p className="max-w-[60ch] text-lead">{manufacturer.description}</p>
+            ) : (
+              <p className="max-w-[60ch] text-body text-ink-400">
+                No history is recorded for {manufacturer.name} yet.
+              </p>
+            )}
+            <Reveal
+              as="dl"
+              stagger
+              className="mt-10 grid border-t border-line sm:grid-cols-2 sm:gap-x-12"
             >
-              Official website ↗
-            </a>
-          </p>
-        ) : null}
-
-        {groups.length === 0 ? (
-          <p className="mt-16 text-sm text-ink-500">
-            No cars from this manufacturer are in the catalogue yet.
-          </p>
-        ) : (
-          <div className="mt-20 space-y-16">
-            {groups.map((group) => (
-              <section
-                key={group.categorySlug}
-                aria-labelledby={`cat-${group.categorySlug}`}
-              >
-                <h2
-                  id={`cat-${group.categorySlug}`}
-                  className="flex items-baseline justify-between border-b border-line pb-4 font-display text-sm tracking-[0.18em] text-ink-50 uppercase"
+              {facts.map((fact) => (
+                <div
+                  key={fact.term}
+                  className="flex items-baseline justify-between gap-6 border-b border-line-subtle py-4"
                 >
-                  {group.category}
-                  <span className="tabular font-mono text-xs text-ink-600">
-                    {group.cars.length}
-                  </span>
-                </h2>
-                <CarGrid cars={group.cars} className="mt-8" />
-              </section>
-            ))}
+                  <dt className="font-mono text-[11px] tracking-hud text-ink-400 uppercase">
+                    {fact.term}
+                  </dt>
+                  <dd className="text-right text-body-s text-ink-100">
+                    {fact.detail ?? <span className="text-ink-400">Not available</span>}
+                  </dd>
+                </div>
+              ))}
+            </Reveal>
           </div>
-        )}
-
-        <p className="mt-20 border-t border-line pt-8 text-xs leading-relaxed text-ink-600">
-          {siteConfig.disclaimer}
-        </p>
+        </div>
       </Container>
+
+      {cars.length === 0 ? (
+        <Container className="pb-24">
+          <EmptyState
+            icon={<CarFront className="size-7" strokeWidth={1.25} aria-hidden="true" />}
+            title="No published cars yet"
+            description={`${manufacturer.name} is in the catalogue, but none of its models has a published variant yet.`}
+          />
+        </Container>
+      ) : (
+        <>
+          <Container
+            as="section"
+            id="models"
+            aria-labelledby="models-heading"
+            className="border-t border-line-subtle py-16 lg:py-24"
+          >
+            <SectionHeading
+              id="models-heading"
+              overline="Line-up"
+              code="01"
+              scramble
+              title="Models"
+              description="Every model with a published variant, newest generation first. Open a model for its catalogue page, or a variant for its full specification."
+              actionHref={catalogueHref}
+              actionLabel="Brand catalogue"
+            />
+            <div className="mt-10">
+              <ModelLineup manufacturerSlug={manufacturer.slug} models={lineup} />
+            </div>
+          </Container>
+
+          <Container
+            as="section"
+            id="cars"
+            aria-labelledby="cars-heading"
+            className="border-t border-line-subtle py-16 lg:py-24"
+          >
+            <SectionHeading
+              id="cars-heading"
+              overline="Catalogue"
+              code="02"
+              scramble
+              title={`Every ${manufacturer.name} in the catalogue`}
+              description="Most powerful first. A figure the maker does not publish is shown as a dash, never estimated."
+            />
+            <div className="mt-10">
+              {tabs.length > 1 ? (
+                <BrandTabs
+                  label={`${manufacturer.name} cars by type`}
+                  tabs={tabs.map((tab) => ({
+                    id: tab.id,
+                    label: tab.label,
+                    count: tab.cars.length,
+                    content: <CarGrid cars={tab.cars} />,
+                  }))}
+                />
+              ) : (
+                <CarGrid cars={cars} />
+              )}
+            </div>
+          </Container>
+        </>
+      )}
     </>
   );
 }

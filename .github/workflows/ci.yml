@@ -1,0 +1,41 @@
+# Lint, format, typecheck, unit tests and a production build on every pull
+# request and every push to main.
+#
+# The build runs WITHOUT Supabase credentials on purpose. That is the state of
+# a fresh clone, and it is the state most likely to regress: every catalogue
+# query must degrade to an empty result, and every generateStaticParams must
+# still return at least one entry (Cache Components error E898 otherwise).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build

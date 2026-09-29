@@ -38,12 +38,18 @@
  *
  * Storage:
  *   default     → public/images/cars/  (no credentials needed)
- *   --supabase  → the `cars` bucket; needs SUPABASE_SERVICE_ROLE_KEY in
- *                 .env.local, because the bucket's RLS policy is admin-write.
- *                 That key is for this local script only. It must never be
- *                 committed, and never referenced from application code.
+ *   --supabase  → the `cars` bucket. The bucket is admin-write, so the run
+ *                 signs in as a temporary importer admin whose password is
+ *                 random for every run, and revokes that account's admin role
+ *                 and password again when the run ends. No service-role key is
+ *                 used (or accepted): nothing long-lived is ever created.
+ *
+ * Provenance: each row records source (Wikimedia Commons), the file's
+ * description page URL, licence, author, pixel size and byte size in the
+ * car_media columns added by migration 0008 — apply migrations first.
  */
 
+import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -83,9 +89,20 @@ if (!carPath && !doAll) {
   process.exit(1);
 }
 
+const ENTITIES = {
+  amp: "&",
+  quot: '"',
+  "#39": "'",
+  apos: "'",
+  lt: "<",
+  gt: ">",
+  nbsp: " ",
+};
 const stripHtml = (s) =>
   String(s ?? "")
     .replace(/<[^>]*>/g, "")
+    .replace(/&(amp|quot|#39|apos|lt|gt|nbsp);/g, (_, name) => ENTITIES[name])
+    .replace(/\s+/g, " ")
     .trim();
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -304,6 +321,10 @@ async function searchWikipedia(term, limit, car) {
         licence: stripHtml(meta.LicenseShortName?.value) || "Unknown",
         author: stripHtml(meta.Artist?.value) || "Unknown",
         descriptionUrl: info.descriptionurl,
+        // The thumbnail (iiurlwidth) is what gets downloaded, so its size is
+        // the one to record.
+        width: info.thumbwidth ?? info.width ?? null,
+        height: info.thumbheight ?? info.height ?? null,
       };
     })
     .filter(
@@ -353,7 +374,8 @@ async function searchWikipedia(term, limit, car) {
       const distance = Math.abs(Number(year[0]) - yearStart);
       if (distance <= 2) value += 5;
       else if (distance <= 5) value += 2;
-      else if (distance >= 10) value -= 8; // a different car entirely
+      else if (distance >= 10)
+        value -= 8; // a different car entirely
       else value -= 2;
     }
 
@@ -382,32 +404,28 @@ async function searchWikipedia(term, limit, car) {
  * Obtain a token allowed to write to the `cars` bucket.
  *
  * The bucket's RLS policy is admin-write, so the anonymous key cannot upload.
- * Two ways to satisfy it:
+ * The run signs in as a dedicated importer account, going *through* the policy
+ * rather than around it (so a successful upload also proves the policy works).
  *
- *   1. SUPABASE_SERVICE_ROLE_KEY, if the owner has put one in .env.local. It
- *      bypasses RLS entirely.
- *   2. Otherwise a short-lived session for a dedicated admin service account.
- *      This is preferred: it goes *through* the policy rather than around it,
- *      so a successful upload is also proof the policy is correct.
+ * SECURITY: the password is random and exists only for this run, and
+ * revokeImporter() demotes the account and scrambles the password again when
+ * the run ends. An earlier version used a fixed default password committed to
+ * the repository, which left a known admin login on the hosted project.
  *
- * The service account is created directly in auth.users with its email already
+ * The account is created directly in auth.users with its email already
  * confirmed, because Supabase's free tier rate-limits confirmation emails to a
  * few per hour and an import must not depend on a mailbox.
  */
+const IMPORTER_EMAIL = "aurix.importer@aurixdemo.io";
 let cachedToken = null;
+let importerActive = false;
 
 async function getUploadToken() {
   if (cachedToken) return cachedToken;
 
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (serviceKey) {
-    cachedToken = serviceKey;
-    console.log("  auth: using SUPABASE_SERVICE_ROLE_KEY");
-    return cachedToken;
-  }
-
-  const email = "aurix.importer@aurixdemo.io";
-  const password = process.env.AURIX_IMPORTER_PASSWORD ?? "aurix-importer-local-only";
+  const email = IMPORTER_EMAIL;
+  const password = randomBytes(24).toString("base64url");
+  importerActive = true;
 
   // Create or reset the account, then grant admin. The role is set with a
   // direct UPDATE because the profiles trigger deliberately refuses to let
@@ -485,8 +503,25 @@ async function getUploadToken() {
   }
 
   cachedToken = json.access_token;
-  console.log(`  auth: signed in as ${email} (admin) — no service key needed`);
+  console.log(`  auth: signed in as ${email} (temporary admin for this run)`);
   return cachedToken;
+}
+
+/** Undo getUploadToken(): no admin role and an unknown password once we stop. */
+async function revokeImporter() {
+  if (!importerActive) return;
+  await db.query(
+    `update auth.users set encrypted_password = crypt($2, gen_salt('bf')), updated_at = now()
+      where email = $1`,
+    [IMPORTER_EMAIL, randomBytes(32).toString("base64url")],
+  );
+  await db.query(
+    `update public.profiles set role = 'user'
+      where id = (select id from auth.users where email = $1)`,
+    [IMPORTER_EMAIL],
+  );
+  importerActive = false;
+  console.log("  auth: importer account revoked (role user, password scrambled)");
 }
 
 // --- preview / install ----------------------------------------------------
@@ -497,160 +532,191 @@ let skipped = 0;
 let missing = 0;
 let failed = 0;
 
-for (const car of cars) {
-  const label = `${car.mf_name} ${car.model_name} ${car.variant_name}`;
-  const broken = [];
-  for (const image of car.images) if (await isBroken(image.url)) broken.push(image);
+try {
+  for (const car of cars) {
+    const label = `${car.mf_name} ${car.model_name} ${car.variant_name}`;
+    const broken = [];
+    for (const image of car.images) if (await isBroken(image.url)) broken.push(image);
 
-  if (broken.length > 0) {
-    removed += broken.length;
-    if (doDownload) {
-      await db.query(`delete from car_media where id = any($1::uuid[])`, [
-        broken.map((image) => image.id),
-      ]);
-      console.log(`  − ${label}: removed broken image ${broken[0].url}`);
-    } else {
-      console.log(`  − ${label}: broken image ${broken[0].url} (--download removes it)`);
-    }
-  }
-
-  if (skipList.has(`${car.mf}/${car.model}/${car.variant}`)) {
-    console.log(`  — ${label}: listed in scripts/image-skip.txt, skipping`);
-    skipped += 1;
-    continue;
-  }
-
-  if (car.images.length > broken.length) {
-    console.log(`  — ${label}: already has an image, skipping`);
-    skipped += 1;
-    continue;
-  }
-
-  let picks = [];
-  let searchError = null;
-  for (const term of searchTerms(car)) {
-    try {
-      picks = await searchWikipedia(term, perCar, car);
-    } catch (error) {
-      searchError = error instanceof Error ? error.message : String(error);
-      break;
-    }
-    if (picks.length > 0) break;
-    await sleep(THROTTLE_MS); // Commons is donated infrastructure; go gently
-  }
-
-  if (searchError) {
-    console.log(`  ! ${label}: ${searchError}`);
-    failed += 1;
-    continue;
-  }
-
-  if (picks.length === 0) {
-    console.log(`  ✗ ${label}: no suitable photograph on Commons`);
-    missing += 1;
-    continue;
-  }
-
-  for (const pick of picks) {
-    console.log(`\n  ${label}`);
-    console.log(`     ${pick.title.replace(/^File:/, "")}`);
-    console.log(
-      `     ${pick.licence}  ·  ${pick.author.slice(0, 50)}  ·  ${prettyBytes(pick.bytes)} source`,
-    );
-    console.log(`     ${pick.descriptionUrl}`);
-
-    if (!doDownload) continue;
-
-    // Named after what the bytes are: a PNG saved as .jpg serves with the
-    // wrong content type.
-    const ext = pick.mime === "image/png" ? "png" : "jpg";
-    const filename = `${car.mf}-${car.model}-${car.variant}.${ext}`;
-    const credit = `Photo: ${pick.author} / Wikimedia Commons (${pick.licence})`;
-    const alt = `${label}`;
-
-    let imageRes;
-    try {
-      imageRes = await fetchRetry(pick.url);
-    } catch (error) {
-      console.log(
-        `     ! download failed: ${error instanceof Error ? error.message : error}`,
-      );
-      continue;
-    }
-    if (!imageRes.ok) {
-      console.log(`     ! download failed (HTTP ${imageRes.status})`);
-      continue;
-    }
-    const bytes = Buffer.from(await imageRes.arrayBuffer());
-
-    let publicUrl;
-
-    if (toSupabase) {
-      const token = await getUploadToken();
-
-      const uploadUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/cars/${filename}`;
-      const upload = await fetchRetry(uploadUrl, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${token}`,
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
-          "content-type": pick.mime,
-          "x-upsert": "true",
-        },
-        body: bytes,
-      });
-
-      if (!upload.ok) {
+    if (broken.length > 0) {
+      removed += broken.length;
+      if (doDownload) {
+        await db.query(`delete from car_media where id = any($1::uuid[])`, [
+          broken.map((image) => image.id),
+        ]);
+        console.log(`  − ${label}: removed broken image ${broken[0].url}`);
+      } else {
         console.log(
-          `     ! upload failed (HTTP ${upload.status}) ${await upload.text()}`,
+          `  − ${label}: broken image ${broken[0].url} (--download removes it)`,
+        );
+      }
+    }
+
+    if (skipList.has(`${car.mf}/${car.model}/${car.variant}`)) {
+      console.log(`  — ${label}: listed in scripts/image-skip.txt, skipping`);
+      skipped += 1;
+      continue;
+    }
+
+    if (car.images.length > broken.length) {
+      console.log(`  — ${label}: already has an image, skipping`);
+      skipped += 1;
+      continue;
+    }
+
+    let picks = [];
+    let searchError = null;
+    for (const term of searchTerms(car)) {
+      try {
+        picks = await searchWikipedia(term, perCar, car);
+      } catch (error) {
+        searchError = error instanceof Error ? error.message : String(error);
+        break;
+      }
+      if (picks.length > 0) break;
+      await sleep(THROTTLE_MS); // Commons is donated infrastructure; go gently
+    }
+
+    if (searchError) {
+      console.log(`  ! ${label}: ${searchError}`);
+      failed += 1;
+      continue;
+    }
+
+    if (picks.length === 0) {
+      console.log(`  ✗ ${label}: no suitable photograph on Commons`);
+      missing += 1;
+      continue;
+    }
+
+    for (const [pickIndex, pick] of picks.entries()) {
+      console.log(`\n  ${label}`);
+      console.log(`     ${pick.title.replace(/^File:/, "")}`);
+      console.log(
+        `     ${pick.licence}  ·  ${pick.author.slice(0, 50)}  ·  ${prettyBytes(pick.bytes)} source`,
+      );
+      console.log(`     ${pick.descriptionUrl}`);
+
+      if (!doDownload) continue;
+
+      // Named after what the bytes are: a PNG saved as .jpg serves with the
+      // wrong content type.
+      const ext = pick.mime === "image/png" ? "png" : "jpg";
+      // One file per pick: with --limit > 1 every pick used to overwrite the
+      // same file name.
+      const suffix = pickIndex === 0 ? "" : `-${pickIndex + 1}`;
+      const filename = `${car.mf}-${car.model}-${car.variant}${suffix}.${ext}`;
+      const credit = `Photo: ${pick.author} / Wikimedia Commons (${pick.licence})`;
+      // Models and variants often share words ("BMW M3 M3"); say it once.
+      const alt = [
+        ...new Set(`${car.mf_name} ${car.model_name} ${car.variant_name}`.split(" ")),
+      ].join(" ");
+
+      let imageRes;
+      try {
+        imageRes = await fetchRetry(pick.url);
+      } catch (error) {
+        console.log(
+          `     ! download failed: ${error instanceof Error ? error.message : error}`,
         );
         continue;
       }
-      publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/cars/${filename}`;
-      console.log(`     ↑ uploaded to Supabase Storage (${prettyBytes(bytes.length)})`);
-    } else {
-      mkdirSync(IMAGES_DIR, { recursive: true });
-      writeFileSync(path.join(IMAGES_DIR, filename), bytes);
-      publicUrl = `/images/cars/${filename}`;
-      console.log(
-        `     ↓ saved public/images/cars/${filename} (${prettyBytes(bytes.length)})`,
+      if (!imageRes.ok) {
+        console.log(`     ! download failed (HTTP ${imageRes.status})`);
+        continue;
+      }
+      const bytes = Buffer.from(await imageRes.arrayBuffer());
+
+      let publicUrl;
+
+      if (toSupabase) {
+        const token = await getUploadToken();
+
+        const uploadUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/cars/${filename}`;
+        const upload = await fetchRetry(uploadUrl, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${token}`,
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+            "content-type": pick.mime,
+            "x-upsert": "true",
+          },
+          body: bytes,
+        });
+
+        if (!upload.ok) {
+          console.log(
+            `     ! upload failed (HTTP ${upload.status}) ${await upload.text()}`,
+          );
+          continue;
+        }
+        publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/cars/${filename}`;
+        console.log(`     ↑ uploaded to Supabase Storage (${prettyBytes(bytes.length)})`);
+      } else {
+        mkdirSync(IMAGES_DIR, { recursive: true });
+        writeFileSync(path.join(IMAGES_DIR, filename), bytes);
+        publicUrl = `/images/cars/${filename}`;
+        console.log(
+          `     ↓ saved public/images/cars/${filename} (${prettyBytes(bytes.length)})`,
+        );
+      }
+
+      await db.query(
+        `insert into car_media (variant_id, type, url, alt, credit, is_primary, shot,
+                              source, source_url, license, author, storage_path,
+                              width, height, file_size_bytes, display_order)
+       values ($1, 'image', $2, $3, $4, $5, $6, 'Wikimedia Commons', $7, $8, $9, $10,
+               $11, $12, $13, $14)`,
+        [
+          car.variant_id,
+          publicUrl,
+          alt,
+          credit,
+          // Only one primary per variant (a unique index enforces it).
+          pickIndex === 0,
+          pickIndex === 0 ? "hero" : "gallery",
+          pick.descriptionUrl ?? null,
+          pick.licence,
+          pick.author,
+          toSupabase ? `cars/${filename}` : null,
+          pick.width,
+          pick.height,
+          bytes.length,
+          pickIndex,
+        ],
       );
+      console.log(`     ✓ registered in car_media`);
+      installed += 1;
     }
-
-    await db.query(
-      `insert into car_media (variant_id, type, url, alt, credit, is_primary)
-       values ($1, 'image', $2, $3, $4, true)`,
-      [car.variant_id, publicUrl, alt, credit],
-    );
-    console.log(`     ✓ registered in car_media`);
-    installed += 1;
   }
-}
 
-// --- attribution file -----------------------------------------------------
+  // --- attribution file -----------------------------------------------------
 
-if (doDownload && (installed > 0 || removed > 0)) {
-  const { rows } = await db.query(
-    `select cm.url, cm.credit, mf.name as mf, m.name as model, v.name as variant
+  if (doDownload && (installed > 0 || removed > 0)) {
+    const { rows } = await db.query(
+      `select cm.url, cm.credit, mf.name as mf, m.name as model, v.name as variant
      from car_media cm
      join car_variants v on v.id = cm.variant_id
      join car_models m on m.id = v.model_id
      join manufacturers mf on mf.id = m.manufacturer_id
      where cm.type = 'image' and cm.credit is not null
      order by mf.name`,
-  );
+    );
 
-  let doc =
-    "# Photograph credits\n\n" +
-    "Car photographs are from [Wikimedia Commons](https://commons.wikimedia.org) " +
-    "under free licences. CC BY-SA requires attribution — these credits are also " +
-    "stored in `car_media.credit`.\n\n";
-  for (const row of rows) {
-    doc += `- **${row.mf} ${row.model} ${row.variant}** — ${row.credit}\n`;
+    let doc =
+      "# Photograph credits\n\n" +
+      "Car photographs are from [Wikimedia Commons](https://commons.wikimedia.org) " +
+      "under free licences. CC BY-SA requires attribution — these credits are also " +
+      "stored in `car_media.credit`.\n\n";
+    for (const row of rows) {
+      doc += `- **${row.mf} ${row.model} ${row.variant}** — ${row.credit}\n`;
+    }
+    mkdirSync(IMAGES_DIR, { recursive: true });
+    writeFileSync(path.join(ROOT, "public", "images", "CREDITS.md"), doc, "utf8");
+    console.log(`\n  attribution written to public/images/CREDITS.md`);
   }
-  mkdirSync(IMAGES_DIR, { recursive: true });
-  writeFileSync(path.join(ROOT, "public", "images", "CREDITS.md"), doc, "utf8");
-  console.log(`\n  attribution written to public/images/CREDITS.md`);
+} finally {
+  await revokeImporter();
 }
 
 await db.end();

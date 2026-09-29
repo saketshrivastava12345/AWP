@@ -2,85 +2,101 @@ import type { Metadata } from "next";
 import { Boxes } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PartCard } from "@/components/parts/PartCard";
-import { listPartCategories } from "@/lib/queries/parts";
+import { IndexHero } from "@/components/manufacturers/IndexHero";
+import { PartsExplorer, type ExplorerCategory } from "@/components/parts/PartsExplorer";
+import { firstSentence, normalizeSearch } from "@/components/parts/parts-helpers";
+import { GROUP_LABELS } from "@/components/3d/viewer-config";
+import { getPartsIndex, type PartsIndexCategory } from "@/lib/queries/parts";
+import { formatNumber } from "@/lib/format";
+import { siteConfig } from "@/lib/site-config";
+
+const DESCRIPTION =
+  "Anatomy of the machine: what every major component does, what it is made of, where it sits, how it fails and what it contributes to performance.";
 
 export const metadata: Metadata = {
   title: "Parts Encyclopedia",
-  description:
-    "Anatomy of the machine: what every major component does, what it is made of, how it fails and what it contributes to performance.",
+  description: DESCRIPTION,
+  alternates: { canonical: `${siteConfig.url}/parts` },
+  openGraph: {
+    title: "Parts Encyclopedia",
+    description: DESCRIPTION,
+    type: "website",
+    url: `${siteConfig.url}/parts`,
+  },
 };
 
+/**
+ * Only what a card shows plus one normalised search string travels to the
+ * browser, not every paragraph of every part.
+ */
+function toExplorer(index: PartsIndexCategory[]): ExplorerCategory[] {
+  return index.map((category) => ({
+    id: category.id,
+    slug: category.slug,
+    name: category.name,
+    description: category.description,
+    parts: category.parts.map((part) => {
+      const systemLabel = part.viewer_group ? GROUP_LABELS[part.viewer_group] : null;
+      return {
+        id: part.id,
+        slug: part.slug,
+        name: part.name,
+        summary: firstSentence(part.function ?? part.description),
+        systemLabel,
+        usageCount: part.usageCount,
+        search: normalizeSearch(
+          [
+            part.name,
+            category.name,
+            systemLabel,
+            part.function,
+            part.description,
+            part.typical_materials,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        ),
+      };
+    }),
+  }));
+}
+
 export default async function PartsPage() {
-  const categories = await listPartCategories();
-  const totalParts = categories.reduce((sum, category) => sum + category.parts.length, 0);
+  const index = await getPartsIndex();
+  const parts = index.flatMap((category) => category.parts);
+  const hasData = parts.length > 0;
 
   return (
-    <Container className="py-16">
-      <header>
-        <p className="text-label">Anatomy of the Machine</p>
-        <h1 className="mt-5 font-display text-2xl tracking-[0.06em] text-ink-50 sm:text-3xl">
-          COMPONENTS, EXPLAINED
-        </h1>
-        <p className="mt-5 max-w-2xl text-sm leading-relaxed text-ink-300">
-          {totalParts} components across {categories.length} systems — what each one does,
-          what it is made of, how it fails, and what it actually contributes.
+    <>
+      <IndexHero
+        title="Parts encyclopedia"
+        lead={
+          <p>
+            What each component does, what it is made of, where it sits, how it fails and
+            what it actually contributes.
+            {hasData
+              ? ` ${formatNumber(parts.length)} components in ${formatNumber(index.length)} categories: filter by name, material or job, or open a category.`
+              : null}
+          </p>
+        }
+      />
+
+      <Container className="pb-24 lg:pb-32">
+        {hasData ? (
+          <PartsExplorer categories={toExplorer(index)} />
+        ) : (
+          <EmptyState
+            icon={<Boxes className="size-7" strokeWidth={1.25} aria-hidden="true" />}
+            title="The encyclopedia is unavailable"
+            description="The catalogue could not be reached just now, so there are no components to show. Reloading the page usually resolves it."
+          />
+        )}
+
+        <p className="mt-20 max-w-[68ch] border-t border-line-subtle pt-8 text-caption">
+          Component descriptions are general engineering explanations, not specific to any
+          one vehicle. Where a car&apos;s own component differs, its page says so.
         </p>
-      </header>
-
-      {categories.length === 0 ? (
-        <EmptyState
-          className="mt-14"
-          icon={<Boxes className="size-7" strokeWidth={1.25} aria-hidden="true" />}
-          title="No parts found"
-          description="The catalogue could not be reached. Reloading often resolves it."
-        />
-      ) : (
-        <>
-          <nav aria-label="Part categories" className="mt-12 border-y border-line py-4">
-            <ul className="flex flex-wrap gap-2">
-              {categories.map((category) => (
-                <li key={category.id}>
-                  <a
-                    href={`#${category.slug}`}
-                    className="rounded-xs border border-line px-3 py-1.5 text-xs text-ink-400 transition-colors duration-200 hover:border-gold-700 hover:text-gold-300"
-                  >
-                    {category.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div className="mt-16 space-y-16">
-            {categories.map((category) => (
-              <section
-                key={category.id}
-                id={category.slug}
-                aria-labelledby={`${category.slug}-heading`}
-                className="scroll-mt-28"
-              >
-                <h2
-                  id={`${category.slug}-heading`}
-                  className="font-display text-sm tracking-[0.18em] text-ink-50 uppercase"
-                >
-                  {category.name}
-                </h2>
-                {category.description ? (
-                  <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-400">
-                    {category.description}
-                  </p>
-                ) : null}
-                <div className="mt-7 grid gap-px sm:grid-cols-2 lg:grid-cols-3">
-                  {category.parts.map((part) => (
-                    <PartCard key={part.id} part={part} />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        </>
-      )}
-    </Container>
+      </Container>
+    </>
   );
 }

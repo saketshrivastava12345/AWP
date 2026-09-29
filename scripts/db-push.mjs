@@ -30,6 +30,19 @@ if (!dbUrl) {
   process.exit(1);
 }
 
+// The example connection string from .env.example points at a host that does
+// not exist, so a copy of that file that was never filled in fails here with
+// "ENOTFOUND aws-0-region.pooler.supabase.com". Say so instead.
+if (/your-project-ref|YOUR_DB_PASSWORD|aws-0-region/.test(dbUrl)) {
+  console.error(
+    "SUPABASE_DB_URL in .env.local still holds the example value from .env.example.\n" +
+      "Replace it with your project's connection string: Supabase dashboard -> Project\n" +
+      "Settings -> Database -> Connection string (URI), with your database password\n" +
+      "filled in. `npm run doctor` checks every value in .env.local.",
+  );
+  process.exit(1);
+}
+
 // Invoke the CLI's JS entry point with the current Node binary rather than the
 // `supabase` shim. Node 22 refuses to spawn .cmd shims without `shell: true`,
 // and putting the connection string through a shell would risk mangling it.

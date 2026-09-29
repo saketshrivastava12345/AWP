@@ -1,143 +1,673 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { Container } from "@/components/ui/Container";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ButtonLink } from "@/components/ui/Button";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { SubNav } from "@/components/ui/SubNav";
+import { IndexHero } from "@/components/manufacturers/IndexHero";
+import { HudFrame } from "@/components/fx/HudFrame";
+import { Reveal } from "@/components/fx/Reveal";
+import { ScrambleText } from "@/components/fx/ScrambleText";
+import { getCatalogueCounts } from "@/lib/queries/cars";
+import { listMediaCredits, type MediaCreditEntry } from "@/lib/queries/credits";
+import {
+  PRICE_TYPE_LABELS,
+  PRICE_TYPE_NOTES,
+  STALE_AFTER_DAYS,
+} from "@/lib/pricing/engine";
+import {
+  PROVENANCE_DESCRIPTIONS,
+  PROVENANCE_LABELS,
+  type ProvenanceStatus,
+} from "@/lib/detail/provenance";
+import { formatNumber } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
+import { cn } from "@/lib/utils";
+
+const DESCRIPTION =
+  "How AURIX works: its data-honesty principles, where the figures and prices come from, credits for every photograph, and the technology behind it.";
 
 export const metadata: Metadata = {
   title: "About",
-  description:
-    "AURIX is a global automotive encyclopedia built as a B.Tech CSE mini project — a normalized Postgres catalogue behind an interactive 3D front end.",
+  description: DESCRIPTION,
+  alternates: { canonical: `${siteConfig.url}/about` },
+  openGraph: {
+    title: "About AURIX",
+    description: DESCRIPTION,
+    type: "website",
+    url: `${siteConfig.url}/about`,
+  },
 };
 
-const STACK = [
-  {
-    name: "Next.js 16 · React 19",
-    detail:
-      "App Router with server components by default. Client components are used only where something is genuinely interactive — the 3D canvas, the filters, the search overlay.",
-  },
-  {
-    name: "TypeScript (strict)",
-    detail:
-      "Including noUncheckedIndexedAccess, because the entire catalogue is built around specification values that may legitimately be absent.",
-  },
-  {
-    name: "Supabase · PostgreSQL",
-    detail:
-      "A normalized twenty-table schema with row level security on every table, a read-optimized catalogue view, and full-text plus trigram search indexes.",
-  },
-  {
-    name: "React Three Fiber · Three.js",
-    detail:
-      "The interactive viewer, the exploded view and engineering mode. Cars are built procedurally from primitives, so every subsystem is a separately addressable group.",
-  },
-  {
-    name: "GSAP · ScrollTrigger",
-    detail:
-      "Camera choreography and scroll storytelling — all of it disabled when the visitor prefers reduced motion.",
-  },
-  {
-    name: "Tailwind CSS v4",
-    detail:
-      "CSS-first configuration. The whole visual system is a set of design tokens declared in one stylesheet.",
-  },
+const SECTIONS = [
+  { id: "principles", label: "Principles" },
+  { id: "data", label: "Data & sources" },
+  { id: "credits", label: "Credits" },
+  { id: "stack", label: "Technology" },
 ] as const;
 
 const PRINCIPLES = [
   {
     title: "Data honesty",
-    body: "Every figure in this catalogue is a published manufacturer specification. Where a number is not known with confidence, the field is left empty and the interface says “Not available” — it is never estimated, converted or filled in to make a table look complete. Each specification records where it came from, and any caveat that applies to it.",
+    body: "Every figure is published by the manufacturer, or by the test it was homologated under, and records where it came from. When a figure is not known with confidence the field stays empty and the interface says “Not available”, or shows “—” in dense comparison tables.",
   },
   {
-    title: "Separation of data and presentation",
-    body: "No car data is hardcoded in a component. Everything is read from Postgres through typed query functions, which means the catalogue can grow without a single change to the interface.",
+    title: "No invented figures",
+    body: "Nothing is estimated, interpolated or back-calculated to make a table look complete. A figure published in another form is left out rather than converted: litres per 100 km are not turned into kilometres per litre, and a dry weight is never presented as a kerb weight.",
   },
   {
-    title: "Accessible by construction",
-    body: "Semantic markup, visible focus states, full keyboard operation including the 3D camera presets, and complete respect for reduced-motion preferences.",
+    title: "No currency conversion",
+    body: "A price is shown in the currency it was published in. There are no exchange rates anywhere in AURIX, so prices in different currencies are never ranked, summed or compared as if they were the same number.",
+  },
+  {
+    title: "Sourced, dated prices only",
+    body: `A price appears only with its type, its market, its source and the date it was last checked, and one not re-checked within ${STALE_AFTER_DAYS} days is flagged as possibly out of date. The on-road total AURIX adds up from published components is labelled “${PRICE_TYPE_LABELS.calculated}”, never presented as a quotation.`,
+  },
+  {
+    title: "Exact model or representation",
+    body: "When a car has a 3D model of that exact vehicle, the viewer says so. Otherwise it shows a representation: the body style’s profile scaled to the car’s published dimensions, with the engine, motors and battery placed from its specification. It is labelled as a representation and never passed off as the car itself.",
   },
 ] as const;
 
-export default function AboutPage() {
+const PRICE_TYPES = [
+  "manufacturer_list",
+  "dealer_list",
+  "ex_showroom",
+  "on_road",
+  "estimated_on_road",
+  "calculated",
+] as const;
+
+/** The pricing UI's note says "the components above"; out of that context: */
+const CALCULATED_NOTE =
+  "The sum of a price's published components (the listed price plus registration, road tax, insurance and other charges), added up by AURIX and labelled as a calculation. Not a quotation.";
+
+const PROVENANCE_ORDER: readonly ProvenanceStatus[] = [
+  "verified",
+  "source-recorded",
+  "unsourced",
+];
+
+/** The same tones as the car page's data-provenance table. */
+const PROVENANCE_TONE: Record<ProvenanceStatus, BadgeTone> = {
+  verified: "positive",
+  "source-recorded": "neutral",
+  unsourced: "neutral",
+};
+
+const CONVENTIONS = [
+  {
+    term: "Power",
+    detail:
+      "Stored exactly as published: metric PS for European makers, SAE net hp for American and Japanese ones. The two differ by about 1.4%, and every figure records which convention it follows.",
+  },
+  {
+    term: "Weight",
+    detail:
+      "Kerb weight only. Makers that publish a dry weight have it recorded in the notes, and figures derived from weight, such as power-to-weight, are left empty rather than computed from it.",
+  },
+  {
+    term: "Range and efficiency",
+    detail:
+      "Always stored with the test standard it was measured under (WLTP, EPA, ARAI, NEDC or CLTC). Figures from different standards are never presented as comparable.",
+  },
+  {
+    term: "Photographs",
+    detail:
+      "From Wikimedia Commons under free licences, each checked by eye before use. A car without a verified photograph shows a body-style drawing, labelled as a drawing.",
+  },
+] as const;
+
+const STACK = [
+  {
+    name: "Next.js 16 · React 19",
+    detail:
+      "App Router with Cache Components: catalogue pages are served from a prerendered static shell, with per-visitor parts such as the account menu streamed in. Server components by default; client code only where something is genuinely interactive.",
+  },
+  {
+    name: "TypeScript, strict",
+    detail:
+      "Including noUncheckedIndexedAccess, because the whole catalogue is built around values that may legitimately be absent.",
+  },
+  {
+    name: "Supabase · PostgreSQL",
+    detail:
+      "A normalised schema with row-level security on every table, a security-invoker catalogue view so drafts can never leak through it, full-text and typo-tolerant trigram search, and prices stored as sourced, dated observations.",
+  },
+  {
+    name: "Three.js · React Three Fiber",
+    detail:
+      "The 3D viewer. The body is a lofted parametric surface drawn from each car’s published dimensions, and the engine, motors, battery and running gear are laid out from its specification, so every subsystem can be inspected or pulled apart.",
+  },
+  {
+    name: "GSAP · ScrollTrigger",
+    detail:
+      "Camera choreography and the scroll-driven anatomy tour, all of it switched off when the visitor prefers reduced motion.",
+  },
+  {
+    name: "Tailwind CSS v4",
+    detail:
+      "CSS-first configuration: the entire visual system is a set of design tokens declared in one stylesheet.",
+  },
+  {
+    name: "Vitest",
+    detail:
+      "Unit tests for the pure logic behind the interface: the search parser, pricing, the anatomy tour, and the map and part-location geometry.",
+  },
+] as const;
+
+const OTHER_CREDITS = [
+  {
+    term: "World map",
+    detail: (
+      <>
+        Land outlines from{" "}
+        <ExternalLink href="https://www.naturalearthdata.com/">
+          Natural Earth
+        </ExternalLink>{" "}
+        1:110m (public domain), via the{" "}
+        <ExternalLink href="https://github.com/topojson/world-atlas">
+          world-atlas
+        </ExternalLink>{" "}
+        TopoJSON package (ISC licence), rasterised into the dot grid at build time.
+      </>
+    ),
+  },
+  {
+    term: "Typefaces",
+    detail:
+      "Inter Tight, Inter, JetBrains Mono and, for the wordmark, Michroma, each under the SIL Open Font License, served through next/font.",
+  },
+  {
+    term: "Icons",
+    detail: (
+      <>
+        <ExternalLink href="https://lucide.dev/">Lucide</ExternalLink> (ISC licence).
+      </>
+    ),
+  },
+] as const;
+
+function ExternalLink({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <Container className="py-20">
-      <p className="text-label">About the project</p>
-      <h1 className="mt-5 max-w-3xl font-display text-2xl leading-[1.3] tracking-[0.06em] text-ink-50 sm:text-3xl">
-        A GLOBAL ENCYCLOPEDIA OF THE AUTOMOBILE
-      </h1>
-      <p className="mt-6 max-w-2xl leading-relaxed text-ink-300">
-        AURIX organises the car from the outside in — country, manufacturer, model,
-        variant, specification, component — and lets you explore each level interactively.
-        It was built as a mini project for B.Tech Computer Science and Engineering at
-        Pimpri Chinchwad University.
-      </p>
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        "inline-flex items-baseline gap-0.5 text-ink-100 underline decoration-ink-600 underline-offset-4 transition-colors duration-(--duration-fast) hover:text-ink-50 hover:decoration-ink-300",
+        className,
+      )}
+    >
+      {children}
+      <ArrowUpRight className="size-3.5 self-center text-ink-400" aria-hidden="true" />
+      <span className="sr-only"> (opens in a new tab)</span>
+    </a>
+  );
+}
 
-      <section className="mt-20" aria-labelledby="principles">
-        <SectionHeading
-          overline="How it is built"
-          title={<span id="principles">Principles</span>}
-        />
-        <div className="mt-8 grid gap-px sm:grid-cols-3">
-          {PRINCIPLES.map((principle) => (
-            <GlassCard key={principle.title} className="rounded-none p-7">
-              <h3 className="font-display text-[11px] tracking-[0.18em] text-gold-300 uppercase">
-                {principle.title}
-              </h3>
-              <p className="mt-4 text-sm leading-relaxed text-ink-300">
-                {principle.body}
-              </p>
-            </GlassCard>
-          ))}
+/**
+ * One chapter of the page: the title (and an optional lead) in the left
+ * third on desktop, the content in the right two thirds, so prose keeps a
+ * readable measure without a narrow page.
+ */
+function Chapter({
+  id,
+  title,
+  lead,
+  code,
+  first = false,
+  children,
+}: {
+  id: string;
+  title: string;
+  lead?: ReactNode;
+  /** Decorative chapter index, e.g. "01" (aria-hidden). */
+  code?: string;
+  first?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Container
+      as="section"
+      id={id}
+      aria-labelledby={`${id}-heading`}
+      className={cn("py-16 lg:py-24", !first && "border-t border-line-subtle")}
+    >
+      <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+        <div className="lg:col-span-4">
+          {code ? (
+            <p className="mb-4 flex items-center gap-3 text-eyebrow">
+              <span
+                aria-hidden="true"
+                className="h-px w-8 shrink-0 bg-cyan-400 shadow-[0_0_8px_var(--color-cyan-400)]"
+              />
+              Chapter
+              <span aria-hidden="true" className="hud-label text-ink-600">
+                {"// "}
+                {code}
+              </span>
+            </p>
+          ) : null}
+          <h2 id={`${id}-heading`} className="text-h2">
+            <ScrambleText text={title} />
+          </h2>
+          {lead ? <p className="mt-4 max-w-[48ch] text-body">{lead}</p> : null}
         </div>
-      </section>
+        <Reveal variant="fade" className="min-w-0 lg:col-span-8">
+          {children}
+        </Reveal>
+      </div>
+    </Container>
+  );
+}
 
-      <section className="mt-20 scroll-mt-24" id="stack" aria-labelledby="stack-heading">
-        <SectionHeading
-          overline="Technology"
-          title={<span id="stack-heading">The stack</span>}
-        />
-        <dl className="mt-8 border-t border-line">
-          {STACK.map((item) => (
-            <div
-              key={item.name}
-              className="grid gap-2 border-b border-line-subtle py-6 sm:grid-cols-[minmax(0,14rem)_1fr] sm:gap-8"
+/** A sub-heading inside a chapter. */
+function SubTitle({ children }: { children: ReactNode }) {
+  return <h3 className="text-h3">{children}</h3>;
+}
+
+/** One credit as table cells that stack into labelled lines on small screens. */
+function CreditCells({
+  entry,
+  showFidelity,
+}: {
+  entry: MediaCreditEntry;
+  showFidelity: boolean;
+}) {
+  const credit = entry.credit;
+  const licenseHref = credit?.licenseUrl ?? null;
+  const cell =
+    "block py-1 align-top md:table-cell md:border-b md:border-line-subtle md:py-4 md:pr-6 " +
+    "before:mr-2 before:text-caption before:content-[attr(data-label)] md:before:content-none";
+
+  return (
+    <>
+      <td className={cn(cell, "pt-4 md:pt-4")} data-label="Car">
+        <Link
+          href={entry.carHref}
+          className="text-ink-50 transition-colors duration-(--duration-fast) hover:text-ink-200"
+        >
+          {entry.carName}
+        </Link>
+      </td>
+      <td className={cell} data-label={showFidelity ? "Author" : "Photographer"}>
+        <span className="text-ink-300">
+          {credit?.author ?? credit?.text ?? "Not recorded"}
+        </span>
+      </td>
+      <td className={cell} data-label="Licence">
+        {credit?.license ? (
+          licenseHref ? (
+            <ExternalLink href={licenseHref}>{credit.license}</ExternalLink>
+          ) : (
+            <span className="text-ink-300">{credit.license}</span>
+          )
+        ) : (
+          <span className="text-ink-400">Not recorded</span>
+        )}
+      </td>
+      <td className={cn(cell, !showFidelity && "pb-4")} data-label="Source">
+        {credit?.sourceUrl ? (
+          <ExternalLink href={credit.sourceUrl}>
+            {credit.sourceName ?? "Source"}
+          </ExternalLink>
+        ) : (
+          <span className="text-ink-300">{credit?.sourceName ?? "Not recorded"}</span>
+        )}
+      </td>
+      {showFidelity ? (
+        <td className={cn(cell, "pb-4")} data-label="Fidelity">
+          <span className="text-ink-300">
+            {entry.isExactModel === true
+              ? "Exact model"
+              : entry.isExactModel === false
+                ? "Representation"
+                : "Not recorded"}
+          </span>
+        </td>
+      ) : null}
+    </>
+  );
+}
+
+function CreditTable({
+  entries,
+  caption,
+  showFidelity = false,
+}: {
+  entries: MediaCreditEntry[];
+  caption: string;
+  showFidelity?: boolean;
+}) {
+  return (
+    <table className="mt-6 w-full border-t border-line-subtle text-left text-body-s">
+      <caption className="sr-only">{caption}</caption>
+      <thead className="sr-only md:not-sr-only">
+        <tr>
+          {["Car", showFidelity ? "Author" : "Photographer", "Licence", "Source"]
+            .concat(showFidelity ? ["Fidelity"] : [])
+            .map((heading) => (
+              <th
+                key={heading}
+                scope="col"
+                className="border-b border-line-subtle py-3 pr-6 text-caption font-normal"
+              >
+                {heading}
+              </th>
+            ))}
+        </tr>
+      </thead>
+      <tbody>
+        {entries.map((entry) => (
+          <tr
+            key={entry.id}
+            className="block border-b border-line-subtle md:table-row md:border-0"
+          >
+            <CreditCells entry={entry} showFidelity={showFidelity} />
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+export default async function AboutPage() {
+  const [counts, credits] = await Promise.all([getCatalogueCounts(), listMediaCredits()]);
+  const photos = credits.filter((entry) => entry.type === "image");
+  const models = credits.filter((entry) => entry.type === "glb");
+  const hasCounts = counts.variants > 0 || counts.manufacturers > 0;
+
+  const rowList = "border-t border-line-subtle";
+  const row =
+    "grid gap-2 border-b border-line-subtle py-5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-8";
+  const term = "text-body-s font-medium text-ink-50";
+  const detail = "text-body-s text-ink-300";
+
+  return (
+    <>
+      <IndexHero
+        overline="About the project"
+        title="A global encyclopedia of the automobile"
+        lead={
+          <>
+            <p>
+              AURIX organises the car from the outside in: country, brand, model, variant,
+              specification and component, each explorable in depth and in 3D.
+            </p>
+            <p className="mt-4 text-body-s text-ink-400">
+              Built as a mini project for B.Tech Computer Science and Engineering at
+              Pimpri Chinchwad University.
+            </p>
+          </>
+        }
+        stats={
+          hasCounts
+            ? [
+                { label: "Countries", value: formatNumber(counts.countries) },
+                { label: "Brands", value: formatNumber(counts.manufacturers) },
+                {
+                  label: "Variants",
+                  value: formatNumber(counts.variants),
+                  hint: "Published variants in the catalogue.",
+                },
+                { label: "Components", value: formatNumber(counts.parts) },
+              ]
+            : []
+        }
+      />
+
+      <SubNav
+        items={SECTIONS.map((section) => ({
+          label: section.label,
+          href: `#${section.id}`,
+        }))}
+      />
+
+      {/* ---------------------------------------------------- Principles */}
+      <Chapter
+        id="principles"
+        code="01"
+        first
+        title="Principles"
+        lead="A car encyclopedia is only useful if it can be trusted, so these rules win over completeness every time."
+      >
+        <Reveal as="ol" stagger className="grid gap-4 sm:gap-5">
+          {PRINCIPLES.map((principle, index) => (
+            <HudFrame
+              key={principle.title}
+              as="li"
+              label={`RULE // ${String(index + 1).padStart(2, "0")}`}
+              className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-4"
             >
-              <dt className="font-display text-[11px] tracking-[0.14em] text-ink-100 uppercase">
+              <span
+                aria-hidden="true"
+                className="pt-1 font-hud text-sm text-cyan-300 tabular-nums glow-text-cyan"
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <h3 className="text-h4">
+                  <span className="sr-only">Principle {index + 1}: </span>
+                  {principle.title}
+                </h3>
+                <p className="mt-2 max-w-[68ch] text-body">{principle.body}</p>
+              </div>
+            </HudFrame>
+          ))}
+        </Reveal>
+      </Chapter>
+
+      {/* -------------------------------------------------------- Data */}
+      <Chapter
+        id="data"
+        code="02"
+        title="Data & sources"
+        lead="Where the figures and prices come from, how they are checked, and the conventions they follow."
+      >
+        <div className="space-y-16">
+          <div className="grid gap-12 xl:grid-cols-2">
+            <div>
+              <SubTitle>Where figures come from</SubTitle>
+              <div className="mt-4 space-y-4 text-body">
+                <p>
+                  Specifications are taken from what manufacturers publish: technical
+                  specification sheets, press kits and official configurators. Range and
+                  efficiency come from the homologation test the car was certified under.
+                </p>
+                <p>
+                  The catalogue is curated by hand in PostgreSQL, where constraints
+                  enforce the rules above: a price cannot be saved without a source link,
+                  and a 3D model cannot be added without saying whether it is the exact
+                  vehicle.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <SubTitle>Provenance and verification</SubTitle>
+              <p className="mt-4 text-body">
+                Every specification table records its source, a link to it and the date it
+                was last verified. Each block of a car&apos;s page shows its status:
+              </p>
+              <dl className="mt-6 space-y-4">
+                {PROVENANCE_ORDER.map((status) => (
+                  <div
+                    key={status}
+                    className="grid gap-2 sm:grid-cols-[9rem_minmax(0,1fr)]"
+                  >
+                    <dt>
+                      <Badge tone={PROVENANCE_TONE[status]}>
+                        {PROVENANCE_LABELS[status]}
+                      </Badge>
+                    </dt>
+                    <dd className="text-body-s text-ink-300">
+                      {PROVENANCE_DESCRIPTIONS[status]}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </div>
+
+          <div>
+            <SubTitle>How prices are sourced</SubTitle>
+            <p className="mt-4 max-w-[68ch] text-body">
+              Every price is a dated observation with a source link, scoped to a market (a
+              country, a state or a city, since on-road charges differ), and history is
+              kept rather than overwritten. What a figure is matters as much as the
+              number, so each one carries its type:
+            </p>
+            <dl className="mt-8 grid gap-x-12 border-t border-line-subtle sm:grid-cols-2">
+              {PRICE_TYPES.map((type) => (
+                <div key={type} className="border-b border-line-subtle py-5">
+                  <dt className={term}>{PRICE_TYPE_LABELS[type]}</dt>
+                  <dd className="mt-1.5 text-body-s text-ink-400">
+                    {type === "calculated" ? CALCULATED_NOTE : PRICE_TYPE_NOTES[type]}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-5 text-caption">
+              A price not re-verified within {STALE_AFTER_DAYS} days is marked as possibly
+              out of date. Prices are never converted between currencies.
+            </p>
+          </div>
+
+          <div>
+            <SubTitle>Conventions</SubTitle>
+            <dl className={cn("mt-6", rowList)}>
+              {CONVENTIONS.map((item) => (
+                <div key={item.term} className={row}>
+                  <dt className={term}>{item.term}</dt>
+                  <dd className={detail}>{item.detail}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </Chapter>
+
+      {/* ----------------------------------------------------- Credits */}
+      <Chapter
+        id="credits"
+        code="03"
+        title="Credits"
+        lead="Creative Commons licences require attribution. It is given here for every photograph and model, and beside each photograph on its car's page."
+      >
+        <div className="space-y-16">
+          <div>
+            <SubTitle>
+              Photographs{" "}
+              <span className="text-body-s font-normal text-ink-400 tabular-nums">
+                {photos.length}
+              </span>
+            </SubTitle>
+            {photos.length > 0 ? (
+              <CreditTable entries={photos} caption="Photograph credits" />
+            ) : (
+              <p className="mt-4 max-w-[68ch] text-body text-ink-400">
+                No photographs are in use right now, so there is nothing to credit. Cars
+                are shown with body-style drawings instead.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <SubTitle>
+              3D models{" "}
+              <span className="text-body-s font-normal text-ink-400 tabular-nums">
+                {models.length}
+              </span>
+            </SubTitle>
+            {models.length > 0 ? (
+              <CreditTable entries={models} caption="3D model credits" showFidelity />
+            ) : (
+              <p className="mt-4 max-w-[68ch] text-body text-ink-400">
+                No third-party 3D models are in use. Every car in the viewer is
+                AURIX&apos;s own representation, built from its published dimensions and
+                specification, so there is no one else to credit.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <SubTitle>Map, type and icons</SubTitle>
+            <dl className={cn("mt-6", rowList)}>
+              {OTHER_CREDITS.map((item) => (
+                <div key={item.term} className={row}>
+                  <dt className={term}>{item.term}</dt>
+                  <dd className={detail}>{item.detail}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </Chapter>
+
+      {/* ------------------------------------------------------- Stack */}
+      <Chapter
+        id="stack"
+        code="04"
+        title="Technology"
+        lead="What AURIX is built with, and why each piece is there."
+      >
+        <Reveal as="dl" stagger className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+          {STACK.map((item, index) => (
+            <div key={item.name} className="relative rounded-card p-5 hud-panel sm:p-6">
+              <span aria-hidden="true" className="hud-brackets -m-px [--hud-l:10px]" />
+              <span
+                aria-hidden="true"
+                className="absolute top-3 right-4 hud-label text-ink-600"
+              >
+                {`SYS.${String(index + 1).padStart(2, "0")}`}
+              </span>
+              <dt className="pr-14 font-hud text-[13px] leading-snug text-ink-50">
                 {item.name}
               </dt>
-              <dd className="text-sm leading-relaxed text-ink-300">{item.detail}</dd>
+              <dd className="mt-3 text-body-s text-ink-300">{item.detail}</dd>
             </div>
           ))}
-        </dl>
-      </section>
-
-      <section className="mt-20" aria-labelledby="disclaimer-heading">
-        <h2
-          id="disclaimer-heading"
-          className="font-display text-sm tracking-[0.18em] text-ink-100 uppercase"
-        >
-          A note on specifications
-        </h2>
-        <p className="mt-5 max-w-2xl text-sm leading-relaxed text-ink-400">
-          {siteConfig.disclaimer} Power output is recorded exactly as each manufacturer
-          publishes it — metric horsepower for European makers, SAE net horsepower for
-          American and Japanese ones — and every specification notes which convention it
-          follows. Prices are indicative launch figures and are never converted between
-          currencies.
+        </Reveal>
+        <p className="mt-6 text-body-s text-ink-300">
+          The source code is public:{" "}
+          <ExternalLink href={siteConfig.repository}>GitHub repository</ExternalLink>.
         </p>
-        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink-400">
-          All marque names, model names and specifications are the property of their
-          respective manufacturers. This is a non-commercial educational project.
-        </p>
+      </Chapter>
 
-        <div className="mt-10 flex flex-wrap gap-3">
-          <ButtonLink href="/cars">Browse the collection</ButtonLink>
-          <ButtonLink href="/parts" variant="secondary">
-            Parts encyclopedia
-          </ButtonLink>
+      {/* ------------------------------------------------------ Notice */}
+      <Container
+        as="section"
+        aria-labelledby="notice-heading"
+        className="border-t border-line-subtle pt-16 pb-24 lg:pt-24 lg:pb-32"
+      >
+        <div className="max-w-3xl">
+          <h2 id="notice-heading" className="text-h3">
+            A note on specifications
+          </h2>
+          <p className="mt-4 max-w-[68ch] text-body-s text-ink-400">
+            {siteConfig.disclaimer} All brand names, model names and specifications are
+            the property of their respective manufacturers; AURIX is a non-commercial
+            educational project and is not affiliated with any of them.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <ButtonLink href="/cars">Browse the collection</ButtonLink>
+            <ButtonLink href="/parts" variant="secondary">
+              Parts encyclopedia
+            </ButtonLink>
+          </div>
         </div>
-      </section>
-    </Container>
+      </Container>
+    </>
   );
 }

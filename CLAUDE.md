@@ -9,23 +9,27 @@ Content hierarchy: **Country → Manufacturer → Model → Variant → Specific
 
 ## Commands
 
-| Command                           | Purpose                                                      |
-| --------------------------------- | ------------------------------------------------------------ |
-| `npm run dev`                     | Dev server (Turbopack) on http://localhost:3000              |
-| `npm run build`                   | Production build                                             |
-| `npm run lint` / `lint:fix`       | ESLint                                                       |
-| `npm run typecheck`               | `tsc --noEmit`                                               |
-| `npm run test` / `test:watch`     | Vitest unit tests                                            |
-| `npm run format` / `format:check` | Prettier                                                     |
-| `npm run verify`                  | lint → build → typecheck (run before finishing a phase)      |
-| `npm run db:push`                 | Apply `supabase/migrations/` (add `-- --dry-run` to preview) |
-| `npm run db:seed`                 | Apply `supabase/seed.sql` (idempotent — safe to re-run)      |
-| `npm run db:verify`               | Row counts for every table plus the catalog view             |
-| `npm run db:types`                | Regenerate `src/types/database.ts` from the hosted schema    |
+| Command                           | Purpose                                                       |
+| --------------------------------- | ------------------------------------------------------------- |
+| `npm run dev`                     | Dev server (Turbopack) on http://localhost:3000               |
+| `npm run build`                   | Production build                                              |
+| `npm run lint` / `lint:fix`       | ESLint                                                        |
+| `npm run typecheck`               | `next typegen` then `tsc --noEmit`                            |
+| `npm run test` / `test:watch`     | Vitest unit tests                                             |
+| `npm run format` / `format:check` | Prettier                                                      |
+| `npm run verify`                  | lint → typecheck → test → build (run before finishing)        |
+| `npm run db:push`                 | Apply `supabase/migrations/` (add `-- --dry-run` to preview)  |
+| `npm run db:seed`                 | Apply `supabase/seed.sql` (idempotent — safe to re-run)       |
+| `npm run db:verify`               | Row counts for every table, views and the search function     |
+| `npm run db:types`                | Regenerate `src/types/database.ts` from the hosted schema     |
+| `npm run doctor`                  | Check .env.local, DNS, the key, migrations and seed, in order |
 
-`verify` runs **build before typecheck** on purpose: Next 16 generates the global
-`LayoutProps` / `PageProps` route types into `.next/types` during a build, so a
-standalone `tsc --noEmit` fails on a clean checkout until one build has run.
+Next 16 generates the global `LayoutProps` / `PageProps` route types into
+`.next/types`, so a bare `tsc --noEmit` fails on a clean checkout. `typecheck`
+therefore runs `next typegen` first (it writes the route types without a full
+build), which lets `verify` typecheck before the slow build step. CI
+(`.github/workflows/ci.yml`) runs lint, `format:check`, typecheck, tests and a
+build **without** Supabase credentials — the fresh-clone state.
 
 ---
 
@@ -71,29 +75,51 @@ All versions are pinned exactly (no `^`) so the build is reproducible for markin
 
 ```
 src/
-  app/                 routes, layout.tsx, not-found.tsx, error.tsx
+  app/                 routes; layout.tsx, template.tsx, not-found/error/loading,
+                       icon.svg, apple-icon.tsx, opengraph-image.tsx, sitemap, robots
+    admin/             the CMS (vehicles, models, prices + import, markets, media,
+                       sources); media/upload/[file] is the upload route handler
+    api/               search (palette), cars (card lookups), favorites,
+                       recently-viewed
+    auth/              sign-in/up/out + reset server actions, /auth/confirm
   components/
-    3d/                CarViewer, ProceduralCar, GLBCar, CameraRig, Lighting,
-                       ExplodedView, EngineeringOverlay, ViewerErrorBoundary
-    cars/              CarCard, CarGrid, SpecSection, CarDNA,
-                       PowertrainVisualizer, CompareTable
-    countries/         WorldMap, CountryCard
-    manufacturers/     ManufacturerCard, ModelGroup
-    parts/             PartCard, PartDetail
-    layout/            Navbar, Footer, LoadingScreen, PageTransition, SearchOverlay
-    ui/                Button, GlassCard, StatCard, Tabs, Sheet, Skeleton, Badge
+    3d/                Car3DViewer (+ ViewerCanvas, CameraController, CarLighting,
+                       ModelLoader, CarControls, ConfiguratorPanel, overlays),
+                       ProceduralCar/CarBody (lofted car), CarShowcase (scroll
+                       tour), StageDirector, Hero*, car-* geometry/layout modules
+    cars/              CarCard, CarGrid, CarPhoto, ListedPrice, FilterRail, SortBar,
+                       FavoriteButton; catalogue/ (listing parts); detail/ (the
+                       car page's chapters, gallery, panels)
+    pricing/           PricingSection and its selector, summary, history, provenance
+    compare/           the compare view, picker and cards
+    account/           favourites view, recently viewed, auth forms
+    admin/             CMS forms, tables, uploads
+    home/ countries/ manufacturers/ parts/
+    layout/            Navbar, MobileMenu, AccountMenu, CommandPalette, Footer,
+                       LoadingScreen
+    ui/                Dialog/Sheet, Tooltip/InfoHint, Select, SegmentedControl,
+                       Switch, Field, Toast, Kbd, IconButton, Progress, Button,
+                       Badge, GlassCard, StatCard, Skeleton, Container, ...
   lib/
-    supabase/          client.ts (browser), server.ts (RSC/route handlers)
-    queries/           cars.ts, manufacturers.ts, countries.ts, parts.ts, compare.ts
-    search/            parseQuery.ts + parseQuery.test.ts
-    dna.ts, format.ts, utils.ts, env.ts, fonts.ts, site-config.ts
-  hooks/               useReducedMotion, useIsMobile, ...
+    supabase/          client.ts (browser), server.ts (static + cookie clients),
+                       middleware.ts (session refresh used by src/proxy.ts)
+    queries/           server-only data access, one module per area
+    pricing/           pure pricing engine, market selection, chart, presentation
+    detail/            pure helpers for the car page (performance, gallery, JSON-LD)
+    admin/             validation, CSV, file signatures, server actions
+    favorites/         guest/account favourites store and recently viewed
+    search/            parseQuery.ts (natural-language catalogue search)
+    viewer-*.ts        pure 3D viewer logic (quality tiers, presets, arbiter, paint)
+    format.ts, cache-tags.ts, static-params.ts, json-ld.ts, car-build.ts, ...
+  proxy.ts             Next 16's renamed middleware (session refresh)
   types/               database.ts (generated — do not edit), domain.ts
 supabase/
-  migrations/0001_schema.sql, 0002_rls.sql, 0003_storage.sql
-  seed.sql
+  migrations/0001..0008   schema, RLS, storage, role fixes, engine position,
+                          exhaust group, markets/pricing/media/generations
+  seed.sql, verify.sql
 public/
-  models/ textures/ images/ map/
+  draco/ basis/        self-hosted Draco and Basis/KTX2 decoders
+  images/cars/         committed photographs (credits in images/CREDITS.md)
 ```
 
 ### Rules
@@ -117,25 +143,46 @@ public/
 
 ### Design language
 
-Dark luxury automotive technology. Near-black grounds, **one** metallic gold
-accent, white typography, hairline borders, restrained glassmorphism, faint
-grain. It should read as a premium configurator, not a gaming dashboard —
-so no neon, no heavy glow, no saturated secondary hues.
+**Futuristic automotive HUD** (Phase 14, the owner's choice): a supercar's
+digital cockpit — cold blue-black grounds with animated grids and scanlines,
+**cyan** as the tech glow (active states, focus, lines, primary buttons),
+**gold** for the brand and "best" markers, violet sparingly in gradients.
+HUD glass panels with corner brackets, chamfered corners, mono labels, and a
+lot of motion. Premium and legible, never a cheap gaming site: body text stays
+crisp without glow, and every text colour passes AA on its own (glow does not
+count toward contrast).
 
-Tokens live in `src/app/globals.css` (Tailwind v4 `@theme`):
+Tokens and utilities live in `src/app/globals.css` (Tailwind v4 `@theme`); the
+full list with examples is `docs/design-system.md`.
 
-- grounds `--color-void`, `--color-surface-1..4`
-- accent `--color-gold-200..800` (`gold-500` is the primary)
-- text `--color-ink-50..600`
-- hairlines `--color-line-subtle` / `line` / `line-strong`
-- muted signals `--color-signal-positive|negative|electric|hybrid`
-- utilities `grain`, `glass`, `edge-light`, `gold-gradient-text`, `text-label`
+- grounds `--color-void`, `--color-surface-1..4`; accents `cyan-*`, `gold-*`,
+  `violet-*`; text `ink-50..600`; saturated `signal-*`
+- HUD: `hud-panel`, brackets, `hud-rule`, tick marks, segmented bars,
+  chamfer clip-paths, glow shadows, `gradient-text`
+- layout vars `--nav-h`, `--subnav-h`, `--nav-offset` + `--subnav-offset`
+
+Motion kit (`src/components/fx/`): `Reveal`, `ScrambleText`, `CountUp`,
+`TiltCard`, `Magnetic`, `Parallax`, `Marquee`, `HudFrame`, and the background
+layers (`GridBackground`, `Scanlines`, `GlowOrbs`, `Spotlight`, `CursorGlow`).
+They are **server components that only render data attributes**; one client
+`FxRuntime` (mounted in the root layout) drives them all with shared observers
+and pointer listeners, so they work inside server pages and can render as a
+`Link`. Hidden initial states apply only under `html.js` (set by the boot
+script) with a 3 s failsafe, so content is never lost without JavaScript; under
+reduced motion everything is shown at once and nothing moves.
+
+Inputs (`src/components/inputs/`): `AutoScaleNumberInput` (Uniswap/Wise-style
+big-number entry whose font shrinks to fit, locale grouping, stable caret —
+used for the admin price amounts) and `AnimatedCaretInput` (a real input with a
+spring-driven glowing caret measured on a canvas — used by the palette-style
+search fields, sign-in and compare). `/lab` demonstrates both.
 
 Fonts (`src/lib/fonts.ts`, via `next/font/google`):
 
-- **Michroma** → `font-display` — headlines, wordmark, big stat numbers
+- **Michroma** → `font-display` / `font-brand` / `font-hud` — headings, big
+  numbers, the wordmark (it has no € glyph: set currency symbols in Inter)
 - **Inter** → `font-sans` — body
-- **JetBrains Mono** → `font-mono` — spec tables, compare columns
+- **JetBrains Mono** → `font-mono` — labels, eyebrows, data, the 3D HUD
 
 ---
 
@@ -227,7 +274,9 @@ Fonts (`src/lib/fonts.ts`, via `next/font/google`):
   records which convention it uses in `performance_specs.source`.
 - `car_media` is **empty**. No real image or GLB URLs exist yet, and inventing
   them would breach the same rule. The 3D viewer's procedural fallback (Phase 5)
-  is designed for exactly this state.
+  is designed for exactly this state. _(Phase 11: the seed now registers the
+  eight photographs committed under `public/images/cars/`, with the author and
+  licence from CREDITS.md.)_
 
 **Phase 3**
 
@@ -376,6 +425,7 @@ The procedural car is architecturally right (named groups, real dimensions,
 explode, presets) but its _visual_ fidelity is the weakest part of the project —
 it reads as a stylised block model, not a sleek car. Two geometry passes
 improved it materially; a further pass on the body profile would help most.
+_(Addressed in Phase 10: the body is now a lofted parametric surface.)_
 
 **Phase 6 — search, filters, compare**
 
@@ -553,11 +603,326 @@ rejection instead of logging 478 phantom errors per build.
   Those are listed in `scripts/image-skip.txt` so a re-run cannot reinstall
   them, and need a photograph added by hand.
 
+**Phase 10 — a real-looking car, and a scroll tour of it**
+
+- **The car is a lofted surface, not boxes.** `car-styles.ts` holds a side-view
+  profile per body style (belt, roof, sill, nose/tail, overhangs) with no
+  three.js import, so the card silhouette (`cars/car-silhouette.ts`) draws from
+  the same profiles. `car-shape.ts` lofts it: monotone (Fritsch–Carlson)
+  curves in side view, a superellipse in plan view, Catmull-Rom cross-sections
+  per station, wheel arches cut by clamping samples to the arch circle.
+- **Everything inside is laid out from the variant's rows** (`car-layout.ts`,
+  `car-systems.ts`): cylinder count and bank layout from `engines`, engine
+  position from the new `car_models.engine_position`, driven axles from
+  `drive_type`, motor count and battery for EVs, seat count, and steering side
+  from the maker's home market. A 911 gets a flat-six behind the rear axle; a
+  Plaid gets three motors and a floor battery and no engine.
+- **Migration 0006** adds `engine_position` (front/mid/rear enum, NULL for
+  EVs). The seed backfills all 31 models with an engine, hybrids included;
+  the 15 electric-only models stay NULL. An engine whose position is not
+  recorded is **not drawn** rather than guessed, so an unmigrated database
+  shows combustion cars without engines.
+- **Lighting is built in the scene** (drei `Lightformer`s rendered once into
+  the environment map). The old `preset="studio"` fetched an HDR from a
+  third-party CDN at runtime; when that failed it took the whole car page down.
+- **The anatomy tour** (`lib/anatomy-tour.ts`, pure and unit-tested) turns a
+  variant's rows into stops — design, engine or motors, battery, drivetrain,
+  chassis, brakes, cabin, performance — each with only the figures that exist
+  and components chosen by the data (a turbocharger only for boosted engines).
+  `CarShowcase` is a CSS `sticky` stage beside normal-flow cards; scroll
+  position becomes a continuous `beat`. `StageDirector` (shared with the home
+  story) damps that beat and flies the camera between shots framed from the
+  car's own layout (`tour-cameras.ts`), ghosting the body and dimming other
+  systems when a stop looks inside. The road slides and the wheels turn with
+  the scroll, so the car reads as driving.
+- **The home story** now runs on the same Director and a generic coupé, and
+  its finale explodes the car into its subsystems.
+- **Missing photographs render a body-style silhouette** (`CarPhoto`), never a
+  broken-image icon. It is labelled as a placeholder, not a likeness.
+- Viewer panels list only the groups the car has (no battery on a petrol car),
+  and add the tour's general components after the variant's own, so a panel
+  is not empty just because nothing is catalogued against that exact variant.
+
+**Four bugs worth remembering**
+
+1. **`animation-fill-mode: both` broke every `position: fixed` child.** The
+   page-enter keyframe ends at `transform: none`, but interpolated against
+   `translateY()` it lands on an identity matrix — still a transform — which
+   makes the wrapper the containing block for fixed descendants. The home
+   story's ScrollTrigger pin was placed at the top of the page (a black
+   screen), and every `Sheet` opened on a scrolled page was misplaced. Fixed
+   with `backwards` fill. Rule: never leave a transform on a layout wrapper.
+2. **ScrollTrigger turns `pinSpacing` off when the pin's parent is flex**, and
+   the page wrapper is flex, so the next section scrolled straight over the
+   pinned story. Now explicit `pinSpacing: true`.
+3. **Read the last IntersectionObserver entry, not the first.** Creating the
+   pin re-parents the section, and the first callback arrived with a stale
+   zero-size entry ahead of the real one — the scene never mounted.
+4. **`emissiveIntensity` defaults to 1**, so a highlight that set the emissive
+   colour to gold rendered the part solid gold. Highlights blend the emissive
+   colour instead. Related: three's `computeVertexNormals` zig-zagged across
+   the lofted grid's thin, unevenly spaced quads and striped the reflections;
+   normals now come from central differences across the grid.
+
+Screenshots under SwiftShader need long settles: GSAP's lag smoothing advances
+tweens only 33 ms per slow frame, so an explode "takes" 30 s there.
+
+**Phase 11 — markets, sourced pricing, and a full product pass**
+
+Built by parallel workstreams on disjoint files, each verified in a browser,
+then reviewed adversarially. The decisions worth keeping:
+
+- **Pricing is sourced or absent.** `market_prices` (migration 0008) holds
+  one row per variant × market (country, optional state, optional city) ×
+  price type × effective date. `source`, `source_url` and `last_verified_at`
+  are NOT NULL; a trigger rejects a state outside its country or a city
+  outside its state; `unique nulls not distinct` stops duplicate national
+  rows. `current_market_prices` (security_invoker) picks the latest row in
+  force per scope with DISTINCT ON. No price is seeded: every car says "Price
+  data unavailable" until an admin records one with its source.
+- **Price types never blur.** Manufacturer list, dealer list, ex-showroom,
+  on-road and estimated on-road are separate; when AURIX adds the components
+  up itself the total is labelled **Calculated on-road**, and only when every
+  component it needs is present. A city falls back to its state, then the
+  country, and the page says which it is showing. Nothing is converted
+  between currencies, anywhere — compare never crowns a price.
+- `src/lib/pricing/engine.ts` is pure and unit-tested; the UI only chooses
+  what to show. The market choice lives in `?market=` and localStorage, read
+  with `useSyncExternalStore` — never `useSearchParams`, which would make the
+  static car page dynamic.
+- **Cache tags** (`src/lib/cache-tags.ts`): `catalogue` (1 h), `prices`
+  (10 min), `markets` (1 day). Admin server actions call `updateTag()` so an
+  edit is visible on the next request; route handlers must use
+  `revalidateTag(tag, { expire: 0 })` because `updateTag` only works in
+  server actions.
+- **Provenance everywhere.** Spec tables gained `source_url` and
+  `last_verified_at`; `car_media` gained licence, author, source URL, pixel
+  size, shot type and 3D-model metadata (`is_exact_model` is required for a
+  GLB — the viewer labels a model "exact" or "representation"). The admin
+  "Data sources" page lists every figure with its status.
+- **Admin is a real CMS, still without a service-role key.** One
+  `requireAdmin()` (getUser + profiles.role) guards every page, action and the
+  upload route, and RLS checks again. Uploads are validated by magic bytes and
+  header parsing (PNG/JPEG/WebP/AVIF sizes, the glTF binary header and its
+  JSON chunk for Draco/KTX2/meshopt), not by name or declared type.
+- **Favourites work for guests.** localStorage `aurix-favorites` (+ the
+  `aurix:favorites-changed` event) for guests, the `favorites` table for
+  accounts, merged on sign-in and cleared only after the merge succeeds.
+  Sign-in state reaches client stores through a rotating, non-secret
+  `aurix-auth-epoch` cookie — the pages themselves stay static.
+- **The command palette** searches through a `search_catalogue` SQL function
+  (tsquery prefix + pg_trgm word similarity), SECURITY INVOKER so RLS still
+  hides unpublished cars; `/api/search` is publicly cacheable.
+- **generateStaticParams must never return `[]`** under Cache Components
+  (build error E898 on a fresh clone with no database). Every dynamic route
+  wraps its params in `withPlaceholder()`; the placeholder slug 404s.
+- `typecheck` runs `next typegen` first, so it works on a fresh clone without
+  a build; CI (`.github/workflows/ci.yml`) builds with **no** Supabase
+  credentials to prove the empty-state path.
+- `src/middleware.ts` became `src/proxy.ts` (Next 16 rename). Its matcher
+  skips static files, the public cacheable APIs and the admin upload route.
+
+**Traps found while building it**
+
+1. `usePathname()` in a client component rendered by the root layout, outside
+   `<Suspense>`, blocks prerendering of every dynamic route whose params are
+   not all listed — a build failure in Next 16.3. The navbar reads the path
+   inside its own Suspense boundary; page transitions moved to a hook-free
+   `app/template.tsx`.
+2. A value exported from a `"use client"` module arrives in a server
+   component as a client reference, not the value. A class-name constant
+   shared by the server AccountMenu silently became `undefined` and the
+   account slot lost its reserved size. Shared constants live in plain `.ts`.
+3. `Intl.DateTimeFormat("en-GB")` prints "Sep" or "Sept" depending on the ICU
+   version, so a date rendered by Node and again by the browser could differ
+   (hydration mismatch). `formatDate` builds the string by hand.
+4. An invisible, absolutely-positioned tooltip still widens the scrollable
+   area; tooltips are now `display: none` until shown.
+5. A dialog rendered inside an element with a transform or backdrop-filter is
+   positioned against that element. `Dialog` portals to `<body>`, and decides
+   which dialog is topmost by open order, not DOM order.
+6. Many single-variant models repeat the model name as the variant name
+   ("Ferrari F8 Tributo F8 Tributo"); `carDisplayName()` and the search
+   function drop the repeat.
+7. `power_hp` is an integer column: PostgREST rejects a fractional bound, so
+   the related-cars power band rounds inward.
+8. Turbopack's dev server grows past 10 GB after an hour of constant
+   recompiles on this 16 GB machine; restart it when it does.
+9. In dev, every page streams, so the no-JavaScript experience can only be
+   judged against a production build.
+
+**Phase 12 — the blueprint tour**
+
+- Chapter 03 of the car page is now a scroll-driven **blueprint**: the floor
+  becomes a gridded sheet, the shell a ghost outlined in gold panel lines, and
+  published dimensions get dimension lines (none for a missing figure). Each
+  further beat moves one subsystem out along its explode path — only groups
+  the car actually has, so an EV has no engine or exhaust — with a card of the
+  variant's real figures and parts; the finale is the labelled exploded car.
+- It reuses the tour's canvas and `StageDirector`: no second WebGL context,
+  every value is a pure function of scroll (`lib/blueprint.ts`, unit-tested),
+  so scrolling back reassembles the car. Line work is built on first reach
+  and disposed with the scene.
+- Reduced motion, no WebGL or a scene error show a server-rendered exploded
+  drawing (`BlueprintDiagram`) from the same layout. It is wrapped in
+  `"use cache"`: three.js objects draw random ids, which Cache Components
+  refuses during prerender otherwise.
+- The hatchback profile in `car-styles.ts` was lowered and raked; it read as
+  an SUV.
+
+**Phase 13 — a car-brand redesign of the whole frontend**
+
+Audited first (every page at 390 and 1440, written up as a defect list and a
+spec), then rebuilt as a design system followed by seven page workstreams on
+disjoint files. The direction is a manufacturer's product site: large quiet
+type, photography and 3D first, sentence case, lots of space, gold only for
+the primary action, the active underline and "best" markers — never for
+headings, prices or statistics.
+
+- **Design system first, additive only.** New tokens and presets, Inter Tight
+  for display, `Button` `link` variant, `StatRow`/`StatCard` (value above
+  label, "—" plus "not published" for a null), `SubNav`, and a navbar that is
+  transparent over heroes. Legacy utilities were remapped rather than
+  deleted, so every page kept compiling while its own workstream was pending.
+  `cn()` had to learn the new utility names, or tailwind-merge silently drops
+  `text-h4` next to `text-ink-300`.
+- **`SubNav`** is the in-page navigation on the car, brand, model, country
+  and about pages. It must be a direct child of the page (a short wrapper or
+  an `overflow-hidden` ancestor stops it sticking). While present, the navbar
+  hides on scroll-down and `--nav-offset` drops to 0; sticky stages such as
+  the blueprint tour sit at `--nav-offset + --subnav-offset`.
+- **Cards and figures.** One card shell for cars and models (brand, name with
+  the repeated model name removed, a meta line, three figures). A price shows
+  only when one is recorded, at full figure. No count-up numbers anywhere.
+- **Catalogue** headings follow the filters ("Electric cars", "Porsche"),
+  zero-count facets are hidden, and sort is a select. Filters stay URL-only
+  and work without JavaScript.
+- **Compare** draws bars only on headline performance rows (`showBar`) and no
+  longer ranks kerb weight.
+- The admin pages now export `instant = false` like their layout: they block
+  on the role check by design, and dev-mode instant-navigation validation
+  otherwise logged an error for every admin page.
+- Ported Creative Commons licences ("CC BY-SA 3.0 de") now link to their deed.
+
+**Phase 14 — futuristic HUD redesign, motion kit, new inputs**
+
+The owner found the calm car-brand pass "not cool" and chose "futuristic tech"
+with "a lot of animation", which replaced the earlier one-gold-accent rule.
+Built as a design system + motion kit first, then five parallel workstreams
+(home, catalogue and places, car page and compare, account and admin, inputs).
+
+- **One runtime for all effects.** Every fx component renders plain markup
+  with `data-*` attributes; `FxRuntime` owns one IntersectionObserver per
+  effect type, one rAF loop and delegated pointer listeners. Cheaper than a
+  client component per card, and server pages can use effects directly.
+- **CountUp never lies.** The server renders the final formatted value in
+  flow; the counting digits are an aria-hidden overlay written through a
+  `data-text` attribute and CSS `content`, so React never sees an extra text
+  node and the resting value is always the real one. Counting stays off on
+  the streamed `/cars` grid, where the runtime can reach content before its
+  Suspense boundary hydrates.
+- **Reveals and late mounts.** An element that is already above the viewport
+  when the runtime starts is shown at once — otherwise a visitor who scrolled
+  during hydration would leave invisible sections behind.
+- **Page transition** fades the template wrapper with opacity only; the scan
+  line is a separate fixed overlay. A transform or filter on that wrapper
+  would again break every sticky and fixed child (see Phase 10, bug 1).
+- **Feature showcase** (`CarFeatureShowcase`): a carousel of the variant's
+  catalogued features plus cards for published subsystems only; expand in
+  place; swipe, keys and dots; a colour picker of **sourced** `car_colors`
+  only that repaints the 3D viewer through its own stored configuration.
+- **AutoScaleNumberInput** keeps the raw value canonical ("1250000.5"),
+  formats with BigInt so no digit is lost, snaps (not animates) when
+  shrinking — an animated shrink briefly overflowed and scrolled the leading
+  digits out of view — and submits through a hidden input, with a
+  `<noscript>` field for the no-JavaScript path.
+
+**Performance pass — "the website is lagging"**
+
+Measured on a production build with 4× CPU throttling (Chrome traces, 390
+and 1440). At rest, with no input, the renderer main thread was busy 690–930
+ms of every second and raster workers up to ~2 s/s. The cause was ambient
+animation alone — pausing every animation took idle cost to zero:
+up to 39 infinite loops per page, ~85% of them off screen, and
+`grid-drift` animating `background-position` on masked section-sized layers,
+which re-rasterised every grid on the page every frame.
+
+- **Ambient loops run only on screen and in a visible tab.** The runtime
+  observes every element with an infinite ambient animation (its `AMBIENT`
+  list) and pauses it through the Web Animations API — no attribute on
+  markup React may not have hydrated. The marquee is the exception (CSS owns
+  its play state for hover/focus/the pause toggle, which a WAAPI `play()`
+  would override for good), so it gets `data-fx-offscreen` instead.
+- **Grids drift by transform.** GridBackground's sheet is one cell taller
+  than its frame and slides one cell (`translateY(var(--grid-size))`), with
+  the mask on the static frame: same picture, composited instead of painted.
+  New ambient animations must animate only transform/opacity.
+- **Lite mode** (`html.fx-lite`, `fx-lite.ts`): set by the boot script before
+  first paint for ≤ 4 cores, ≤ 4 GiB, Data Saver or an earlier slow verdict,
+  and by the runtime when frames are slow at rest after load (session). The
+  look stays, standing still. `localStorage["aurix-fx"] = "full" | "lite"`
+  overrides it.
+- Pointer effects read layout before writing styles, and a section's
+  Spotlight takes `--mx/--my` on its own layer: on the section, a custom
+  property restyled the whole section subtree on every pointer frame.
+- **backdrop-filter stays.** Removing it made GPU-path scrolling slower
+  (/cars 60 → 36 fps), as those surfaces stopped being layers of their own.
+  The fixed body background was not a measurable cost either.
+- WebGL was already on demand; the blueprint tour now also honours the
+  device quality tier (LOW → the lighter recipe), not just phone width.
+- `SetupNotice` (dev only) reuses a healthy verdict for 60 s: probing on
+  every request held the HTML stream — and the `load` event the loading
+  screen and hero wait for — open for two round trips to a hosted project.
+- Judge speed on `npm run build && npm start`, never `npm run dev`.
+
+**Owner-supplied AI illustrations, and the blueprint sheet**
+
+- **AI-generated images are never passed off as photographs.** The owner
+  supplied AI-generated infographics of three cars; views cropped from them
+  live in `public/images/cars/ai/` and are seeded as `car_media` rows whose
+  licence is "AI-generated illustration". `lib/media-kind.ts` decides what
+  is an illustration (that licence, or the `ai/` folder — the catalogue view
+  gives cards only a URL), and every surface labels it: an "AI illustration"
+  badge on cards, heroes, gallery tiles and compare thumbnails, alt text,
+  and a credit that says "not a photograph". None is primary, so a real
+  photograph always wins. The spec tables printed on those infographics were
+  **not** imported: they contradicted each other and the published figures.
+- **The blueprint sheet** (`lib/blueprint-sheet.ts`, `BlueprintSheet`) is the
+  Design chapter's drawing: side, front, top and rear views at one scale,
+  from the same lofted body-style profiles the 3D car uses, sized to the
+  published dimensions, with dimension lines only for published figures.
+  It is labelled a representation, not a manufacturer drawing; model-exact
+  outlines would need exact source geometry, which the project does not
+  have.
+- `NEXT_PUBLIC_SUPABASE_URL` is normalised (`lib/supabase-url.ts`): a
+  pasted `/rest/v1` suffix made every request 404 with "Invalid path
+  specified in request URL". The dev notice and `npm run doctor` now name
+  that case instead of blaming missing migrations.
+- A commit message that merely mentions GitHub's skip marker (square
+  brackets around "skip ci") skips CI for that push; keep the marker out of
+  messages that are meant to run CI.
+
 **Open items**
 
-- None blocking. The Supabase publishable key was initially rejected because
-  the paste had wrapped and lost its last four characters (`BUNI` arrived on a
-  line of its own and looked like a stray token). The corrected key is in
-  `.env.local` and is verified working: `/auth/v1/health` returns 200, anon
-  SELECT on `car_catalog` returns all 54 rows through PostgREST, and anon
-  INSERT is correctly refused with `42501 permission denied`.
+- Apply migrations 0006–0008 to the hosted database: `npm run db:push`, then
+  `npm run db:seed` (idempotent).
+- Configure Supabase Auth: Site URL, the `/auth/confirm` redirect URL, and
+  ideally the token-hash email templates (README section 4).
+- Record prices, availability and paint colours through the admin panel,
+  each with its source. None are seeded.
+- Cars without a verified photograph show the silhouette placeholder. Run
+  `node scripts/fetch-images.mjs --all --download` on a machine with internet
+  access, check every pick by eye, and commit the files in
+  `public/images/cars/`; or upload licensed photographs in the admin panel.
+- No licensed GLB is bundled; every car shows the parametric representation.
+- On Vercel, admin uploads above 4.5 MB need signed direct-to-Storage uploads.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
